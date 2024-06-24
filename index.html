@@ -27,12 +27,17 @@
         .hidden {
             display: none;
         }
+        .start-button {
+            position: absolute;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
+    <button id="startButton" class="start-button">Start Video</button>
     <div class="video-container">
-        <video id="videoPlayer" class="video-layer" controls></video>
-        <video id="videoPlayer2" class="video-layer hidden" controls></video>
+        <video id="videoPlayer" class="video-layer"></video>
+        <video id="videoPlayer2" class="video-layer hidden"></video>
     </div>
     <!-- <script>var exports = {};</script> -->
     <script src="dist/bundle.js"></script>
