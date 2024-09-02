@@ -18,5 +18,10 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "path-browserify": "^1.0.1",
+    "sqlite3": "^5.1.7",
+    "util": "^0.12.5"
+  }
 }

@@ -1,44 +1,48 @@
-import { number,addToNumber } from './index';
-
-export function playVideoWithLoad(videoPlayer: HTMLVideoElement, videoPlayer2: HTMLVideoElement): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-        function onLoadedMetadata() {
-            videoPlayer.removeEventListener('loadedmetadata', onLoadedMetadata); // Remove listener once loaded
-            resolve();
-        }
-
-        function onError(event: Event) {
-            reject((event as any).error || new Error('Unknown video loading error'));
-        }
-
-        videoPlayer.addEventListener('loadedmetadata', onLoadedMetadata);
-        videoPlayer.addEventListener('error', onError);
-
-        videoPlayer.src = "/video/" + number.toString() + ".mp4";
-        addToNumber(1);
-        videoPlayer.load(); // Reload the video source
-    });
-}
+import { number, modifyNumber, total } from './index';
 
 export async function handleVideoEnded(videoPlayer: HTMLVideoElement, videoPlayer2: HTMLVideoElement): Promise<void> {
     console.log('Video ended');
     try {
-        await playVideoWithLoad(videoPlayer2, videoPlayer);
         await videoPlayer2.play();
         videoPlayer2.classList.remove('hidden');
         videoPlayer.classList.add('hidden');
+        const shouldSetRandom = Math.random() < 0.20; // 50% chance to either add or set to random.
+
+        if (shouldSetRandom) {
+            // If true, set 'number' to a random value.
+            const random = Math.floor(Math.random() * total) + 1;
+            modifyNumber(random, true); // Assuming modifyNumber is the new function name that can either add or set.
+        } else {
+            // If false, simply add 1 to 'number'.
+            modifyNumber(1, false)
+            console.log("next video number: ", number);
+            
+        }
+        videoPlayer.src = "/video/" + number.toString() + ".mp4";
         console.log('New video started playing');
     } catch (error) {
         console.error('Error loading or playing new video:', error);
     }
 }
+
 export async function handleVideoEnded2(videoPlayer: HTMLVideoElement, videoPlayer2: HTMLVideoElement): Promise<void> {
     console.log('Video ended');
     try {
-        await playVideoWithLoad(videoPlayer, videoPlayer2);
         await videoPlayer.play();
         videoPlayer.classList.remove('hidden');
         videoPlayer2.classList.add('hidden');
+        const shouldSetRandom = Math.random() < 0.20; // 50% chance to either add or set to random.
+
+        if (shouldSetRandom) {
+            // If true, set 'number' to a random value.
+            const random = Math.floor(Math.random() * total) + 1;
+            modifyNumber(random, true); // Assuming modifyNumber is the new function name that can either add or set.
+        } else {
+            // If false, simply add 1 to 'number'.
+            modifyNumber(1, false);
+            console.log("next video number: ", number);
+        }
+        videoPlayer2.src = "/video/" + number.toString() + ".mp4";
         console.log('New video started playing');
     } catch (error) {
         console.error('Error loading or playing new video:', error);

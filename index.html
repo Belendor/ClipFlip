@@ -30,16 +30,30 @@
         .start-button {
             position: absolute;
             z-index: 1;
+            opacity: 0.7;
+        }
+        .toggle-button {
+            position: absolute;
+            z-index: 1;
+            opacity: 0.7;
+            left: 80px;
+        }
+        .play-button {
+            position: absolute;
+            z-index: 1;
+            opacity: 0.7;
+            left: 160px;
         }
     </style>
 </head>
 <body>
     <button id="startButton" class="start-button">Start Video</button>
+    <button id="fullscreenButton" class="toggle-button">Full-Screen</button>
+    <button id="playButton" class="play-button">Stop Video</button>
     <div class="video-container">
         <video id="videoPlayer" class="video-layer"></video>
         <video id="videoPlayer2" class="video-layer hidden"></video>
     </div>
-    <!-- <script>var exports = {};</script> -->
     <script src="dist/bundle.js"></script>
 </body>
 </html>
