@@ -1,21 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Player</title>
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             height: 100%;
             overflow: hidden;
         }
+
+        .player1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 99;
+            background: black;
+        }
+
         .video-container {
             position: relative;
             width: 100%;
             height: 100%;
         }
+
         .video-layer {
             position: absolute;
             top: 0;
@@ -24,36 +38,195 @@
             height: 100%;
             object-fit: cover;
         }
+
+        .video-layer-right {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-layer-botttom {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-layer-botttom-right {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .half-size {
+            width: 50% !important;
+            height: 50% !important;
+        }
+
         .hidden {
             display: none;
         }
-        .start-button {
+
+        .form-container {
             position: absolute;
             z-index: 1;
-            opacity: 0.7;
+            bottom: 10px;
+            left: 10px;
+            /* background: rgba(0, 0, 0, 0.7); */
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
         }
-        .toggle-button {
-            position: absolute;
-            z-index: 1;
-            opacity: 0.7;
-            left: 80px;
+
+        .form-container input,
+        .form-container select {
+            margin: 5px;
+            padding: 5px;
+            border-radius: 3px;
         }
-        .play-button {
+
+        select[multiple] {
+            height: auto;
+            max-height: 100px;
+            /* Limit height for better UX */
+            overflow-y: auto;
+            /* Scroll for long lists */
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            /* or fixed dimensions */
+            height: 100%;
+        }
+
+        .video-layer {
             position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
             z-index: 1;
-            opacity: 0.7;
-            left: 160px;
+            /* lower than form */
+        }
+
+        .button-toolbar {
+            position: absolute;
+            /* adjust horizontal offset */
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+            /* high to be on top */
+            background-color: rgba(0, 0, 0, 0.1);
+            /* optional translucent bg */
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+
+        .button {
+            z-index: 11;
+        }
+
+        .form-container {
+            position: absolute;
+            bottom: 5;
+            /* transform: translateX(-50%); */
+            width: 50%;
+            height: 50%;
         }
     </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body>
-    <button id="startButton" class="start-button">Start Video</button>
-    <button id="fullscreenButton" class="toggle-button">Full-Screen</button>
-    <button id="playButton" class="play-button">Stop Video</button>
-    <div class="video-container">
-        <video id="videoPlayer" class="video-layer"></video>
-        <video id="videoPlayer2" class="video-layer hidden"></video>
+
+    <div class="button-toolbar">
+        <button id="playButton"
+            class="w-8 h-8 rounded border-2 border-gray-300 bg-transparent flex items-center justify-center hover:bg-white/10 transition">
+            <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M6 4l10 6-10 6V4z" />
+            </svg>
+        </button>
+
+        <button id="pauseButton"
+            class="w-8 h-8 rounded border-2 border-gray-300 bg-transparent flex items-center justify-center hover:bg-white/10 transition">
+            <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                <rect x="5" y="4" width="3" height="12" />
+                <rect x="12" y="4" width="3" height="12" />
+            </svg>
+        </button>
+
+        <button id="fullscreenButton"
+            class="w-8 h-8 rounded border-2 border-gray-300 bg-transparent flex items-center justify-center hover:bg-white/10 transition">
+            <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4h4M4 16v4h4M20 8V4h-4M20 16v4h-4" />
+            </svg>
+        </button>
+
+        <button id="resizeButton"
+            class="w-8 h-8 rounded border-2 border-gray-300 bg-transparent flex items-center justify-center hover:bg-white/10 transition">
+            <!-- Icon placeholder, set dynamically -->
+            <span id="viewIcon" class="text-gray-300"></span>
+        </button>
+        <button id="muteToggle"
+            class="w-8 h-8 rounded border-2 border-gray-300 bg-transparent flex items-center justify-center hover:bg-white/10 transition">
+            <span id="muteIcon" class="text-gray-300">
+                <!-- <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
+                </svg> -->
+            </span>
+        </button>
+
+
+        <!-- <button id="hideForm"
+            class="w-8 h-8 rounded border-2 border-gray-300 bg-transparent flex items-center justify-center hover:bg-white/10 transition">
+            <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+        </button> -->
+
+
     </div>
+
+    <div class="video-container">
+        <div id="player1" class="video-layer">
+            <video id="videoPlayer1" class="video-layer"></video>
+        </div>
+        <div id="player2" class="video-layer hidden">
+            <video id="videoPlayer2" class="video-layer"></video>
+        </div>
+        <div id="player3" class="video-layer-right half-size hidden">
+            <video id="videoPlayer3" class="video-layer"></video>
+        </div>
+        <div id="player4" class="video-layer-right half-size hidden">
+            <video id="videoPlayer4" class="video-layer"></video>
+        </div>
+        <div id="player5" class="video-layer-botttom half-size hidden">
+            <video id="videoPlayer5" class="video-layer"></video>
+        </div>
+        <div id="player6" class="video-layer-botttom half-size hidden">
+            <video id="videoPlayer6" class="video-layer"></video>
+        </div>
+        <div id="player7" class="video-layer-botttom-right half-size hidden">
+            <video id="videoPlayer7" class="video-layer"></video>
+        </div>
+        <div id="player8" class="video-layer-botttom-right half-size hidden">
+            <video id="videoPlayer8" class="video-layer"></video>
+        </div>
+    </div>
+
     <script src="dist/bundle.js"></script>
 </body>
+
 </html>
