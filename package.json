@@ -6,7 +6,7 @@
   "scripts": {
     "build:dev": "webpack --watch --mode development",
     "build:prod": "webpack --mode production",
-    "start": "live-server --no-browser"
+    "start": "live-server --port=80 --no-browser"
   },
   "devDependencies": {
     "@types/node": "^20.14.8",
