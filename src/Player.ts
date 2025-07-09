@@ -13,7 +13,7 @@ class Players {
     // hideForm: HTMLButtonElement;
 
     active: Record<number, boolean>;
-    folder = 'https://s3.eu-central-1.amazonaws.com/clipflip.online/video/';
+    folder = '/video/';
     muted: boolean = true;
 
     constructor(state: State, playerCount: number = 8) {
