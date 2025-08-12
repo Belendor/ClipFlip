@@ -301,7 +301,7 @@ export default class HTML {
       formData.append('title', uploadTitleInput.value);
       formData.append('tagId', uploadTagSelect.value);
 
-      const res = await fetch('http://localhost:3000/upload-video', {
+      const res = await fetch('https://www.clipflip.online/api/upload-video', {
         method: 'POST',
         body: formData,
       });
@@ -359,7 +359,7 @@ export default class HTML {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/videos', {
+      const response = await fetch('https://www.clipflip.online/api/videos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

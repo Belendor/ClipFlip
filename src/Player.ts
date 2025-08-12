@@ -15,7 +15,7 @@ class Players {
     state: State;
     html: HTML;
     active: Record<number, boolean> | undefined;
-    folder = './output/';
+    folder = './video/';
     muted: boolean = true;
     playerCount: number = 8;
     selectedTags: Map<number, string> = new Map();
@@ -214,7 +214,7 @@ class Players {
     }
     async getVideoMetadata(videoId: number): Promise<VideoMetadata | null> {
         try {
-            const response = await fetch(`http://localhost:3000/videos/${videoId}`);
+            const response = await fetch(`https://www.clipflip.online/api/videos/${videoId}`);
             if (!response.ok) throw new Error(`Failed to fetch metadata for videoId ${videoId}`);
             return await response.json();
         } catch (error) {
@@ -358,7 +358,7 @@ class Players {
                 };
 
                 try {
-                    const response = await fetch('http://localhost:3000/videos', {
+                    const response = await fetch('https://www.clipflip.online/api/videos', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(data),
@@ -497,7 +497,7 @@ class Players {
 
     async fetchAllTags() {
         try {
-            const response = await fetch('http://localhost:3000/tags', {
+            const response = await fetch('https://www.clipflip.online/api/tags', {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
             });

@@ -6,7 +6,7 @@ export type PlayerIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type PositionsMap = Record<SectionId, number>;
 class State {
     randomized: boolean = true;
-    endIndex = 3848; // Maximum position index
+    endIndex = 3873; // Maximum position index
     positions: PositionsMap = {
         1: this.randomInRange(1, this.endIndex * 0.25),
         2: this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5),
@@ -103,7 +103,7 @@ class State {
         if (!tags || tags.length === 0) return null;
 
         try {
-            const response = await fetch('http://localhost:3000/videos/by-tags', {
+            const response = await fetch('https://www.clipflip.online/api/videos/by-tags', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tags }),
