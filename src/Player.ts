@@ -43,7 +43,7 @@ class Players {
         this.updateLayout();
         // this.addFormsToPlayers();
     }
-    async loadVideos(active = false): Promise<void> {
+    async loadVideos(active = false, reload = false): Promise<void> {
         for (let i = 1; i <= this.html.videoPlayers.length; i++) {
             console.log(`Loading video for Player ${i}...`);
 
@@ -51,10 +51,14 @@ class Players {
                 console.log(`Player ${i} is not active in single section mode, skipping...`);
                 continue;
             }
-            if (active && this.active && this.active[i]) {
-                console.log(`Player ${i} currently active, skipping...`);
+
+            if (reload && !this.html.videoPlayers[i - 1].src) {
+
+            } else if (active && this.active && this.active[i] && this.html.videoPlayers[i - 1].src) {
+                console.log(`Player ${i} currently active with source, skipping...`);
                 continue;
             }
+
             const section = Math.ceil(i / 2) as SectionId;
 
             console.log(`Loading video for Player ${i} in section ${section}`);
@@ -198,7 +202,7 @@ class Players {
 
             // this.updateResizeIcon();
             this.updateLayout();
-            this.loadVideos();
+            this.loadVideos(true, true);
         });
         this.html.fullscreenButton.addEventListener('click', () => {
             this.toggleFullscreen();
@@ -468,7 +472,12 @@ class Players {
         if (!tag) return;
         const tagId = `${tag}-id`;
 
-        document.querySelectorAll(`.${tagId}`).forEach(el => {
+        // find the closest section container (e.g. player div)
+        const sectionEl = btn.closest('[id^="player"]');
+        if (!sectionEl) throw new Error(`Section element not found for tag ${tag}`);
+
+        // within that section only, find elements with the tag class and toggle
+        sectionEl.querySelectorAll(`.${tagId}`).forEach(el => {
             if (el instanceof HTMLElement) {
                 el.classList.toggle('active-tag');
             }
