@@ -48,13 +48,18 @@ export default class HTML {
   <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
   </svg>`
-    const iconUp = `
-  <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
-  </svg>`
-    this.hideIcon.innerHTML = iconUp
+    const iconBurger = `
+  <svg class="w-5 h-5 text-black-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+    <line x1="3" y1="6" x2="21" y2="6" stroke-linecap="round" />
+    <line x1="3" y1="12" x2="21" y2="12" stroke-linecap="round" />
+    <line x1="3" y1="18" x2="21" y2="18" stroke-linecap="round" />
+  </svg>
+`;
+    this.hideIcon.innerHTML = iconBurger;
+    this.hideIcon.innerHTML = iconBurger
 
     this.hideFormsButton = this.createButton('hideForms', this.hideIcon)
+    this.hideFormsButton.classList.add('hide-button')
 
     this.hideFormsButton.addEventListener('click', () => {
       const forms = document.querySelectorAll('.metadata-form')
@@ -63,16 +68,16 @@ export default class HTML {
         (el as HTMLElement).classList.toggle('hidden')
       })
 
-      this.hideIcon.innerHTML = forms[0].classList.contains('hidden') ? iconDown : iconUp
+      this.hideIcon.innerHTML = forms[0].classList.contains('hidden') ? iconBurger : iconBurger
     })
 
     toolbar.append(
+      this.hideFormsButton,
       this.playButton,
       this.pauseButton,
       this.fullscreenButton,
       this.resizeButton,
       this.muteToggle,
-      this.hideFormsButton
     )
 
     return toolbar

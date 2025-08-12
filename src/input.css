@@ -118,11 +118,52 @@ select[multiple] {
     border: 1px solid #ccc;
     z-index: 1;
 }
+
 .upload-form {
     position: absolute;
     bottom: 0;
     left: 100%;
 }
+
+.hide-button {
+  stroke: #3B82F6 !important;
+  transition: stroke 0.2s ease;
+  border: 3px solid #3B82F6 !important;
+  border-radius: 4px;
+  color: #1E40AF !important;
+  transform: scale(1.2);
+  transform-origin: center center;
+  display: inline-flex;           /* use flex */
+  justify-content: center;        /* center horizontally */
+  align-items: center;            /* center vertically */
+  padding: 0.5rem 1rem;           /* adjust padding as needed */
+}
+
+/* .hide-button::after {
+    content: '';
+    position: relative;
+    top: 50%;
+    right: -2px !important;
+    bottom: 30px !important;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 16px solid #3B82F6;
+    pointer-events: none;
+} */
+
+.hide-button:hover {
+    stroke: #2563EB !important;
+    border-color: #2563EB !important;
+}
+
+.hide-button.inactive {
+    stroke: #9CA3AF !important;
+    border-color: #E5E7EB !important;
+}
+
 .metadata-form {
     z-index: 2;
     position: absolute;
