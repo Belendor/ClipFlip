@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Video" ADD COLUMN "model" TEXT;
+ALTER TABLE "Video" ADD COLUMN "seriesNr" INTEGER;
+ALTER TABLE "Video" ADD COLUMN "seriesTotal" INTEGER;
+ALTER TABLE "Video" ADD COLUMN "studio" TEXT;

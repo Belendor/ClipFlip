@@ -1,44 +1,91 @@
+import HTML from "./HTML";
+import { type VideoMetadata } from "./Player";
+
+export type SectionId = 1 | 2 | 3 | 4;
+export type PlayerIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type PositionsMap = Record<SectionId, number>;
 class State {
-    private readonly spread = 500;
-    positions: Record<number, number>;
-    endIndex = 3508; // Maximum position index
+    randomized: boolean = true;
+    endIndex = 3848; // Maximum position index
+    positions: PositionsMap = {
+        1: this.randomInRange(1, this.endIndex * 0.25),
+        2: this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5),
+        3: this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75),
+        4: this.randomInRange(this.endIndex * 0.75, this.endIndex)
+    };
+    activeTags: Record<SectionId, string[]> = {
+        1: [],
+        2: [],
+        3: [],
+        4: []
+    };
+
     percentChance = 25; // 25% chance to modify position
     multiSection: boolean = false; // Whether to use multiple sections
-    randomized: boolean = true;
 
     constructor() {
-        this.positions = this.initializePositions(this.randomized);
+        console.log("State initialized with positions:", this.positions);
+        
     }
 
-    private initializePositions(randomized: boolean = false): Record<number, number> {
-        const positions: Record<number, number> = {};
-        for (let i = 1; i <= 4; i++) {
-            if (randomized) {
-                const randomStart = Math.floor(Math.random() * this.endIndex) + 1;
-                positions[i] = randomStart;
-            } else {
-                positions[i] = positions[i] + 1 > this.endIndex ? 1 : positions[i] + 1;
-            }
-        }
-        return positions;
-    }
-    set setMultiSection(value: boolean) {
-        this.multiSection = value;
+    private randomInRange(min: number, max: number) {
+        const minInt = Math.floor(min);
+        const maxInt = Math.floor(max);
+        return Math.floor(Math.random() * (maxInt - minInt + 1)) + minInt;
     }
 
-    get getMultiSection() {
-        return this.multiSection;
-    }
-
-    modifyPosition(section: number, randomize: boolean = false): void {
+    async modifyPosition(section: SectionId): Promise<void> {
+        console.log(`Modifying position for section ${section}`);
+        
         if (!(section in this.positions)) {
-            console.warn(`Section ${section} does not exist.`);
-            return;
+            throw new Error(`Invalid section: ${section}`);
         }
 
-        if (randomize) {
-            console.log(true);
+        const taggedVideos: VideoMetadata[] = (await this.fetchVideosByTags(section)) ?? [];
+        console.log(`Tagged videos for section ${section}:`, taggedVideos);
 
+
+        // Tagged mode
+        if (taggedVideos.length > 0) {
+            const currentId = this.positions[section];
+            console.log(`Current ID for section ${section}:`, currentId);
+
+            const videoIds = taggedVideos.map(v => v.id);;
+
+            // Random within tagged
+            if (this.randomized) {
+                const roll = Math.random() * 100;
+                if (roll < this.percentChance) {
+                    const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
+                    console.log(`Randomly selected video for section ${section}:`, randomVideo);
+                    this.positions[section] = randomVideo.id;
+                    return;
+                }
+            }
+            let currentIndex = videoIds.indexOf(currentId);
+            console.log(`Current index in tagged list for section ${section}:`, currentIndex);
+            
+            if (currentIndex === -1) {
+                // current not in tagged list, start from first
+                this.positions[section] = videoIds[0];
+                return;
+            }
+            console.log("nextIndex", currentIndex + 1);
+            
+            const nextIndex = currentIndex + 1
+            if (nextIndex >= videoIds.length) {
+                this.positions[section] = videoIds[0];
+                return;
+            }
+            console.log(videoIds[nextIndex], 'next video ID for section', section);
+
+            this.positions[section] = videoIds[nextIndex]; 
+            console.log(`Next position for section ${section}:`, this.positions[section]);
+            return
+        }
+
+        // Untagged mode
+        if (this.randomized) {
             const roll = Math.random() * 100;
             if (roll < this.percentChance) {
                 const newValue = Math.floor(Math.random() * this.endIndex) + 1;
@@ -46,8 +93,30 @@ class State {
                 return;
             }
         }
+        const nextValue = this.positions[section] + 1 > this.endIndex ? 1 : this.positions[section] + 1;
 
-        this.positions[section] += 1;
+        // Default increment
+        this.positions[section] = nextValue;
+    }
+    async fetchVideosByTags(section: SectionId): Promise<VideoMetadata[] | null> {
+        const tags = this.activeTags[section];
+        if (!tags || tags.length === 0) return null;
+
+        try {
+            const response = await fetch('http://localhost:3000/videos/by-tags', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tags }),
+            });
+
+            if (!response.ok) throw new Error(`Server error (${response.status})`);
+
+            const videos = await response.json();
+            return videos;
+        } catch (err) {
+            console.error(`Failed to fetch videos for section ${section} with tags ${tags}`, err);
+            return null;
+        }
     }
 }
 

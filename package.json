@@ -6,11 +6,18 @@
   "scripts": {
     "build:dev": "webpack --watch --mode development",
     "build:prod": "webpack --mode production",
-    "start": "live-server --port=80 --no-browser"
+    "start": "live-server --port=80 --no-browser",
+    "start:dev": "live-server --port=80 --no-browser --no-watch",
+    "npx": "tailwindcss init",
+    "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --minify"
   },
   "devDependencies": {
     "@types/node": "^20.14.8",
-    "live-server": "^1.2.1",
+    "autoprefixer": "^10.4.21",
+    "live-server": "^1.2.2",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.1.1",
+    "tailwindcss": "^4.1.11",
     "ts-loader": "^9.5.1",
     "typescript": "^4.9.5",
     "webpack": "^5.92.1",
@@ -20,6 +27,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tailwindcss/cli": "^4.1.11",
     "path-browserify": "^1.0.1",
     "sqlite3": "^5.1.7",
     "util": "^0.12.5"

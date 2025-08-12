@@ -1,7 +1,24 @@
 import State from './State';
 import Players from './Player';
+import HTML from './HTML';
 
-document.addEventListener('DOMContentLoaded', async () => {
+declare global {
+    interface Window {
+        html: HTML;
+        state: State;
+        players: Players;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async (e) => {
+    e.preventDefault();
     const state = new State();
-    const players = new Players(state); // Initialize with 8 players
+    const html = new HTML(state);
+    const players = new Players(state, html);
+    await players.init();
+
+    // expose for debugging or external access
+    window.html = html;
+    window.state = state;
+    window.players = players;
 });

@@ -1,0 +1,183 @@
+@import "tailwindcss";
+
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* .player1 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99;
+    background: black;
+} */
+
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.video-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.video-layer-right {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.video-layer-botttom {
+    position: absolute;
+    top: 50%;
+    left: 0%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.video-layer-botttom-right {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.half-size {
+    width: 50% !important;
+    height: 50% !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.form-container {
+    position: absolute;
+    z-index: 1;
+    bottom: 10px;
+    left: 10px;
+    /* background: rgba(0, 0, 0, 0.7); */
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+}
+
+.form-container input,
+.form-container select {
+    margin: 5px;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+select[multiple] {
+    height: auto;
+    max-height: 100px;
+    /* Limit height for better UX */
+    overflow-y: auto;
+    /* Scroll for long lists */
+}
+
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    /* or fixed dimensions */
+    height: 100%;
+}
+
+
+.tag-list {
+    position: absolute;
+    top: -80%;
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: white;
+    border: 1px solid #ccc;
+    z-index: 1;
+}
+.upload-form {
+    position: absolute;
+    bottom: 0;
+    left: 100%;
+}
+.metadata-form {
+    z-index: 2;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(229, 229, 229, 0.25);
+    border-radius: 5px;
+    border-color: rgba(229, 229, 229, 0.95);
+}
+
+.active-tag {
+    border-color: #22c55e !important;
+    /* nicer green - Tailwind's green-500 */
+    border-width: 2px !important;
+    /* thicker border */
+    color: white !important;
+}
+
+.tag-button {
+    border-color: black;
+    color: black;
+}
+
+.plus-button {
+    border-color: black;
+    color: black;
+}
+
+.button-toolbar {
+    position: absolute;
+    /* adjust horizontal offset */
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+    /* high to be on top */
+    background-color: rgba(255, 255, 255, 0.3);
+    /* optional translucent bg */
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+.button {
+    z-index: 991;
+}
+
+.form-container {
+    position: absolute;
+    bottom: 5;
+    /* transform: translateX(-50%); */
+    width: 50%;
+    height: 50%;
+}
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    #rotateOverlay {
+        display: flex !important;
+    }
+}

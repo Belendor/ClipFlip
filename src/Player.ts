@@ -1,107 +1,123 @@
-import State from "./State";
+import State, { type SectionId, PlayerIndex } from "./State";
+import HTML from "./HTML";
+
+export type VideoMetadata = {
+    id: number;
+    title: string | null;
+    seriesNr: number | null;
+    seriesTotal: number | null;
+    studio: string | null;
+    models: Array<string> | null;
+    tags: any[] | null;
+};
 
 class Players {
     state: State;
-
-    videoPlayers: HTMLVideoElement[];
-    playButton: HTMLButtonElement;
-    pauseButton: HTMLButtonElement;
-    resizeButton: HTMLButtonElement;
-    fullscreenButton: HTMLButtonElement;
-    muteToggleBtn: HTMLButtonElement;
-    muteIcon: HTMLElement;
-    // hideForm: HTMLButtonElement;
-
-    active: Record<number, boolean>;
-    folder = '/video/';
+    html: HTML;
+    active: Record<number, boolean> | undefined;
+    folder = './output/';
     muted: boolean = true;
+    playerCount: number = 8;
+    selectedTags: Map<number, string> = new Map();
 
-    constructor(state: State, playerCount: number = 8) {
+    constructor(state: State, html: HTML) {
         this.state = state;
-        this.videoPlayers = [];
-        this.active = this.initializeActive(playerCount);
-        for (let i = 1; i <= playerCount; i++) {
-            const player = document.getElementById(`videoPlayer${i}`);
-            if (!(player instanceof HTMLVideoElement)) {
-                throw new Error(`Element with id "videoPlayer${i}" not found or not a <video> element.`);
-            }
-            this.videoPlayers.push(player);
-        }
+        this.html = html;
 
-        this.playButton = this.getButton('playButton');
-        this.pauseButton = this.getButton('pauseButton');
-        this.resizeButton = this.getButton('resizeButton');
-        this.fullscreenButton = this.getButton('fullscreenButton');
-        this.muteToggleBtn = this.getButton('muteToggle');
-        this.muteIcon = document.getElementById('muteIcon') as HTMLElement;
-        // this.hideForm = this.getButton('hideForm');
-        this.attachEventListeners();
-        this.loadVideos();
-        this.updateLayout();
-        this.updateResizeIcon();
-        this.initializeMuteButton();
         // this.addFormsToPlayers();
 
     }
-    private updateLayout(): void {
-        const isMulti = this.state.getMultiSection;
-        console.log('Multi-section view:', isMulti);
+    async init() {
+        this.active = this.initializeActive(this.playerCount);
+        this.html.allTags = await this.fetchAllTags();
+        console.log('Fetched all tags:', this.html.allTags);
+        const toolbar = this.html.createToolbar()
+        const videoContainer = this.html.createVideoContainer()
 
-        // toggle 'half-size' class on players 0 and 1
-        [0, 1].forEach(index => {
-            const player = this.videoPlayers[index];
-            const wrapper = player.parentElement as HTMLDivElement;
-            wrapper.classList.toggle('half-size', isMulti);
-        });
+        document.body.appendChild(toolbar)
+        document.body.appendChild(videoContainer)
 
-        this.videoPlayers.forEach((player, index) => {
-            if (index >= 2) {
-                const shouldBeVisible = isMulti
-                    ? (index === 2 || index === 4 || index === 6)
-                    : false;
-
-                const wrapper = player.parentElement as HTMLDivElement;
-                const isHidden = player.classList.contains('hidden');
-
-                if (shouldBeVisible) {
-                    // player.classList.remove('hidden');
-                    wrapper?.classList.remove('hidden');
-                    console.log(`Showing player ${index + 1}`);
-                } else if (!shouldBeVisible) {
-                    // player.classList.add('hidden');
-                    wrapper?.classList.add('hidden');
-                    console.log(`Hiding player ${index + 1}`);
-                }
-
-                // always apply half-size in multi layout
-                wrapper?.classList.toggle('half-size', isMulti);
-            }
-        });
+        this.attachEventListeners();
+        this.initializeMuteButton();
+        await this.loadVideos();
+        this.updateLayout();
+        // this.addFormsToPlayers();
     }
-    private updateResizeIcon(): void {
-        const isMulti = !this.state.multiSection;
+    async loadVideos(active = false): Promise<void> {
+        for (let i = 1; i <= this.html.videoPlayers.length; i++) {
+            console.log(`Loading video for Player ${i}...`);
 
-        const iconHTML = isMulti
-            ? `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-            <rect x="14" y="14" width="7" height="7" />
-        </svg>`
-            : `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <rect x="4" y="4" width="16" height="16" />
-        </svg>`;
+            if (!this.state.multiSection && i > 2) {
+                console.log(`Player ${i} is not active in single section mode, skipping...`);
+                continue;
+            }
+            if (active && this.active && this.active[i]) {
+                console.log(`Player ${i} currently active, skipping...`);
+                continue;
+            }
+            const section = Math.ceil(i / 2) as SectionId;
 
-        const iconSpan = document.getElementById('viewIcon');
-        if (iconSpan) iconSpan.innerHTML = iconHTML;
+            console.log(`Loading video for Player ${i} in section ${section}`);
+
+
+            // get current position for that section
+            await this.state.modifyPosition(section);
+            const pos = this.state.positions[section];
+            console.log(`Loading video for Player ${i} at position ${pos}`);
+
+            const playerIndex = i - 1 as PlayerIndex;
+
+            // assign video source based on position
+            this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
+            this.html.videoPlayers[playerIndex].preload = 'auto';
+            const res = await this.getVideoMetadata(pos);
+            console.log(`Loaded metadata for video ${pos}:`, res);
+            this.populateMetadataForm(playerIndex, res);
+
+            // increment position for section for next video load
+            console.log(`first loading section ${section} position:`, this.state.positions[section]);
+            await this.state.modifyPosition(section);
+            console.log(`changed section ${section} position:`, this.state.positions[section]);
+        }
+    }
+    private updateLayout(): void {
+        const isMulti = this.state.multiSection;
+
+        // Always update players 0 and 1
+        [0, 1].forEach(index => {
+            const player = this.html.videoPlayers[index];
+            const wrapper = player.parentElement as HTMLDivElement;
+            // wrapper.classList.remove('hidden'); // always visible
+            console.log("Toggling player", index + 1, "visibility:", !wrapper.classList.contains('half-size'));
+
+            wrapper.classList.toggle('half-size', isMulti);
+            console.log(`Player ${index + 1} visibility toggled to:`, !wrapper.classList.contains('half-size'));
+
+        });
+
+        this.html.videoPlayers.forEach((player, index) => {
+            if (index < 2) return;
+
+            const wrapper = player.parentElement as HTMLDivElement | null;
+            if (!wrapper) return;
+
+            const shouldBeVisible = isMulti && index % 2 === 0;
+
+            if (shouldBeVisible) {
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+
+            console.log(`${shouldBeVisible ? 'Showing' : 'Hiding'} player ${index + 1}`);
+        });
+
     }
     private initializeMuteButton(): void {
         const muteIcon = document.getElementById('muteIcon');
 
         // set initial state: all players muted + muted icon
-        this.videoPlayers.forEach(player => {
+        this.html.videoPlayers.forEach(player => {
             player.muted = this.muted;
         });
 
@@ -116,10 +132,10 @@ class Players {
         }
 
         // add click listener
-        this.muteToggleBtn?.addEventListener('click', () => {
+        this.html.muteToggle?.addEventListener('click', () => {
             this.muted = !this.muted;
 
-            this.videoPlayers.forEach(player => {
+            this.html.videoPlayers.forEach(player => {
                 player.muted = this.muted;
             });
 
@@ -140,120 +156,132 @@ class Players {
       </svg>`;
         });
     }
-    private getButton(id: string): HTMLButtonElement {
-        const btn = document.getElementById(id);
-        if (!(btn instanceof HTMLButtonElement)) {
-            throw new Error(`Element with id "${id}" not found or not a <button> element.`);
-        }
-        return btn;
-    }
     private attachEventListeners() {
-        this.playButton.addEventListener('click', async () => {
-            try {
-                // play only videos where the player is active in state
-                const playPromises = this.videoPlayers
-                    .filter((_, index) => this.active[index + 1])
-                    .map(player => player.play());
+        this.html.playButton.addEventListener('click', async () => {
+            console.log('Play button clicked, playing selected videos...');
+            console.log('Active players:', this.active);
 
-                await Promise.all(playPromises);
+            try {
+                for (let i = 0; i < this.html.videoPlayers.length; i++) {
+                    const player = this.html.videoPlayers[i];
+                    if (this.active && this.active[i + 1]) {
+                        console.log(`Player ${i + 1} is active, playing...`);
+                        await player.play();
+                    } else {
+                        console.log(`Player ${i + 1} is inactive, skipping...`);
+                    }
+                }
             } catch (error) {
                 console.error('Error playing selected videos:', error);
             }
         });
-        this.pauseButton.addEventListener('click', async () => {
+        this.html.pauseButton.addEventListener('click', async () => {
             try {
                 // play only videos where the player is active in state
-                const playPromises = this.videoPlayers
-                    .map(player => player.pause());
-
-                await Promise.all(playPromises);
+                this.html.videoPlayers
+                    .forEach(player => player.pause());
             } catch (error) {
                 console.error('Error playing selected videos:', error);
             }
         });
-        this.videoPlayers.forEach((player, index) => {
+        this.html.videoPlayers.forEach((player, index) => {
             player.addEventListener('ended', () => {
-                this.handlePlayerEnded(index);
+                this.handlePlayerEnded(index as PlayerIndex);
             });
-            player.addEventListener('click', () => this.togglePlayPause(player));
+            player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
         });
-        this.resizeButton.addEventListener('click', () => {
-            this.state.setMultiSection = !this.state.getMultiSection;
-            this.updateResizeIcon();
+        this.html.resizeButton.addEventListener('click', () => {
+            console.log("Resizing, status:", this.state.multiSection);
+
+            this.state.multiSection = !this.state.multiSection;
+            console.log("Resizing, new status:", this.state.multiSection);
+
+            // this.updateResizeIcon();
             this.updateLayout();
+            this.loadVideos();
         });
-        this.fullscreenButton.addEventListener('click', () => {
+        this.html.fullscreenButton.addEventListener('click', () => {
             this.toggleFullscreen();
         });
-
-        // this.hideForm.addEventListener('click', () => {
-        //     const forms = document.querySelectorAll('.form-container');
-        //     forms.forEach(form => {
-        //         form.classList.toggle('hidden');
-        //     });
-        // });
     }
     private initializeActive(playerCount: number): Record<number, boolean> {
         const act: Record<number, boolean> = {};
-        for (let i = 1; i <= playerCount; i++) {
+        for (let i = 1; i < playerCount; i++) {
             // active only players 1, 3, 5, 7 (odd numbers)
             act[i] = (i % 2 === 1);
         }
         return act;
     }
-    loadVideos() {
-        for (let i = 0; i < this.videoPlayers.length; i++) {
-            // determine section: players 1&2 → 1, 3&4 → 2, 5&6 → 3, 7&8 → 4
-            const section = Math.floor(i / 2) + 1;
-
-            // get current position for that section
-            const pos = this.state.positions[section];
-
-            // assign video source based on position
-            this.videoPlayers[i].src = this.folder + pos + '.mp4';
-
-            // increment position for section for next video load
-            this.state.modifyPosition(section);
+    async getVideoMetadata(videoId: number): Promise<VideoMetadata | null> {
+        try {
+            const response = await fetch(`http://localhost:3000/videos/${videoId}`);
+            if (!response.ok) throw new Error(`Failed to fetch metadata for videoId ${videoId}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching metadata for videoId ${videoId}:`, error);
+            return null;
         }
     }
-    async handlePlayerEnded(playerIndex: number) {
-        if (!this.state.getMultiSection && playerIndex > 1) {
+    async handlePlayerEnded(playerIndex: PlayerIndex) {
+        console.log(`Player ${playerIndex + 1} ended, switching video...`);
+        const section = Math.floor(playerIndex / 2) + 1 as SectionId;
+
+        let nextPlayerIndex = undefined
+        if (playerIndex === 0) {
+            nextPlayerIndex = 1;
+        } else if (playerIndex === 1) {
+            nextPlayerIndex = 0;
+        } else if (playerIndex === 2) {
+            nextPlayerIndex = 3;
+        } else if (playerIndex === 3) {
+            nextPlayerIndex = 2;
+        } else if (playerIndex === 4) {
+            nextPlayerIndex = 5;
+        } else if (playerIndex === 5) {
+            nextPlayerIndex = 4;
+        } else if (playerIndex === 6) {
+            nextPlayerIndex = 7;
+        } else if (playerIndex === 7) {
+            nextPlayerIndex = 6;
+        }
+        if (nextPlayerIndex === undefined) {
+            console.error(`Invalid player index: ${playerIndex}`);
             return;
         }
-        const section = Math.floor(playerIndex / 2) + 1;
-        const primary = this.videoPlayers[section * 2 - 2];
-        const secondary = this.videoPlayers[section * 2 - 1];
-
-        const current = this.videoPlayers[playerIndex];
-        const next = current === primary ? secondary : primary;
-
+        const primary = this.html.videoPlayers[playerIndex];
+        const secondary = this.html.videoPlayers[nextPlayerIndex];
+        await this.state.modifyPosition(section);
         try {
-            await next.play();
-
+            await secondary.play();
             // hide/show wrappers instead of videos
-            const currentWrapper = current.parentElement as HTMLElement;
-            const nextWrapper = next.parentElement as HTMLElement;
+            const currentWrapper = primary.parentElement as HTMLElement;
+            const nextWrapper = secondary.parentElement as HTMLElement;
 
             nextWrapper.classList.remove('hidden');
             currentWrapper.classList.add('hidden');
+            this.active![nextPlayerIndex + 1] = !this.active![nextPlayerIndex + 1];
+            this.active![playerIndex + 1] = !this.active![playerIndex + 1];
+
+            console.log(this.state.positions[section], 'current position for section', section);
 
             const pos = this.state.positions[section];
             const filename = this.folder + pos + '.mp4';
-            current.src = filename;
-            current.load();
+            primary.src = filename;
+            primary.preload = 'auto';
+            primary.load();
+            const res = await this.getVideoMetadata(pos);
+            this.populateMetadataForm(playerIndex as PlayerIndex, res);
 
-            this.state.modifyPosition(section, true);
 
-            console.log(`Section ${section}, switching from Player ${playerIndex + 1}`);
-            console.log(`Assigned new video: ${filename}`);
         } catch (err) {
             console.error(`Error in section ${section}, player ${playerIndex + 1}:`, err);
         }
     }
-    private togglePlayPause(video: HTMLVideoElement): void {
+    private togglePlayPause(index: PlayerIndex): void {
+        const video = this.html.videoPlayers[index];
         if (video.paused) {
             video.play();
-
+            // this.active![index + 1] = true; // mark as active
             // // hide form when playing
             // const wrapper = video.parentElement;
             // if (wrapper) {
@@ -262,6 +290,7 @@ class Players {
             // }
         } else {
             video.pause();
+            // this.active![index + 1] = false; // mark as inactive
 
             // // show form when paused
             // const wrapper = video.parentElement;
@@ -275,7 +304,7 @@ class Players {
         let tags: { id: number; title: string }[] = [];
 
         try {
-            const response = await fetch('http://localhost:3000/tags');
+            const response = await fetch('http://:3000/tags');
             if (!response.ok) throw new Error('Failed to fetch tags');
             const bodyText = await new Response(response.body).text();
             console.log(JSON.parse(bodyText));
@@ -355,6 +384,144 @@ class Players {
         } else {
             await doc.exitFullscreen();
         }
+    }
+
+    populateMetadataForm(index: PlayerIndex, data: VideoMetadata | null): void {
+        console.log(`Populating metadata form for Player ${index + 1} with data:`, data);
+
+        if (!this.isMetadataValid(data) || !data) {
+            console.warn(`Invalid or empty metadata for Player ${index}`);
+            return;
+        }
+        const form = document.getElementById(`metaForm${index + 1}`);
+        if (!form) return;
+
+        const inputs = form.querySelectorAll('input');
+
+        inputs.forEach((input) => {
+            switch (input.placeholder) {
+                case 'Title':
+                    input.value = data.title || '';
+                    break;
+                case 'Models':
+                    input.value = Array.isArray(data.models) ? data.models.join(', ') : (data.models || '');
+                    break;
+                case 'Studio':
+                    input.value = data.studio || '';
+                    break;
+            }
+        });
+        if (!data.tags || data.tags.length === 0) {
+            console.log(`Player ${index} has no tags.`);
+            return;
+        }
+
+        console.log(`Populating metadata form for Player ${index + 1} with data:`, data);
+
+        const tagsWrapper = this.html.tagsWrappers[index as PlayerIndex];
+        this.html.tagsWrappers.forEach((wrapper, i) => {
+            console.log(wrapper.id, 'wrapper id');
+        });
+
+        if (!tagsWrapper) return;
+        // render toggleable tags directly here
+        this.html.renderTags(
+            tagsWrapper,
+            data.tags.map(t => t.title),
+            index,
+            this.toggleTag.bind(this)
+        )
+
+        // tagSelect.innerHTML = ''; // clear existing options
+
+        // const currentTag = (data.tags && data.tags.length > 0) ? data.tags[0].title : 'Select a tag';
+
+        // // add main tag as first selected option, or default text if none
+        // const mainOption = document.createElement('option');
+        // mainOption.value = currentTag;
+        // mainOption.textContent = currentTag || 'Select a tag';
+        // mainOption.selected = true;
+        // mainOption.disabled = false; // allow reselecting if you want
+        // tagSelect.appendChild(mainOption);
+
+        // // add other tags, excluding the main one to avoid duplicates
+        // data.tags.forEach(tag => {
+        //     if (tag.title !== currentTag) {
+        //         const option = document.createElement('option');
+        //         option.value = tag.title;
+        //         option.textContent = tag.title;
+        //         tagSelect.appendChild(option);
+        //     }
+        // });
+        // // listen for changes and update map
+        // tagSelect.addEventListener('change', () => {
+        //     const selectedTag = tagSelect.value;
+        //     this.html.updateMeta(index, 'tag', selectedTag); // if needed
+        //     this.selectedTags.set(index, selectedTag);
+        // });
+    }
+
+    async toggleTag(btn: HTMLElement) {
+        // find all elements with id `{tag}-id` and sync class
+        const tag = btn.textContent?.trim() ?? '';
+
+        if (!tag) return;
+        const tagId = `${tag}-id`;
+
+        document.querySelectorAll(`.${tagId}`).forEach(el => {
+            if (el instanceof HTMLElement) {
+                el.classList.toggle('active-tag');
+            }
+        });
+        // Extract player number from parent id like "player3"
+        const sectionId = btn.closest('[id^="player"]')?.id;
+        const match = sectionId?.match(/\d+/);
+        const playerNumber: PlayerIndex = match ? (parseInt(match[0]) as PlayerIndex) : NaN as PlayerIndex;
+        if (isNaN(playerNumber)) return;
+
+        const section = Math.floor(playerNumber / 2 + 1) as SectionId;
+
+        const tags = this.state.activeTags[section];
+
+        const isActive = btn.classList.contains('active-tag');
+
+        if (isActive && !tags.includes(tag)) {
+            tags.push(tag); // add tag
+        } else if (!isActive && tags.includes(tag)) {
+            // remove tag
+            this.state.activeTags[section] = tags.filter((t: string) => t !== tag);
+        }
+
+        await this.loadVideos(true);
+    }
+
+    async fetchAllTags() {
+        try {
+            const response = await fetch('http://localhost:3000/tags', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const tags = await response.json();
+            return tags; // array of tag objects
+        } catch (error) {
+            console.error('Failed to fetch tags:', error);
+            return [];
+        }
+    }
+    isMetadataValid(data: VideoMetadata | null): boolean {
+        if (!data) return false;
+
+        const hasTitle = !!data.title?.trim();
+        const hasModels = Array.isArray(data.models) && data.models.length > 0;
+        const hasStudio = !!data.studio?.trim();
+        const hasTags = Array.isArray(data.tags) && data.tags.length > 0;
+
+        return hasTitle || hasModels || hasStudio || hasTags;
     }
 }
 

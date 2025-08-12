@@ -1,8 +1,17 @@
 /node_modules
 /video
-/server
+/videos
 /bash
 /dist
 /pyton
 /image recognition
+/trash
+/dist
+/outputs
+/output
+/old
+/new
 script.js
+devtor.db
+server/segments
+cutter.js
