@@ -94,6 +94,10 @@ export default class HTML {
       const video = document.createElement('video')
       video.id = `videoPlayer${i}`
       video.className = 'video-layer'
+      video.playsInline = true
+      video.setAttribute('webkit-playsinline', '')
+      video.muted = true
+      video.autoplay = true
       wrapper.appendChild(video)
       container.appendChild(wrapper)
       this.videoPlayers.push(video)
