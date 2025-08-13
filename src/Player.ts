@@ -254,13 +254,15 @@ class Players {
         }
         const primary = this.html.videoPlayers[playerIndex];
         const secondary = this.html.videoPlayers[nextPlayerIndex];
-        await this.state.modifyPosition(section);
+        await secondary.play();
+
+        
         try {
-            await secondary.play();
             // hide/show wrappers instead of videos
             const currentWrapper = primary.parentElement as HTMLElement;
             const nextWrapper = secondary.parentElement as HTMLElement;
-
+            nextWrapper.classList.remove('hidden');
+            currentWrapper.classList.add('hidden');
             this.active![nextPlayerIndex + 1] = !this.active![nextPlayerIndex + 1];
             this.active![playerIndex + 1] = !this.active![playerIndex + 1];
 
@@ -273,10 +275,8 @@ class Players {
             const res = await this.getVideoMetadata(pos);
 
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
-            nextWrapper.classList.remove('hidden');
-            currentWrapper.classList.add('hidden');
             primary.load();
-
+            await this.state.modifyPosition(section);
         } catch (err) {
             console.error(`Error in section ${section}, player ${playerIndex + 1}:`, err);
         }
