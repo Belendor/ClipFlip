@@ -270,13 +270,13 @@ class Players {
 
             const pos = this.state.positions[section];
             const filename = this.folder + pos + '.mp4';
-            primary.classList.add('video-offscreen');
             primary.src = filename;
             primary.preload = 'auto';
             primary.load();
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
-            secondary.classList.remove('video-offscreen');
+
+
         } catch (err) {
             console.error(`Error in section ${section}, player ${playerIndex + 1}:`, err);
         }
