@@ -261,8 +261,6 @@ class Players {
             const currentWrapper = primary.parentElement as HTMLElement;
             const nextWrapper = secondary.parentElement as HTMLElement;
 
-            nextWrapper.classList.remove('hidden');
-            currentWrapper.classList.add('hidden');
             this.active![nextPlayerIndex + 1] = !this.active![nextPlayerIndex + 1];
             this.active![playerIndex + 1] = !this.active![playerIndex + 1];
 
@@ -272,10 +270,12 @@ class Players {
             const filename = this.folder + pos + '.mp4';
             primary.src = filename;
             primary.preload = 'auto';
-            primary.load();
             const res = await this.getVideoMetadata(pos);
-            this.populateMetadataForm(playerIndex as PlayerIndex, res);
 
+            this.populateMetadataForm(playerIndex as PlayerIndex, res);
+            nextWrapper.classList.remove('hidden');
+            currentWrapper.classList.add('hidden');
+            primary.load();
 
         } catch (err) {
             console.error(`Error in section ${section}, player ${playerIndex + 1}:`, err);
