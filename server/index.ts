@@ -102,6 +102,38 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch video' });
   }
 });
+app.get("/video/:id", (req, res) => {
+  const id = req.params.id;
+  
+  const filepath = path.join("/video/", id);
+
+  if (!fsSync.existsSync(filepath)) {
+    return res.status(404).send("video not found");
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width">
+  <style>
+    body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
+    video { max-width:100%; max-height:100%; }
+  </style>
+</head>
+<body>
+  <a href="https://www.clipflip.online/video/${id}"> <!-- link behind video -->
+    <video controls autoplay loop muted playsinline>
+      <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
+      your browser does not support the video tag.
+    </video>
+  </a>
+</body>
+</html>
+  `;
+
+  res.send(html);
+});
 
 app.get('/tags', async (req, res) => {
   try {
