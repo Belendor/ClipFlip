@@ -14,10 +14,10 @@ class State {
         4: this.randomInRange(this.endIndex * 0.75, this.endIndex)
     };
     activeTags: Record<SectionId, string[]> = {
-        1: [],
-        2: [],
-        3: [],
-        4: []
+        1: ["panties"],
+        2: ["panties"],
+        3: ["panties"],
+        4: ["panties"]
     };
 
     percentChance = 25; // 25% chance to modify position
@@ -43,7 +43,6 @@ class State {
 
         const taggedVideos: VideoMetadata[] = (await this.fetchVideosByTags(section)) ?? [];
         console.log(`Tagged videos for section ${section}:`, taggedVideos);
-
 
         // Tagged mode
         if (taggedVideos.length > 0) {

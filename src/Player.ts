@@ -15,7 +15,7 @@ class Players {
     state: State;
     html: HTML;
     active: Record<number, boolean> | undefined;
-    folder = './video/';
+    folder = 'https://www.clipflip.online/video/';
     muted: boolean = true;
     playerCount: number = 8;
     selectedTags: Map<number, string> = new Map();
@@ -80,8 +80,6 @@ class Players {
 
             // increment position for section for next video load
             console.log(`first loading section ${section} position:`, this.state.positions[section]);
-            await this.state.modifyPosition(section);
-            console.log(`changed section ${section} position:`, this.state.positions[section]);
         }
     }
     private updateLayout(): void {
@@ -255,8 +253,8 @@ class Players {
         const primary = this.html.videoPlayers[playerIndex];
         const secondary = this.html.videoPlayers[nextPlayerIndex];
         await secondary.play();
+        await this.state.modifyPosition(section);
 
-        
         try {
             // hide/show wrappers instead of videos
             const currentWrapper = primary.parentElement as HTMLElement;
@@ -275,8 +273,8 @@ class Players {
             const res = await this.getVideoMetadata(pos);
 
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
-            primary.load();
-            await this.state.modifyPosition(section);
+            // primary.load();
+            
         } catch (err) {
             console.error(`Error in section ${section}, player ${playerIndex + 1}:`, err);
         }
@@ -391,8 +389,6 @@ class Players {
     }
 
     populateMetadataForm(index: PlayerIndex, data: VideoMetadata | null): void {
-        console.log(`Populating metadata form for Player ${index + 1} with data:`, data);
-
         if (!this.isMetadataValid(data) || !data) {
             console.warn(`Invalid or empty metadata for Player ${index}`);
             return;
