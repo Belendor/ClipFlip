@@ -253,7 +253,7 @@ class Players {
         const primary = this.html.videoPlayers[playerIndex];
         const secondary = this.html.videoPlayers[nextPlayerIndex];
         await secondary.play();
-        await this.state.modifyPosition(section);
+        this.state.modifyPosition(section);
 
         try {
             // hide/show wrappers instead of videos
