@@ -111,16 +111,36 @@ app.get("/video/:id", (req, res) => {
 <head>
   <meta name="viewport" content="width=device-width">
   <style>
-    body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
-    video { max-width:100%; max-height:100%; }
+    body {
+      margin:0;
+      background:#000;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      position:relative;
+    }
+    video {
+      max-width:100%;
+      max-height:100%;
+      position:relative;
+      z-index:2;
+    }
+    a.bg-link {
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      z-index:1;
+    }
   </style>
 </head>
 <body>
-  <a href="https://www.clipflip.online"> <!-- link behind video -->
-    <video controls autoplay loop muted playsinline>
-      <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
-    </video>
-  </a>
+  <a href="https://www.clipflip.online" class="bg-link"></a>
+  <video controls autoplay loop muted playsinline>
+    <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
+  </video>
 </body>
 </html>
   `;
