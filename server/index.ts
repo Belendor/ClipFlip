@@ -124,7 +124,6 @@ app.get("/video/:id", (req, res) => {
       max-width:100%;
       max-height:100%;
       position:relative;
-      z-index:2;
     }
     a.bg-link {
       position:absolute;
