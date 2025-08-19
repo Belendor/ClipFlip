@@ -136,10 +136,10 @@ app.get("/video/:id", (req, res) => {
   </style>
 </head>
 <body>
-  <a href="https://www.clipflip.online" class="bg-link"></a>
   <video controls autoplay loop muted playsinline>
     <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
   </video>
+  <a href="https://www.clipflip.online" class="bg-link"></a>
 </body>
 </html>
   `;
