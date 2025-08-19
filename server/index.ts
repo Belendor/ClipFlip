@@ -104,12 +104,6 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
 });
 app.get("/video/:id", (req, res) => {
   const id = req.params.id;
-  
-  const filepath = path.join("/video/", id);
-
-  if (!fsSync.existsSync(filepath)) {
-    return res.status(404).send("video not found");
-  }
 
   const html = `
 <!DOCTYPE html>
@@ -122,10 +116,9 @@ app.get("/video/:id", (req, res) => {
   </style>
 </head>
 <body>
-  <a href="https://www.clipflip.online/video/${id}"> <!-- link behind video -->
+  <a href="https://www.clipflip.online"> <!-- link behind video -->
     <video controls autoplay loop muted playsinline>
       <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
-      your browser does not support the video tag.
     </video>
   </a>
 </body>
