@@ -110,15 +110,39 @@ app.get("/video/:id", (req, res) => {
 <html>
 <head>
   <meta name="viewport" content="width=device-width">
+  <title>ClipFlip Video</title>
+
+  <!-- Open Graph for embeds -->
+  <meta property="og:type" content="video.other">
+  <meta property="og:title" content="ClipFlip Video">
+  <meta property="og:description" content="Watch this video on ClipFlip">
+  <meta property="og:url" content="https://www.clipflip.online">
+  <meta property="og:image" content="https://www.clipflip.online/thumbnail.jpg">
+  <meta property="og:video" content="https://www.clipflip.online/video/${id}">
+  <meta property="og:video:type" content="video/mp4">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="player">
+  <meta name="twitter:title" content="ClipFlip Video">
+  <meta name="twitter:description" content="Watch this video on ClipFlip">
+  <meta name="twitter:image" content="https://www.clipflip.online/thumbnail.jpg">
+  <meta name="twitter:player" content="https://www.clipflip.online/api/video/${id}">
+  <meta name="twitter:player:width" content="1280">
+  <meta name="twitter:player:height" content="720">
+
   <style>
     body { margin:0; background:#000; position:relative; height:100vh; display:flex; justify-content:center; align-items:center; }
     video { max-width:100%; max-height:100%; }
+    .logo { position:absolute; top:10px; left:10px; width:80px; cursor:pointer; z-index:2; }
   </style>
 </head>
 <body>
   <video controls autoplay loop muted playsinline>
     <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
   </video>
+  <a href="https://www.clipflip.online">
+    <img src="https://www.clipflip.online/logo.png" class="logo" />
+  </a>
 </body>
 </html>
 `;
