@@ -110,11 +110,26 @@ app.get("/video/:id", (req, res) => {
 <html>
 <head>
   <meta name="viewport" content="width=device-width">
+  <style>
+    body { margin:0; background:#000; position:relative; height:100vh; display:flex; justify-content:center; align-items:center; }
+    video { max-width:100%; max-height:100%; }
+    .logo {
+      position:absolute;
+      top:10px;
+      left:10px;
+      z-index:2;
+      width:80px;
+      cursor:pointer;
+    }
+  </style>
 </head>
 <body>
   <video controls autoplay loop muted playsinline>
     <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
   </video>
+  <a href="https://www.clipflip.online">
+    <img src="https://www.clipflip.online/logo.png" class="logo" />
+  </a>
 </body>
 </html>
 `;
