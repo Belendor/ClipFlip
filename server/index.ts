@@ -102,26 +102,30 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch video' });
   }
 });
-app.get("/video/:id", (req, res) => {
-  const id = req.params.id;
+app.get("/api/video/:id", (req, res) => {
+  const id = req.params.id; // e.g., "50.mp4"
 
   const html = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ClipFlip Video</title>
 
-  <!-- Open Graph for embeds -->
+  <!-- Open Graph for Reddit and other platforms -->
   <meta property="og:type" content="video.other">
   <meta property="og:title" content="ClipFlip Video">
   <meta property="og:description" content="Watch this video on ClipFlip">
-  <meta property="og:url" content="https://www.clipflip.online">
+  <meta property="og:url" content="https://www.clipflip.online/api/video/${id}">
   <meta property="og:image" content="https://www.clipflip.online/thumbnail.jpg">
   <meta property="og:video" content="https://www.clipflip.online/video/${id}">
+  <meta property="og:video:secure_url" content="https://www.clipflip.online/video/${id}">
   <meta property="og:video:type" content="video/mp4">
+  <meta property="og:video:width" content="1280">
+  <meta property="og:video:height" content="720">
 
-  <!-- Twitter Card -->
+  <!-- Twitter Card (optional, for Twitter/X compatibility) -->
   <meta name="twitter:card" content="player">
   <meta name="twitter:title" content="ClipFlip Video">
   <meta name="twitter:description" content="Watch this video on ClipFlip">
@@ -131,17 +135,18 @@ app.get("/video/:id", (req, res) => {
   <meta name="twitter:player:height" content="720">
 
   <style>
-    body { margin:0; background:#000; position:relative; height:100vh; display:flex; justify-content:center; align-items:center; }
-    video { max-width:100%; max-height:100%; }
-    .logo { position:absolute; top:10px; left:10px; width:80px; cursor:pointer; z-index:2; }
+    body { margin: 0; background: #000; position: relative; height: 100vh; display: flex; justify-content: center; align-items: center; }
+    video { max-width: 100%; max-height: 100%; }
+    .logo { position: absolute; top: 10px; left: 10px; width: 80px; cursor: pointer; z-index: 2; }
   </style>
 </head>
 <body>
   <video controls autoplay loop muted playsinline>
     <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
+    Your browser does not support the video tag.
   </video>
   <a href="https://www.clipflip.online">
-    <img src="https://www.clipflip.online/logo.png" class="logo" />
+    <img src="https://www.clipflip.online/logo.png" class="logo" alt="ClipFlip Logo" />
   </a>
 </body>
 </html>
