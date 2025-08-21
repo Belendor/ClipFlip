@@ -102,7 +102,7 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch video' });
   }
 });
-app.get('/video/:id', (req, res) => {
+app.get("/video/:id", (req, res) => {
   const id = req.params.id; // e.g., "50.mp4"
 
   const html = `
@@ -125,7 +125,7 @@ app.get('/video/:id', (req, res) => {
   <meta property="og:video:width" content="1280">
   <meta property="og:video:height" content="720">
 
-  <!-- Twitter Card (optional, for Twitter/X compatibility) -->
+  <!-- Twitter Card for Twitter/X -->
   <meta name="twitter:card" content="player">
   <meta name="twitter:title" content="ClipFlip Video">
   <meta name="twitter:description" content="Watch this video on ClipFlip">
@@ -152,6 +152,7 @@ app.get('/video/:id', (req, res) => {
 </html>
 `;
 
+  res.setHeader('Content-Type', 'text/html');
   res.send(html);
 });
 
@@ -296,7 +297,7 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
       select: { id: true }
     });
     console.log(`Last video ID in DB: ${lastVideo?.id || 0}, max ID in output folder: ${maxId}`);
-    
+
 
     let nextId = (lastVideo?.id || 0) + 1;
     let nextVideo = nextId;
@@ -339,7 +340,7 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
   }
 });
 
-app.listen(port,'0.0.0.0', () => {
+app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running at http://0.0.0.0:${port}`);
 });
 
