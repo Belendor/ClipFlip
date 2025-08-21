@@ -146,7 +146,7 @@ app.get("/video/:id", (req, res) => {
     Your browser does not support the video tag.
   </video>
   <a href="https://www.clipflip.online">
-    <img src="https://www.clipflip.online/logo.png" class="logo" alt="ClipFlip Logo" />
+    <img src="https://www.clipflip.online/logo.jpg" class="logo" alt="ClipFlip Logo" />
   </a>
 </body>
 </html>
