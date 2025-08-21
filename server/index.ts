@@ -135,9 +135,27 @@ app.get("/video/:id", (req, res) => {
   <meta name="twitter:player:height" content="720">
 
   <style>
-    body { margin: 0; background: #000; position: relative; height: 100vh; display: flex; justify-content: center; align-items: center; }
-    video { max-width: 100%; max-height: 100%; }
-    .logo { position: absolute; top: 10px; left: 10px; width: 80px; cursor: pointer; z-index: 2; }
+    body { 
+        margin: 0; 
+        background: #000; 
+        position: relative; 
+        height: 100vh; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+    }
+    video { 
+        max-width: 100%; 
+        max-height: 100%; 
+    }
+    .logo { 
+        position: absolute; 
+        top: 10px; 
+        left: 10px; 
+        width: 40px; /* Reduced from 80px to 40px (2x smaller) */
+        cursor: pointer; 
+        z-index: 2; 
+    }
   </style>
 </head>
 <body>
