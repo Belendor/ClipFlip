@@ -102,7 +102,7 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch video' });
   }
 });
-app.get("/api/video/:id", (req, res) => {
+app.get('/video/:id', (req, res) => {
   const id = req.params.id; // e.g., "50.mp4"
 
   const html = `
