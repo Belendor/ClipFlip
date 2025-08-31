@@ -13,3 +13,6 @@ script.js
 devtor.db
 server/segments
 cutter.js
+*.pem
+*.pub
+*.ppk
