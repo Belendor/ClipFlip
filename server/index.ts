@@ -6,6 +6,9 @@ import { PrismaClient } from '@prisma/client';
 import cors from 'cors';  // Import CORS
 import path from 'path';
 import multer from 'multer';
+import { pipeline, Readable } from "stream";
+import { promisify } from "util";
+const streamPipeline = promisify(pipeline);
 
 // multer in-memory or direct-to-disk upload
 const upload = multer({ dest: path.join(__dirname, '../tmp_uploads') })
@@ -173,6 +176,26 @@ app.get("/video/:id", (req, res) => {
   res.setHeader('Content-Type', 'text/html');
   res.send(html);
 });
+app.get('/videos', async (req: Request, res: Response) => {
+  const search = req.query.search?.toString() || '';
+
+  const videos = await prisma.video.findMany({
+    where: search
+      ? {
+        OR: [
+          { title: { contains: search } },
+          { studio: { contains: search } },
+          { models: { some: { name: { contains: search } } } },
+          { tags: { some: { title: { contains: search } } } },
+        ],
+      }
+      : undefined,
+    include: { tags: true, models: true },
+    orderBy: { id: 'desc' },
+  });
+
+  res.json(videos);
+});
 
 app.get('/tags', async (req, res) => {
   try {
@@ -297,7 +320,7 @@ app.get('/', async (req, res) => {
 app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
   try {
     // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../new');
+    const outputDir = path.join(__dirname, '../videos');
     const files = fsSync.readdirSync(outputDir);
 
     let maxId = 0;
@@ -356,6 +379,48 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+});
+
+app.get("/download", async (req, res) => {
+  const BASE_URL =
+    "https://ev-h.phncdn.com/hls/c6251/videos/202511/03/28540395/1080P_4000K_28540395.mp4";
+  const QUERY =
+    "?validfrom=1763795713&validto=1763802913&ipa=1&hdl=-1&hash=4W3WKtVm7pE6fXAqS6QqIAg9ikU%3D";
+
+  const outputDir = path.resolve("../downloads");
+  fsSync.mkdirSync(outputDir, { recursive: true });
+
+  let seg = 1;
+  let downloaded = 0;
+
+  while (true) {
+    const url = `${BASE_URL}/seg-${seg}-v1-a1.ts${QUERY}`;
+    const filePath = path.join(outputDir, `${seg}.ts`);
+    console.log(`Downloading segment ${seg}...`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.log(`Stopped at seg-${seg}: ${response.status}`);
+      break; // no more segments
+    }
+
+    if (!response.body) {
+      console.log(`Segment ${seg} had no body, stopping.`);
+      break;
+    }
+
+    const nodeStream =
+      typeof (response.body as any).getReader === "function"
+        ? Readable.fromWeb(response.body as any)
+        : (response.body as unknown as NodeJS.ReadableStream);
+
+    await streamPipeline(nodeStream, fsSync.createWriteStream(filePath));
+    console.log(`Segment ${seg} saved.`);
+    downloaded++;
+    seg++;
+  }
+
+  res.json({ message: `Downloaded ${downloaded} segments to ${outputDir}` });
 });
 
 app.listen(port, '0.0.0.0', () => {
