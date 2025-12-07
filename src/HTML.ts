@@ -21,6 +21,8 @@ export default class HTML {
   // video players
   videoPlayers: HTMLVideoElement[] = []
 
+  // video forms
+  videoForms: HTMLDivElement[] = []
   // menu
   tagsWrappers: HTMLDivElement[] = []
 

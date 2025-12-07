@@ -100,10 +100,10 @@ html {
 }
 
 .form-container {
-    position: absolute;
+    /* position: absolute; */
     z-index: 1;
-    bottom: 10px;
-    left: 10px;
+    /* bottom: 10px;
+    left: 10px; */
     /* background: rgba(0, 0, 0, 0.7); */
     padding: 10px;
     border-radius: 5px;
@@ -135,14 +135,13 @@ select[multiple] {
 
 .tag-list {
     position: absolute;
-    top: -80%;
-    left: 0;
-    width: 100%;
+    /* Remove top: 0 and left: 0 */
+    /* Use a fixed width or rely on min-width */
     max-height: 200px;
     overflow-y: auto;
     background-color: white;
     border: 1px solid #ccc;
-    z-index: 1;
+    z-index: 10; /* Increase z-index to ensure it sits over other form elements */
 }
 
 .upload-form {
@@ -198,6 +197,11 @@ select[multiple] {
     background-color: rgba(229, 229, 229, 0.25);
     border-radius: 5px;
     border-color: rgba(229, 229, 229, 0.95);
+
+    /* make width fit content */
+    height: max-content;       /* fits content */
+    display: inline-block;    /* shrink to content if needed */
+    padding: 0.5rem;          /* optional, keeps spacing inside */
 }
 
 .active-tag {
@@ -219,7 +223,7 @@ select[multiple] {
 }
 
 .button-toolbar {
-    position: absolute;
+    /* position: absolute; */
     /* adjust horizontal offset */
     display: flex;
     gap: 10px;

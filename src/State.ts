@@ -21,7 +21,13 @@ class State {
         3: [""],
         4: [""]
     };
-    apiUrl: string = "http://localhost:3000";
+    playing: Record<SectionId, boolean> = {
+        1: false,
+        2: false,
+        3: false,
+        4: false
+    };
+    apiUrl: string = "http://63.176.175.74/api";
     constructor() {
     }
 

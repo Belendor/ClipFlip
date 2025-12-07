@@ -15,7 +15,7 @@ class Players {
     state: State;
     html: HTML;
     active: Record<number, boolean> | undefined;
-    folder = './videos/';
+    folder = 'http://63.176.175.74/video/';
     muted: boolean = true;
     playerCount: number = 8;
     selectedTags: Map<number, string> = new Map();
@@ -75,7 +75,8 @@ class Players {
     }
     createToolbar(): HTMLElement {
         const toolbar = this.html.createDiv('button-toolbar')
-        toolbar.className = 'button-toolbar flex justify-center items-center gap-3 p-3 bg-gray-900'
+        toolbar.className = 'button-toolbar flex flex-wrap justify-center items-center gap-3 p-3 bg-gray-900 \
+                         absolute bottom-0 left-1/2 transform -translate-x-1/2 z-10'
 
         // Buttons
         this.html.playButton = this.html.createButton('playButton', this.html.svgPlay())
@@ -124,7 +125,7 @@ class Players {
             this.html.hideFormsButton,
             this.html.playButton,
             this.html.pauseButton,
-            searchInput, // ⬅ add here between buttons
+            // searchInput, // ⬅ add here between buttons
             this.html.fullscreenButton,
             this.html.resizeButton,
             this.html.muteToggle
@@ -226,21 +227,47 @@ class Players {
             try {
                 for (let i = 0; i < this.html.videoPlayers.length; i++) {
                     const player = this.html.videoPlayers[i];
+
                     if (this.active && this.active[i]) {
                         await player.play();
+
+                        const section = Math.floor(i / 2 + 1) as SectionId;
+                        this.state.playing[section] = true;
+
+                        // current form
+                        this.html.videoForms[i].classList.add('hidden');
+
+                        // pair form
+                        const pair = i % 2 === 0 ? i + 1 : i - 1;
+                        if (this.html.videoForms[pair]) {
+                            this.html.videoForms[pair].classList.add('hidden');
+                        }
                     }
                 }
             } catch (error) {
                 console.error('Error playing selected videos:', error);
             }
         });
+
         this.html.pauseButton.addEventListener('click', async () => {
             try {
-                // play only videos where the player is active in state
-                this.html.videoPlayers
-                    .forEach(player => player.pause());
+                this.html.videoPlayers.forEach((player, index) => {
+                    player.pause();
+
+                    const section = Math.floor(index / 2 + 1) as SectionId;
+                    this.state.playing[section] = false;
+
+                    // current form
+                    this.html.videoForms[index].classList.remove('hidden');
+
+                    // pair form
+                    const pair = index % 2 === 0 ? index + 1 : index - 1;
+                    if (this.html.videoForms[pair]) {
+                        this.html.videoForms[pair].classList.remove('hidden');
+                    }
+                });
             } catch (error) {
-                console.error('Error playing selected videos:', error);
+                console.error('Error pausing selected videos:', error);
             }
         });
         this.html.videoPlayers.forEach((player, index) => {
@@ -334,102 +361,36 @@ class Players {
 
     private togglePlayPause(index: PlayerIndex): void {
         const video = this.html.videoPlayers[index];
-        if (video.paused) {
-            video.play();
-            // this.active![index + 1] = true; // mark as active
-            // // hide form when playing
-            // const wrapper = video.parentElement;
-            // if (wrapper) {
-            //     const form = wrapper.querySelector('.form-container');
-            //     form?.classList.add('hidden');
-            // }
-        } else {
-            video.pause();
-            // this.active![index + 1] = false; // mark as inactive
+        const section = Math.floor(index / 2 + 1) as SectionId;
 
-            // // show form when paused
-            // const wrapper = video.parentElement;
-            // if (wrapper) {
-            //     const form = wrapper.querySelector('.form-container');
-            //     form?.classList.remove('hidden');
-            // }
+        // find partner index (0↔1, 2↔3, 4↔5 ...)
+        const pairIndex = index % 2 === 0 ? index + 1 : index - 1;
+
+        if (video.paused) {
+            // PLAY
+            video.play();
+            this.state.playing[section] = true;
+
+            // hide both forms
+            this.html.videoForms[index].classList.add('hidden');
+            if (this.html.videoForms[pairIndex]) {
+                this.html.videoForms[pairIndex].classList.add('hidden');
+            }
+
+        } else {
+            // PAUSE
+            video.pause();
+            this.state.playing[section] = false;
+
+            // show both forms
+            this.html.videoForms[index].classList.remove('hidden');
+            if (this.html.videoForms[pairIndex]) {
+                this.html.videoForms[pairIndex].classList.remove('hidden');
+            }
         }
     }
-    // private async addFormsToPlayers() {
-    //     let tags: { id: number; title: string }[] = [];
 
-    //     try {
-    //         const response = await fetch('http://:3000/tags');
-    //         if (!response.ok) throw new Error('Failed to fetch tags');
-    //         const bodyText = await new Response(response.body).text();
-    //         console.log(JSON.parse(bodyText));
 
-    //         tags = JSON.parse(bodyText);
-    //     } catch (error) {
-    //         console.error('Error loading tags:', error);
-    //     }
-    //     for (let i = 1; i <= 8; i++) {
-    //         const wrapper = document.getElementById(`player${i}`);
-    //         if (!wrapper) continue;
-    //         const optionsHtml = tags.length
-    //             ? tags.map(tag => `<option value="${tag.title}">${tag.title}</option>`).join('')
-    //             : `...`;
-    //         console.log(tags);
-
-    //         const formContainer = document.createElement('div');
-    //         formContainer.className = 'form-container hidden'; // initially hidden
-    //         formContainer.innerHTML = `
-    //         <form id="videoForm${i}">
-    //             <select id="tagSelect${i}" multiple style="width: 100%;">
-    //                 ${optionsHtml}
-    //             </select>
-    //             <input type="text" id="videoTitle${i}" placeholder="Video Title" style="width: 100%; margin-top: 5px;" />
-    //             <input type="text" id="videoModel${i}" placeholder="Model" style="width: 100%; margin-top: 5px;" />
-    //             <button type="submit" class="submit-button" style="margin-top: 5px;">Submit</button>
-    //         </form>
-    //     `;
-
-    //         wrapper.appendChild(formContainer);
-
-    //         const form = formContainer.querySelector('form');
-    //         form?.addEventListener('submit', async (event) => {
-    //             event.preventDefault();
-
-    //             const titleInput = form.querySelector(`#videoTitle${i}`) as HTMLInputElement;
-    //             const tagSelect = form.querySelector(`#tagSelect${i}`) as HTMLSelectElement;
-
-    //             const title = titleInput?.value || '';
-    //             const tags = Array.from(tagSelect?.selectedOptions || []).map(opt => opt.value);
-    //             const video = document.getElementById(`videoPlayer${i}`) as HTMLVideoElement | null;
-
-    //             let videoName = '';
-    //             if (video && video.src) {
-    //                 videoName = video.src.split('/').pop()?.replace(/\.mp4$/, '') || '';
-    //             }
-    //             const data = {
-    //                 title,
-    //                 tags,
-    //                 id: videoName,
-    //             };
-
-    //             try {
-    //                 const response = await fetch(`${this.state.apiUrl}/videos`, {
-    //                     method: 'POST',
-    //                     headers: { 'Content-Type': 'application/json' },
-    //                     body: JSON.stringify(data),
-    //                 });
-
-    //                 if (!response.ok) {
-    //                     throw new Error(`Server responded with status ${response.status}`);
-    //                 }
-
-    //                 console.log(`Data from player ${i} submitted successfully:`, data);
-    //             } catch (error) {
-    //                 console.error(`Error submitting data for player ${i}:`, error);
-    //             }
-    //         });
-    //     }
-    // }
     private async toggleFullscreen(): Promise<void> {
         const doc = document;
         const el = document.documentElement;
@@ -553,8 +514,19 @@ class Players {
         if (!query) this.cachedVideos = data; // cache all videos
         return data;
     }
-    createMetadataForm(index: PlayerIndex): HTMLElement {
-        const form = this.html.createDiv(`metaForm${index}`, 'metadata-form p-2');
+    createMetadataForm(index: PlayerIndex): void {
+        // 💡 UPDATED: Added positioning classes 'absolute top-0 left-0 z-20 relative'.
+        // 'absolute top-0 left-0' places it in the top-left of the parent.
+        // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
+        this.html.videoForms[index] = this.html.createDiv(
+            `metaForm${index}`,
+            'metadata-form p-2 absolute top-0 left-0 z-20 relative'
+        );
+
+        const shouldHide = this.state.playing[Math.floor(index / 2 + 1) as SectionId];
+        if (shouldHide) {
+            this.html.videoForms[index].classList.add('hidden');
+        }
 
         const makeInput = (placeholder: string, key: keyof VideoMetadata) => {
             const input = document.createElement('input');
@@ -578,13 +550,18 @@ class Players {
         // in your constructor or before usage
         this.html.tagsWrappers.push(tagsWrapper);
 
+        // 1. Create a container for the button and the dropdown
+        const tagButtonWrapper = this.html.createDiv('tag-button-wrapper', 'relative inline-block'); // Make this wrapper relative
+
         // + Button to show available tags
         const addTagBtn = document.createElement('button');
         addTagBtn.type = 'button';
         addTagBtn.textContent = '+';
         addTagBtn.className = 'plus-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
+
+        // 2. Adjust dropdown classes to position relative to the new wrapper
         const tagListDropdown = document.createElement('div');
-        tagListDropdown.className = 'tag-list mt-2 hidden bg-white text-black border border-gray-300 rounded shadow-md z-10 absolute';
+        tagListDropdown.className = 'tag-list mt-2 hidden bg-white text-black border border-gray-300 rounded shadow-md z-30 absolute **top-full left-0**'; // <-- Use top-full to drop it down
         tagListDropdown.style.minWidth = '10rem';
 
         this.html.allTags.forEach((tag) => {
@@ -611,6 +588,7 @@ class Players {
         uploadBtn.className = 'upload-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
 
         const uploadFormWrapper = document.createElement('div');
+        // The dropdowns are already set to absolute, which now uses the form (relative) as its context.
         uploadFormWrapper.className = 'upload-form hidden mt-2 bg-white text-black border border-gray-300 rounded shadow-md p-2 z-10 absolute';
         uploadFormWrapper.style.minWidth = '14rem';
 
@@ -670,8 +648,9 @@ class Players {
             uploadFormWrapper.classList.toggle('hidden');
         });
 
-        form.append(titleInput, modelInput, studioInput, tagsWrapper, addTagBtn, tagListDropdown, uploadBtn, uploadFormWrapper);
-        return form;
+        // Append button and dropdown to the new wrapper
+        tagButtonWrapper.append(addTagBtn, tagListDropdown);
+        this.html.videoForms[index].append(titleInput, modelInput, studioInput, tagsWrapper, tagButtonWrapper, uploadBtn, uploadFormWrapper);
     }
     async updateMeta(index: PlayerIndex, key: string, value: string | string[], tagId?: number): Promise<VideoMetadata | null> {
         // gather data to send, assuming you have videos in an array like this:
@@ -733,18 +712,20 @@ class Players {
         const container = this.html.createDiv('video-container')
         this.html.videoPlayers = []
         for (let i: PlayerIndex = 0; i <= 7; i++) {
-            const wrapper = this.html.createDiv(`player${i}`, `${this.html.getPositionClass(i)}`)
+            // 💡 UPDATED: Added 'relative' to the wrapper's class list
+            const wrapper = this.html.createDiv(
+                `player${i}`,
+                `${this.html.getPositionClass(i)} relative`
+            )
 
-            const form = this.createMetadataForm(i as PlayerIndex)
-            wrapper.appendChild(form)
+            this.createMetadataForm(i as PlayerIndex)
+            // Since wrapper is the parent, and the form is absolute, it will now sit in the top-left of this wrapper.
+            wrapper.appendChild(this.html.videoForms[i as PlayerIndex]);
 
             const video = document.createElement('video')
             video.id = `videoPlayer${i}`
             video.className = 'video-layer'
-            video.playsInline = true
-            video.setAttribute('webkit-playsinline', '')
             video.muted = true
-            video.autoplay = true
             wrapper.appendChild(video)
             container.appendChild(wrapper)
             this.html.videoPlayers.push(video)
