@@ -1,5 +1,6 @@
 import State, { type SectionId, PlayerIndex } from "./State";
 import HTML from "./HTML";
+import { config } from "./config";
 
 export type VideoMetadata = {
     id: number;
@@ -15,7 +16,7 @@ class Players {
     state: State;
     html: HTML;
     active: Record<number, boolean> | undefined;
-    folder = 'http://63.176.175.74/video/';
+    folder = `${config.baseUrl}/videos`;
     muted: boolean = true;
     playerCount: number = 8;
     selectedTags: Map<number, string> = new Map();
@@ -125,7 +126,7 @@ class Players {
             this.html.hideFormsButton,
             this.html.playButton,
             this.html.pauseButton,
-            // searchInput, // ⬅ add here between buttons
+            searchInput, // ⬅ add here between buttons
             this.html.fullscreenButton,
             this.html.resizeButton,
             this.html.muteToggle
@@ -486,7 +487,11 @@ class Players {
             }
 
             const tags = await response.json();
-            return tags; // array of tag objects
+            const sorted = tags.map((t: any) => ({ ...t, title: t.title.trim() })) // trim just in case
+                .sort((a: any, b: any) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+
+
+            return sorted; // array of tag objects
         } catch (error) {
             console.error('Failed to fetch tags:', error);
             return [];
@@ -520,7 +525,7 @@ class Players {
         // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
         this.html.videoForms[index] = this.html.createDiv(
             `metaForm${index}`,
-            'metadata-form p-2 absolute top-0 left-0 z-20 relative'
+            'metadata-form p-2 relative z-20'
         );
 
         const shouldHide = this.state.playing[Math.floor(index / 2 + 1) as SectionId];
@@ -561,7 +566,7 @@ class Players {
 
         // 2. Adjust dropdown classes to position relative to the new wrapper
         const tagListDropdown = document.createElement('div');
-        tagListDropdown.className = 'tag-list mt-2 hidden bg-white text-black border border-gray-300 rounded shadow-md z-30 absolute **top-full left-0**'; // <-- Use top-full to drop it down
+        tagListDropdown.className = 'tag-list mt-2 bg-white text-black border border-gray-300 rounded shadow-md z-30 absolute **top-full left-0**'; // <-- Use top-full to drop it down
         tagListDropdown.style.minWidth = '10rem';
 
         this.html.allTags.forEach((tag) => {
@@ -606,6 +611,7 @@ class Players {
         // tag select for uploaded video
         const uploadTagSelect = document.createElement('select');
         uploadTagSelect.className = 'block w-full mb-2 border border-gray-400 px-2 py-1 rounded';
+
         this.html.allTags.forEach((tag) => {
             const opt = document.createElement('option');
             opt.value = tag.id.toString();

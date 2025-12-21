@@ -1,4 +1,5 @@
 import { type VideoMetadata } from "./Player";
+import { config } from "./config";
 
 export type SectionId = 1 | 2 | 3 | 4;
 export type PlayerIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -27,8 +28,16 @@ class State {
         3: false,
         4: false
     };
-    apiUrl: string = "http://63.176.175.74/api";
+    apiUrl: string = `${config.baseUrl}/api`;
     constructor() {
+        // Read all URL parameters
+        const params = new URLSearchParams(window.location.search);
+        console.log(params.toString());
+        
+        // Example: get ?name=Artur
+        const name = params.get("tags");
+        this.activeTags[1] = name ? name.split(",") : [""];
+        
     }
 
     async modifyPosition(section: SectionId): Promise<void> {
