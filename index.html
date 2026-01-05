@@ -20,12 +20,100 @@
 </head>
 
 <body>
-    <div id="app-root">
-        <noscript>
-            <p>This app requires JavaScript.</p>
-            <img src="/thumbnails/preview.jpg" alt="Static thumbnail of video interface" />
-        </noscript>
+    <div id="app-root" class="app-root">
+        <div class="video-container" id="video-container"></div>
+        <div class="ui-wrapper">
+            <div class="advanced-panel" id="advancedPanel">
+                <div class="p-4 text-white">Advanced Tags & Filters</div>
+            </div>
+            <div class="toolbar" id="toolbar">
+                <button class="advanced-toggle-btn group" id="hideForms">
+                    <span class="icon-wrapper">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4">
+                            </path>
+                        </svg>
+                    </span>
+                </button>
+                <button class="control-btn-square" id="playPauseBtn">
+                    <span class="icon-play">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M5 3l14 9-14 9V3z" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
+
+                    <span class="icon-pause">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M6 4h4v16H6zM14 4h4v16h-4z" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
+                </button>
+                <div class="search-container">
+                    <input type="text" id="search-input" placeholder="Search tags..." class="search-input-glass">
+                    <span class="search-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                    </span>
+                </div>
+                <button class="control-btn-square" id="fullScreenBtn">
+                    <span class="icon-enter">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M15 3h6v6M9 21H3v-6M21 15v6h-6M3 9V3h6" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </span>
+
+                    <span class="icon-exit">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </span>
+                </button>
+                <button class="control-btn-square" id="multiScreenBtn">
+                    <span class="icon-grid">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <rect x="3" y="3" width="7" height="7" />
+                            <rect x="14" y="3" width="7" height="7" />
+                            <rect x="3" y="14" width="7" height="7" />
+                            <rect x="14" y="14" width="7" height="7" />
+                        </svg>
+                    </span>
+
+                    <span class="icon-single">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <rect x="3" y="3" width="18" height="18" rx="1" />
+                        </svg>
+                    </span>
+                </button>
+                <button class="control-btn-square is-muted" id="muteBtn">
+                    <span class="icon-sound">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M11 5L6 9H2v6h4l5 4V5z" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </span>
+
+                    <span class="icon-muted">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M11 5L6 9H2v6h4l5 4V5z" stroke-linecap="round" stroke-linejoin="round" />
+                            <line x1="23" y1="9" x2="17" y2="15" stroke-linecap="round" stroke-linejoin="round" />
+                            <line x1="17" y1="9" x2="23" y2="15" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </div>
     </div>
+    </div>
+    <noscript>
+        <p>This app requires JavaScript.</p>
+        <img src="/thumbnails/preview.jpg" alt="Static thumbnail of video interface" />
+    </noscript>
 </body>
 
 </html>

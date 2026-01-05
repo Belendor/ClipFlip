@@ -206,6 +206,7 @@ app.get('/tags', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tags' });
   }
 });
+
 // Route to get all tags
 app.post('/videos/by-tags', async (req, res) => {
   const { tags } = req.body; // tags: string[]
@@ -382,11 +383,16 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
 });
 
 app.get("/download", async (req, res) => {
-  const BASE_URL =
-    "https://ev-h.phncdn.com/hls/c6251/videos/202511/03/28540395/1080P_4000K_28540395.mp4";
-  const QUERY =
-    "?validfrom=1763795713&validto=1763802913&ipa=1&hdl=-1&hash=4W3WKtVm7pE6fXAqS6QqIAg9ikU%3D";
-
+  const FULL_SAMPLE_URL = "https://ev-h.phncdn.com/hls/videos/202205/22/408558321/1080P_8000K_408558321.mp4/seg-46-v1-a1.ts?validfrom=1766433638&validto=1766440838&ipa=1&hdl=-1&hash=wylSQLBmogJ%2FsybcXv4wa2ORBMM%3D"
+  // This Regex looks for "/seg-" followed by numbers and captures everything before and after it
+  const match = FULL_SAMPLE_URL.match(/^(.*\/seg-)\d+(-v1-a1\.ts)(\?.*)$/);
+  if (!match) {
+    console.error("Invalid URL format. Could not find segment pattern.");
+    process.exit(1);
+  }
+  const urlStart = match[1]; // Everything up to "/seg-"
+  const urlEnd = match[2];   // The suffix "-v1-a1.ts"
+  const query = match[3];    // The "?hdnea=..." part
   const outputDir = path.resolve("../downloads");
   fsSync.mkdirSync(outputDir, { recursive: true });
 
@@ -394,7 +400,7 @@ app.get("/download", async (req, res) => {
   let downloaded = 0;
 
   while (true) {
-    const url = `${BASE_URL}/seg-${seg}-v1-a1.ts${QUERY}`;
+    const url = `${urlStart}${seg}${urlEnd}${query}`;
     const filePath = path.join(outputDir, `${seg}.ts`);
     console.log(`Downloading segment ${seg}...`);
 

@@ -5,7 +5,307 @@ html {
     margin: 0;
     padding: 0;
     height: 100%;
-    overflow-y: auto !important;
+    /* FIX: Changed to hidden to prevent the "ghost" scrollbar */
+    overflow: hidden;
+    /* Set background to black to match your UI and hide any potential lines */
+    background-color: #000;
+}
+
+.app-root {
+    position: relative;
+    width: 100%;
+    /* FIX: Use 100% of the parent (html) instead of vh to avoid mobile browser address bar issues */
+    height: 100%;
+    min-height: 100%;
+
+    /* FIX: Prevents child margins from "leaking" out and pushing the container down */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Toggle Logic: Exit icon is hidden by default */
+.control-btn-square .icon-exit {
+    display: none;
+}
+
+/* When button has 'is-fullscreen' class, swap icons */
+.control-btn-square.is-fullscreen .icon-enter {
+    display: none;
+}
+
+.control-btn-square.is-fullscreen .icon-exit {
+    display: block;
+}
+
+/* Optional: Add a slight rotation to the icon on hover to match the Advanced button style */
+#fullScreenBtn:hover svg {
+    transform: scale(1.1);
+}
+
+/* Toggle Logic: Single icon is hidden by default */
+.control-btn-square .icon-single {
+    display: none;
+}
+
+/* When button has 'is-multi' class, swap icons */
+.control-btn-square.is-multi .icon-grid {
+    display: none;
+}
+
+.control-btn-square.is-multi .icon-single {
+    display: block;
+}
+
+/* Hover animation specific to this button */
+#multiScreenBtn:hover svg {
+    transform: scale(1.1);
+}
+
+/* Hidden by default */
+.control-btn-square .icon-muted {
+    display: none;
+}
+
+/* When button has 'is-muted', show Mute icon and hide Sound icon */
+.control-btn-square.is-muted .icon-sound {
+    display: none;
+}
+
+.control-btn-square.is-muted .icon-muted {
+    display: block;
+}
+
+/* Optional: Make the button look slightly "dimmer" when muted */
+.control-btn-square.is-muted {
+    opacity: 0.7;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    /* This allows the search bar to grow/shrink between the buttons */
+    flex: 1 1 auto;
+    /* max-width: 30%; */
+    /* Prevents it from getting too wide */
+    /* Prevents it from getting too small */
+    max-height: 35px;
+}
+
+.search-input-glass {
+    font-size: 0.7rem;
+    height: 2.5rem;
+    /* Matches your 48px buttons */
+    padding: 0 1rem 0 2.5rem;
+    /* Space on left for the icon */
+
+    background: transparent;
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 0.9rem;
+
+    /* Contrast & Visibility */
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.search-input-glass::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-input-glass:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #3b82f6;
+    /* Changes to blue when typing */
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+/* Positioning the Search Icon inside the input */
+.search-icon {
+    position: absolute;
+    left: 12px;
+    color: #ffffff;
+    pointer-events: none;
+}
+
+.search-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Base Button Styling */
+.advanced-toggle-btn {
+    /* Positioning & Layering */
+    position: relative;
+
+    /* Sizing - Slightly bigger */
+    display: flex;
+    max-height: 65px;
+    max-width: 65px;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+
+    /* Borders & Background */
+    border: 2px solid #3b82f6;
+    /* Blue-500 */
+    background-color: transparent;
+    border-radius: 0.5rem;
+    /* rounded-lg */
+    color: #3b82f6;
+
+    /* Transitions */
+    cursor: pointer;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Icon Wrapper Styling */
+.icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-wrapper svg {
+    height: 1.5rem;
+    /* 24px */
+    width: 1.5rem;
+    transition: transform 300ms ease;
+}
+
+/* Hover States */
+.advanced-toggle-btn:hover {
+    background-color: #3b82f6;
+    color: #ffffff;
+    /* Blue Shadow Glow */
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+/* SVG Rotation on Button Hover */
+.advanced-toggle-btn:hover svg {
+    transform: rotate(90deg);
+}
+
+/* Focus State for Accessibility */
+.advanced-toggle-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.control-btn-square {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 2px solid #ffffff;
+    /* Slightly thinner border looks better on small icons */
+    border-radius: 8px;
+    color: #ffffff;
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    padding: 3px;
+    /* Desktop Size (Default) */
+    max-height: 65px;
+    max-width: 65px;
+}
+
+/* Tablet / Large Phone (Under 768px) */
+@media (max-width: 768px) {
+    .control-btn-square {
+        height: 2.5rem;
+        /* 40px */
+        width: 2.5rem;
+        /* 40px */
+    }
+
+    .control-btn-square svg {
+        width: 1.5rem;
+        /* Shrink icon slightly too */
+        height: 1.5rem;
+        padding: 2px;
+    }
+
+    .advanced-toggle-btn {
+        height: 2.5rem;
+        /* 40px */
+        width: 2.5rem;
+        /* 40px */
+    }
+
+    .search-input-glass {
+        font-size: 0.7rem;
+        height: 2.5rem;
+    }
+
+    .metadata-form {
+        bottom: 75px;
+    }
+}
+
+/* Small Phone (Under 480px) */
+@media (max-width: 480px) {
+    .control-btn-square {
+        height: 2rem;
+        /* 32px */
+        width: 2rem;
+        /* 32px */
+        border-width: 1.5px;
+        /* Thinner border for tiny buttons */
+    }
+
+    .control-btn-square svg {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    .advanced-toggle-btn {
+        height: 2rem;
+        /* 32px */
+        width: 2rem;
+        /* 32px */
+    }
+
+    .search-input-glass {
+        font-size: 0.6rem;
+        height: 2rem;
+    }
+
+    .metadata-form {
+        bottom: 65px;
+    }
+}
+
+/* Icon Sizing */
+.control-btn-square svg {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+/* Hover State */
+.control-btn-square:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Toggle Logic: Hidden by default */
+.control-btn-square .icon-pause {
+    display: none;
+}
+
+/* When button has 'is-playing' class, swap icons */
+.control-btn-square.is-playing .icon-play {
+    display: none;
+}
+
+.control-btn-square.is-playing .icon-pause {
+    display: block;
 }
 
 /* .player1 {
@@ -17,7 +317,7 @@ html {
     z-index: 99;
     background: black;
 } */
-.index-box{
+.index-box {
     position: absolute;
     top: 5px;
     left: 5px;
@@ -26,30 +326,44 @@ html {
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 14px;
-    z-index: 3;
 }
 
 .video-container {
     position: relative;
     width: 100%;
+    /* Use min-height to ensure it doesn't collapse to 0 */
+    /* Or use height: 100% ONLY if the parent has a fixed height */
     height: 100%;
+
+    background-color: #000;
+    /* Helps see the container if video fails */
+    overflow: hidden;
 }
+
 #video-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-  padding: 1rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1rem;
 }
+
 .button-toolbar button {
-  background-color: #1f2937; /* bg-gray-800 */
-  color: #ffffff; /* text-white */
-  border-radius: 0.25rem; /* rounded */
-  padding: 0.5rem; /* p-2 */
-  transition: background-color 0.2s ease;
+    background-color: #1f2937;
+    /* bg-gray-800 */
+    color: #ffffff;
+    /* text-white */
+    border-radius: 0.25rem;
+    /* rounded */
+    padding: 0.5rem;
+    /* p-2 */
+    transition: background-color 0.2s ease;
 }
+
 .button-toolbar button:hover {
-  background-color: #374151; /* hover:bg-gray-700 */
+    background-color: #374151;
+    /* hover:bg-gray-700 */
 }
+
 .video-layer {
     position: absolute;
     top: 0;
@@ -101,7 +415,6 @@ html {
 
 .form-container {
     /* position: absolute; */
-    z-index: 1;
     /* bottom: 10px;
     left: 10px; */
     /* background: rgba(0, 0, 0, 0.7); */
@@ -115,6 +428,7 @@ html {
     margin: 5px;
     padding: 5px;
     border-radius: 3px;
+    max-height: 20px;
 }
 
 select[multiple] {
@@ -135,13 +449,20 @@ select[multiple] {
 
 .tag-list {
     position: absolute;
-    /* Remove top: 0 and left: 0 */
-    /* Use a fixed width or rely on min-width */
-    max-height: 200px;
-    overflow-y: auto;
-    background-color: white;
-    border: 1px solid #ccc;
-    z-index: 10; /* Increase z-index to ensure it sits over other form elements */
+    bottom: -10px;
+    /* 60px from the bottom edge */
+    left: 185px;
+    /* transform: translate(-50%, 50%); */
+    margin-top: 0.5rem;
+    background: white;
+    color: black;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-width: 10rem;
+    /* visible by default */
+    overflow-y: auto;  
+    max-height: 240px;
 }
 
 .upload-form {
@@ -151,17 +472,21 @@ select[multiple] {
 }
 
 .hide-button {
-  stroke: #3B82F6 !important;
-  transition: stroke 0.2s ease;
-  border: 3px solid #3B82F6 !important;
-  border-radius: 4px;
-  color: #1E40AF !important;
-  transform: scale(1.2);
-  transform-origin: center center;
-  display: inline-flex;           /* use flex */
-  justify-content: center;        /* center horizontally */
-  align-items: center;            /* center vertically */
-  padding: 0.5rem 1rem;           /* adjust padding as needed */
+    stroke: #3B82F6 !important;
+    transition: stroke 0.2s ease;
+    border: 3px solid #3B82F6 !important;
+    border-radius: 4px;
+    color: #1E40AF !important;
+    transform: scale(1.2);
+    transform-origin: center center;
+    display: inline-flex;
+    /* use flex */
+    justify-content: center;
+    /* center horizontally */
+    align-items: center;
+    /* center vertically */
+    padding: 0.5rem 1rem;
+    /* adjust padding as needed */
 }
 
 /* .hide-button::after {
@@ -190,18 +515,47 @@ select[multiple] {
 }
 
 .metadata-form {
-    z-index: 2;
+    /* 1. Perfect Centering Logic */
+    z-index: 1;
     position: absolute;
-    bottom: 0;
-    left: 0;
-    background-color: rgba(229, 229, 229, 0.25);
-    border-radius: 5px;
-    border-color: rgba(229, 229, 229, 0.95);
+    bottom: 70px;
+    /* 60px from the bottom edge */
+    left: 10px;
+    /* transform: translate(-50%, 50%); */
 
-    /* make width fit content */
-    height: max-content;       /* fits content */
-    display: inline-block;    /* shrink to content if needed */
-    padding: 0.5rem;          /* optional, keeps spacing inside */
+
+    /* 2. Style - Transparent High Contrast */
+    backdrop-filter: blur(4px);
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.161);
+    /* 3. Sizing */
+    width: max-content;
+}
+
+.input-fields {
+    display: block;
+
+    width: 170px;
+    height: 20px;
+    font-size: 13px;
+    margin-bottom: 8px; /* mb-2 */
+    background-color: transparent;
+    color: #ffffff; /* Switched to white for high contrast on dark backgrounds */
+    border: 1px solid rgba(244, 238, 238, 0.61); /* border-gray-400 equivalent */
+    padding: 4px 8px; /* py-1 px-2 */
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input-fields::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.input-fields:focus {
+    border-color: #3b82f6; /* Blue highlight on focus */
 }
 
 .active-tag {
@@ -222,21 +576,71 @@ select[multiple] {
     color: black;
 }
 
-.button-toolbar {
-    /* position: absolute; */
-    /* adjust horizontal offset */
+.ui-wrapper {
+    z-index: 1;
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    /* This stacks the panel on top of the toolbar */
     display: flex;
-    gap: 10px;
-    z-index: 2;
-    /* high to be on top */
-    background-color: rgba(255, 255, 255, 0.3);
-    /* optional translucent bg */
-    padding: 6px 10px;
-    border-radius: 6px;
+    flex-direction: column;
+    align-items: center;
+
+    /* Matches your previous responsive requirements */
+    width: max-content;
+    max-width: 95vw;
 }
 
-.button {
-    z-index: 991;
+.advanced-panel {
+    /* Ensures it matches the width of the toolbar below */
+    width: 100%;
+
+    /* Extends toward the top */
+    height: calc(100vh - 120px);
+
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    overflow-y: auto;
+
+    /* Start hidden */
+    display: none;
+}
+
+/* Show class for JS toggle */
+.advanced-panel.is-visible {
+    display: block;
+}
+
+.toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    /* FIX: Gap controls the space between buttons, Padding controls the edges */
+    gap: 8px;
+    padding: 11px 8px;
+
+    /* FIX: Shrink the bar to fit the content instead of stretching to the screen edges */
+    width: max-content;
+
+    /* FIX: Lower blur and higher transparency for a cleaner look */
+    backdrop-filter: blur(2px);
+    /* Reduced from 10px to be less "strong" */
+
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+
+    max-height: 55px;
+}
+
+.toolbar-item {
+    /* Allow items to grow and shrink, but not go below a minimum width */
+    flex: 1 1 auto;
+    min-width: fit-content;
+    max-width: 100%;
 }
 
 .form-container {
@@ -245,6 +649,10 @@ select[multiple] {
     /* transform: translateX(-50%); */
     width: 50%;
     height: 50%;
+}
+
+.upload-form{
+    z-index: 3;
 }
 
 @media screen and (max-width: 768px) and (orientation: portrait) {

@@ -1,4 +1,4 @@
 export const config = {
-    baseUrl: 'http://63.176.175.74/api',
+    baseUrl: 'localhost:3000',
     defaultPercentChance: 25,
 }

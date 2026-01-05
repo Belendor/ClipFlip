@@ -4,17 +4,20 @@ import State, { PlayerIndex, SectionId } from "./State"
 export default class HTML {
   // objects
   state!: State
+  // toolbar buttons
+  toolbar: HTMLDivElement = document.getElementById('toolbar') as HTMLDivElement
+  hideFormsBtn: HTMLSpanElement = document.getElementById('hideForms') as HTMLSpanElement
+  playPauseBtn: HTMLButtonElement = document.getElementById('playPauseBtn') as HTMLButtonElement
+  fullscreenButton: HTMLButtonElement = document.getElementById('fullScreenBtn') as HTMLButtonElement
+  resizeButton: HTMLButtonElement = document.getElementById('multiScreenBtn') as HTMLButtonElement
+  muteToggle: HTMLButtonElement = document.getElementById('muteBtn') as HTMLButtonElement
+
+
   // toolbar icons
   resizeIcon!: HTMLSpanElement
   muteIcon!: HTMLSpanElement
-  hideIcon!: HTMLSpanElement
   // toolbar buttons
-  playButton!: HTMLButtonElement
-  pauseButton!: HTMLButtonElement
-  fullscreenButton!: HTMLButtonElement
-  resizeButton!: HTMLButtonElement
-  muteToggle!: HTMLButtonElement
-  hideFormsButton!: HTMLButtonElement
+  hideAdvancedIconFormsButton!: HTMLButtonElement
   // metadata
   allTags: Array<{ id: number; title: string }> = [];
 
@@ -25,6 +28,7 @@ export default class HTML {
   videoForms: HTMLDivElement[] = []
   // menu
   tagsWrappers: HTMLDivElement[] = []
+  
 
   constructor(state: State) {
     this.state = state;
@@ -36,7 +40,7 @@ export default class HTML {
     const btn = document.createElement('button')
     btn.id = id
     btn.className =
-      'w-8 h-8 rounded border-2 bg-transparent flex items-center justify-center hover:bg-black/10 transition'
+      'toolbar-item'
     btn.style.borderColor = 'rgba(0, 0, 0, 0.4)'
     btn.appendChild(content)
     return btn
@@ -123,10 +127,10 @@ export default class HTML {
     return svg
   }
 
-  togglePlayUI(isPlaying: boolean) {
-    this.playButton.style.display = isPlaying ? 'none' : 'flex'
-    this.pauseButton.style.display = isPlaying ? 'flex' : 'none'
-  }
+  // togglePlayUI(isPlaying: boolean) {
+  //   this.playButton.style.display = isPlaying ? 'none' : 'flex'
+  //   this.pauseButton.style.display = isPlaying ? 'flex' : 'none'
+  // }
 
   setMuteIcon(muted: boolean) {
     this.muteIcon.innerHTML = muted

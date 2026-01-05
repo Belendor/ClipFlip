@@ -9,7 +9,7 @@ class State {
     multiSection: boolean = false; // Whether to use multiple sections
     randomized: boolean = true;
     percentChance = 25; // 25% chance to modify position
-    endIndex = 3194; // Maximum position index
+    endIndex =5609; // Maximum position index
     positions: PositionsMap = {
         1: this.randomized ? this.randomInRange(1, this.endIndex * 0.25) : 1,
         2: this.randomized ? this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5) : 500,
@@ -28,11 +28,11 @@ class State {
         3: false,
         4: false
     };
-    apiUrl: string = `${config.baseUrl}/api`;
+    apiUrl: string = `${config.baseUrl}`;
+    advancedMode: boolean = false;
     constructor() {
         // Read all URL parameters
         const params = new URLSearchParams(window.location.search);
-        console.log(params.toString());
         
         // Example: get ?name=Artur
         const name = params.get("tags");
@@ -59,6 +59,8 @@ class State {
                     // pick random from taggedVideos
                     const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
                     this.positions[section] = randomVideo.id;
+                    console.log("assigning random position:", this.positions[section]);
+                    
                     return;
                 }
             }
@@ -67,10 +69,12 @@ class State {
             if (currentIndex === -1) {
                 // Video is last in tagged list or not found, reset to first tagged video
                 this.positions[section] = videoIds[0];
+                      console.log("Reseting video:", this.positions[section]);
                 return;
             }
 
             this.positions[section] = videoIds[currentIndex + 1];
+                  console.log("Quing next video:", this.positions[section]);
             return
         }
 
@@ -88,6 +92,7 @@ class State {
 
         // Default increment
         this.positions[section] = nextValue;
+        return
     }
 
     async fetchVideosByTags(section: SectionId): Promise<VideoMetadata[] | null> {
@@ -100,7 +105,7 @@ class State {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tags }),
             });
-
+            
             if (!response.ok) throw new Error(`Server error (${response.status})`);
 
             const videos = await response.json();

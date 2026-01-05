@@ -16,7 +16,7 @@ class Players {
     state: State;
     html: HTML;
     active: Record<number, boolean> | undefined;
-    folder = `${config.baseUrl}/videos`;
+    folder = `./videos/`;
     muted: boolean = true;
     playerCount: number = 8;
     selectedTags: Map<number, string> = new Map();
@@ -32,11 +32,9 @@ class Players {
     async init() {
         this.active = this.initializeActive(this.playerCount);
         this.html.allTags = await this.fetchAllTags();
-        const toolbar = this.createToolbar()
         const videoContainer = this.createVideoContainer()
-
-        document.body.appendChild(toolbar)
-        document.body.appendChild(videoContainer)
+        const rootApp = document.getElementById('app-root');
+        rootApp?.appendChild(videoContainer)
 
         this.attachEventListeners();
         this.initializeMuteButton();
@@ -64,74 +62,12 @@ class Players {
             const pos = this.state.positions[section];
             const playerIndex = i as PlayerIndex;
 
-            // assign video source based on position
-            console.log("assigning to player", playerIndex, "the video", pos);
-
             this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
             this.html.videoPlayers[playerIndex].preload = 'auto';
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex, res);
             await this.state.modifyPosition(section);
         }
-    }
-    createToolbar(): HTMLElement {
-        const toolbar = this.html.createDiv('button-toolbar')
-        toolbar.className = 'button-toolbar flex flex-wrap justify-center items-center gap-3 p-3 bg-gray-900 \
-                         absolute bottom-0 left-1/2 transform -translate-x-1/2 z-10'
-
-        // Buttons
-        this.html.playButton = this.html.createButton('playButton', this.html.svgPlay())
-        this.html.pauseButton = this.html.createButton('pauseButton', this.html.svgPause())
-        this.html.fullscreenButton = this.html.createButton('fullscreenButton', this.html.svgFullscreen())
-        this.html.resizeButton = this.html.createButton('resizeButton', this.html.svgGrid4())
-
-        this.html.muteIcon = this.html.createSpan('muteIcon')
-        this.html.muteToggle = this.html.createButton('muteToggle', this.html.muteIcon)
-
-        this.html.hideIcon = this.html.createSpan('hideIcon')
-        const iconBurger = `
-    <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <line x1="3" y1="6" x2="21" y2="6" stroke-linecap="round" />
-      <line x1="3" y1="12" x2="21" y2="12" stroke-linecap="round" />
-      <line x1="3" y1="18" x2="21" y2="18" stroke-linecap="round" />
-    </svg>
-  `
-        this.html.hideIcon.innerHTML = iconBurger
-
-        this.html.hideFormsButton = this.html.createButton('hideForms', this.html.hideIcon)
-        this.html.hideFormsButton.classList.add('hide-button')
-
-        this.html.hideFormsButton.addEventListener('click', () => {
-            const forms = document.querySelectorAll('.metadata-form')
-            forms.forEach(el => (el as HTMLElement).classList.toggle('hidden'))
-        })
-
-        // Search bar element
-        const searchInput = document.createElement('input')
-        searchInput.id = 'search-input'
-        searchInput.type = 'text'
-        searchInput.placeholder = 'Search videos...'
-        searchInput.className =
-            'w-1/3 p-2 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-pink-500'
-
-        searchInput.addEventListener('input', async (e) => {
-            const value = (e.target as HTMLInputElement).value.trim()
-            await this.fetchVideos(value)
-                .then((videos) => this.renderSearchResults(videos))
-                .catch(console.error)
-        })
-
-        // append everything inline
-        toolbar.append(
-            this.html.hideFormsButton,
-            this.html.playButton,
-            this.html.pauseButton,
-            searchInput, // ⬅ add here between buttons
-            this.html.fullscreenButton,
-            this.html.resizeButton,
-            this.html.muteToggle
-        )
-        return toolbar
     }
     async renderSearchResults(videos: any[]) {
         const container = document.getElementById('video-container');
@@ -206,89 +142,63 @@ class Players {
                 player.muted = this.muted;
             });
 
-            muteIcon!.innerHTML = !this.muted
-                ? `
-      <!-- Muted icon: speaker only -->
-      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2"
-        viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
-      </svg>`
-                : `
-      <!-- Unmuted icon: speaker with waves -->
-      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2"
-        viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 9a3 3 0 010 6" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M17.5 7.5a6 6 0 010 9" />
-      </svg>`;
+
         });
     }
     private attachEventListeners() {
-        this.html.playButton.addEventListener('click', async () => {
-            try {
-                for (let i = 0; i < this.html.videoPlayers.length; i++) {
-                    const player = this.html.videoPlayers[i];
+        this.html.playPauseBtn.addEventListener('click', () => {
+            this.html.playPauseBtn.classList.toggle('is-playing');
 
-                    if (this.active && this.active[i]) {
-                        await player.play();
 
-                        const section = Math.floor(i / 2 + 1) as SectionId;
-                        this.state.playing[section] = true;
+            this.html.videoPlayers.forEach((player, index) => {
+                this.togglePlayPause(index as PlayerIndex);
 
-                        // current form
-                        this.html.videoForms[i].classList.add('hidden');
+            });
 
-                        // pair form
-                        const pair = i % 2 === 0 ? i + 1 : i - 1;
-                        if (this.html.videoForms[pair]) {
-                            this.html.videoForms[pair].classList.add('hidden');
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error playing selected videos:', error);
-            }
         });
+        this.html.fullscreenButton.addEventListener('click', () => {
+            // Target document.documentElement for the "Whole Document"
+            const docElm = document.documentElement;
 
-        this.html.pauseButton.addEventListener('click', async () => {
-            try {
-                this.html.videoPlayers.forEach((player, index) => {
-                    player.pause();
-
-                    const section = Math.floor(index / 2 + 1) as SectionId;
-                    this.state.playing[section] = false;
-
-                    // current form
-                    this.html.videoForms[index].classList.remove('hidden');
-
-                    // pair form
-                    const pair = index % 2 === 0 ? index + 1 : index - 1;
-                    if (this.html.videoForms[pair]) {
-                        this.html.videoForms[pair].classList.remove('hidden');
-                    }
+            if (!document.fullscreenElement) {
+                docElm.requestFullscreen().catch(err => {
+                    console.error(`Error: ${err.message}`);
                 });
-            } catch (error) {
-                console.error('Error pausing selected videos:', error);
+            } else {
+                document.exitFullscreen();
             }
         });
+
+        // Update the icon toggle
+        document.addEventListener('fullscreenchange', () => {
+            this.html.fullscreenButton.classList.toggle('is-fullscreen', !!document.fullscreenElement);
+        });
+        this.html.resizeButton.addEventListener('click', () => {
+            this.html.resizeButton.classList.toggle('is-multi');
+            this.state.multiSection = !this.state.multiSection;
+            this.updateLayout();
+            this.loadVideos(true, true);
+        });
+        this.html.muteToggle.addEventListener('click', () => {
+            this.html.muteToggle.classList.toggle('is-muted');
+        });
+        this.html.hideFormsBtn.addEventListener('click', () => {
+            const forms = document.querySelectorAll('.metadata-form')
+            forms.forEach(el => (el as HTMLElement).classList.toggle('hidden'))
+        })
+
+        // searchInput.addEventListener('input', async (e) => {
+        //     const value = (e.target as HTMLInputElement).value.trim()
+        //     await this.fetchVideos(value)
+        //         .then((videos) => this.renderSearchResults(videos))
+        //         .catch(console.error)
+        // })
+
         this.html.videoPlayers.forEach((player, index) => {
             player.addEventListener('ended', () => {
                 this.handlePlayerEnded(index as PlayerIndex);
             });
             player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
-        });
-        this.html.resizeButton.addEventListener('click', () => {
-            console.log("Resizing, status:", this.state.multiSection);
-
-            this.state.multiSection = !this.state.multiSection;
-            console.log("Resizing, new status:", this.state.multiSection);
-
-            // this.updateResizeIcon();
-            this.updateLayout();
-            this.loadVideos(true, true);
-        });
-        this.html.fullscreenButton.addEventListener('click', () => {
-            this.toggleFullscreen();
         });
     }
     private initializeActive(playerCount: number): Record<number, boolean> {
@@ -296,13 +206,12 @@ class Players {
         for (let i = 0; i < playerCount; i++) {
             act[i] = (i % 2 === 0);
         }
-        console.log(act);
 
         return act;
     }
     async getVideoMetadata(videoId: number): Promise<VideoMetadata | null> {
         try {
-            const response = await fetch(`${this.state.apiUrl}/videos/${videoId}`);
+            const response = await fetch(`${this.state.apiUrl}`);
             if (!response.ok) throw new Error(`Failed to fetch metadata for videoId ${videoId}`);
             return await response.json();
         } catch (error) {
@@ -311,27 +220,25 @@ class Players {
         }
     }
     async handlePlayerEnded(playerIndex: PlayerIndex) {
-        console.log(`Player ${playerIndex} ended, switching video...`);
-
-        const section = Math.ceil((playerIndex + 1) / 2) as SectionId;
-
-        // flip 0↔1, 2↔3, 4↔5, 6↔7
-        const nextPlayerIndex = playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1;
-
-        const primary = this.html.videoPlayers[playerIndex];
-        const secondary = this.html.videoPlayers[nextPlayerIndex];
-
-        if (!primary || !secondary) {
-            console.error(`Invalid player index: ${playerIndex}`);
-            return;
-        }
-
-        await secondary.play();
-        console.log("section", section);
-
-        this.state.modifyPosition(section);
-
         try {
+            const section = Math.ceil((playerIndex + 1) / 2) as SectionId;
+
+            // flip 0↔1, 2↔3, 4↔5, 6↔7
+            const nextPlayerIndex = playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1;
+
+            const primary = this.html.videoPlayers[playerIndex];
+            const secondary = this.html.videoPlayers[nextPlayerIndex];
+
+            if (!primary || !secondary) {
+                console.error(`Invalid player index: ${playerIndex}`);
+                return;
+            }
+
+            await secondary.play();
+
+            this.state.modifyPosition(section);
+
+
             // hide/show wrappers instead of videos
             const currentWrapper = primary.parentElement as HTMLElement;
             const nextWrapper = secondary.parentElement as HTMLElement;
@@ -345,8 +252,6 @@ class Players {
             this.active[nextPlayerIndex] = true;
             this.active[playerIndex] = false;
 
-            console.log(this.state.positions[section], "current position for section", section);
-
             const pos = this.state.positions[section];
             const filename = `${this.folder}${pos}.mp4`;
             primary.src = filename;
@@ -356,51 +261,31 @@ class Players {
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
             // primary.load();
         } catch (err) {
-            console.error(`Error in section ${section}, player ${playerIndex}:`, err);
+            console.error(`Error in section , player ${playerIndex}:`, err);
         }
     }
 
-    private togglePlayPause(index: PlayerIndex): void {
-        const video = this.html.videoPlayers[index];
+    private async togglePlayPause(index: PlayerIndex): Promise<void> {
+        const player = this.html.videoPlayers[index];
         const section = Math.floor(index / 2 + 1) as SectionId;
 
-        // find partner index (0↔1, 2↔3, 4↔5 ...)
-        const pairIndex = index % 2 === 0 ? index + 1 : index - 1;
+        if (this.active && this.active[index] && !this.state.playing[section]) {
+            await player.play();
+            console.log("starting to play video index", index);
+            
 
-        if (video.paused) {
-            // PLAY
-            video.play();
+            const pair = index % 2 === 0 ? index + 1 : index - 1;
+            if (this.html.videoForms[pair] && this.state.advancedMode) {
+                this.html.videoForms[pair].classList.add('hidden');
+            }
             this.state.playing[section] = true;
-
-            // hide both forms
-            this.html.videoForms[index].classList.add('hidden');
-            if (this.html.videoForms[pairIndex]) {
-                this.html.videoForms[pairIndex].classList.add('hidden');
-            }
-
         } else {
-            // PAUSE
-            video.pause();
+            await player.pause();
+            console.log("pausing video index", index);
             this.state.playing[section] = false;
-
-            // show both forms
-            this.html.videoForms[index].classList.remove('hidden');
-            if (this.html.videoForms[pairIndex]) {
-                this.html.videoForms[pairIndex].classList.remove('hidden');
-            }
         }
-    }
 
-
-    private async toggleFullscreen(): Promise<void> {
-        const doc = document;
-        const el = document.documentElement;
-
-        if (!doc.fullscreenElement) {
-            await el.requestFullscreen();
-        } else {
-            await doc.exitFullscreen();
-        }
+        // this.html.toolbar.classList.toggle('hidden');
     }
 
     populateMetadataForm(index: PlayerIndex, data: VideoMetadata | null): void {
@@ -487,9 +372,8 @@ class Players {
             }
 
             const tags = await response.json();
-            const sorted = tags.map((t: any) => ({ ...t, title: t.title.trim() })) // trim just in case
+            const sorted = tags.map((t: any) => ({ ...t }))
                 .sort((a: any, b: any) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
-
 
             return sorted; // array of tag objects
         } catch (error) {
@@ -525,7 +409,7 @@ class Players {
         // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
         this.html.videoForms[index] = this.html.createDiv(
             `metaForm${index}`,
-            'metadata-form p-2 relative z-20'
+            'metadata-form hidden p-2'
         );
 
         const shouldHide = this.state.playing[Math.floor(index / 2 + 1) as SectionId];
@@ -537,7 +421,7 @@ class Players {
             const input = document.createElement('input');
             input.type = 'text';
             input.placeholder = placeholder;
-            input.className = 'block w-full mb-2 bg-transparent text-black border border-gray-400 px-2 py-1 rounded placeholder-black-400';
+            input.className = 'input-fields';
 
             input.addEventListener('input', async (event) => {
                 event.preventDefault();
@@ -566,8 +450,7 @@ class Players {
 
         // 2. Adjust dropdown classes to position relative to the new wrapper
         const tagListDropdown = document.createElement('div');
-        tagListDropdown.className = 'tag-list mt-2 bg-white text-black border border-gray-300 rounded shadow-md z-30 absolute **top-full left-0**'; // <-- Use top-full to drop it down
-        tagListDropdown.style.minWidth = '10rem';
+        tagListDropdown.className = 'tag-list hidden';
 
         this.html.allTags.forEach((tag) => {
             const tagItem = document.createElement('div');
@@ -594,7 +477,7 @@ class Players {
 
         const uploadFormWrapper = document.createElement('div');
         // The dropdowns are already set to absolute, which now uses the form (relative) as its context.
-        uploadFormWrapper.className = 'upload-form hidden mt-2 bg-white text-black border border-gray-300 rounded shadow-md p-2 z-10 absolute';
+        uploadFormWrapper.className = 'upload-form hidden mt-2 bg-white text-black border border-gray-300 rounded shadow-md p-2 absolute';
         uploadFormWrapper.style.minWidth = '14rem';
 
         // form fields inside upload form
@@ -715,13 +598,16 @@ class Players {
         }
     }
     createVideoContainer(): HTMLElement {
-        const container = this.html.createDiv('video-container')
+        const container = document.getElementById('video-container')
+        if (!container) {
+            throw new Error('Video container element not found');
+        }
         this.html.videoPlayers = []
         for (let i: PlayerIndex = 0; i <= 7; i++) {
             // 💡 UPDATED: Added 'relative' to the wrapper's class list
             const wrapper = this.html.createDiv(
                 `player${i}`,
-                `${this.html.getPositionClass(i)} relative`
+                `${this.html.getPositionClass(i)}`
             )
 
             this.createMetadataForm(i as PlayerIndex)
