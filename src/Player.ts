@@ -211,7 +211,7 @@ class Players {
     }
     async getVideoMetadata(videoId: number): Promise<VideoMetadata | null> {
         try {
-            const response = await fetch(`${this.state.apiUrl}`);
+            const response = await fetch(`${this.state.apiUrl}/videos/${videoId}`);
             if (!response.ok) throw new Error(`Failed to fetch metadata for videoId ${videoId}`);
             return await response.json();
         } catch (error) {
