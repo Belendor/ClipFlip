@@ -2,11 +2,14 @@
 // If 'window' is undefined (like during SSR), it defaults to localhost
 const isBrowser = typeof window !== 'undefined';
 const isProduction = isBrowser && window.location.hostname === 'clip-flip.com';
+console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
+console.log(window.location.hostname);
+
 
 export const config = {
     // If Linux (EC2), use the production domain. If Windows, use localhost.
     baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
-    videoSourcePath: isProduction ? './video/' : './video/',
+    videoSourcePath: isProduction ? './video/' : './videos/',
     defaultPercentChance: 25,
     defaultEndIndex: 5609
 };
