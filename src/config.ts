@@ -1,11 +1,12 @@
-import os from 'os';
-
-const isLinux = os.platform() === 'linux';
+// Detect environment based on the URL in the browser
+// If 'window' is undefined (like during SSR), it defaults to localhost
+const isBrowser = typeof window !== 'undefined';
+const isProduction = isBrowser && window.location.hostname === 'clip-flip.com';
 
 export const config = {
     // If Linux (EC2), use the production domain. If Windows, use localhost.
-    baseUrl: isLinux ? 'https://clip-flip.com' : 'http://localhost:3000',
-    videoSourcePath: isLinux ? './video/' : './video/',
+    baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
+    videoSourcePath: isProduction ? './video/' : './video/',
     defaultPercentChance: 25,
     defaultEndIndex: 5609
 };
