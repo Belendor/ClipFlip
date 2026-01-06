@@ -9,7 +9,7 @@ class State {
     multiSection: boolean = false; // Whether to use multiple sections
     randomized: boolean = true;
     percentChance = 25; // 25% chance to modify position
-    endIndex =5609; // Maximum position index
+    endIndex = config.defaultEndIndex; // Maximum position index
     positions: PositionsMap = {
         1: this.randomized ? this.randomInRange(1, this.endIndex * 0.25) : 1,
         2: this.randomized ? this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5) : 500,

@@ -16,7 +16,7 @@ class Players {
     state: State;
     html: HTML;
     active: Record<number, boolean> | undefined;
-    folder = `./videos/`;
+    folder = config.videoSourcePath;
     muted: boolean = true;
     playerCount: number = 8;
     selectedTags: Map<number, string> = new Map();
