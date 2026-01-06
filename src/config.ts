@@ -1,7 +1,7 @@
 // Detect environment based on the URL in the browser
 // If 'window' is undefined (like during SSR), it defaults to localhost
 const isBrowser = typeof window !== 'undefined';
-const isProduction = isBrowser && window.location.hostname === 'clip-flip.com';
+const isProduction = isBrowser && (window.location.hostname === 'clip-flip.com' || window.location.hostname === 'www.clip-flip.com');
 console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 console.log(window.location.hostname);
 
