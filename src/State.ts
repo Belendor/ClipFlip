@@ -28,7 +28,7 @@ class State {
         3: false,
         4: false
     };
-    apiUrl: string = `${config.baseUrl}`;
+    apiUrl: string = config.apiUrl;
     advancedMode: boolean = false;
     constructor() {
         // Read all URL parameters

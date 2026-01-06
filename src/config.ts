@@ -11,5 +11,6 @@ export const config = {
     baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
     videoSourcePath: isProduction ? './video/' : './videos/',
     defaultPercentChance: 25,
-    defaultEndIndex: 5609
+    defaultEndIndex: 5609,
+    apiUrl: isProduction ? 'https://clip-flip.com/api' : 'http://localhost:3000'
 };
