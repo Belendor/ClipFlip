@@ -186,13 +186,42 @@ class Players {
             const forms = document.querySelectorAll('.metadata-form')
             forms.forEach(el => (el as HTMLElement).classList.toggle('hidden'))
         })
+        const searchInput = document.getElementById('search-input') as HTMLInputElement;
+        const advancedPanel = document.getElementById('advancedPanel');
+        if (!searchInput || !advancedPanel) return;
+        searchInput.addEventListener('focus', () => {
+            advancedPanel?.classList.remove("hidden");
+        });
 
-        // searchInput.addEventListener('input', async (e) => {
-        //     const value = (e.target as HTMLInputElement).value.trim()
-        //     await this.fetchVideos(value)
-        //         .then((videos) => this.renderSearchResults(videos))
-        //         .catch(console.error)
-        // })
+        searchInput.addEventListener('focusout', () => {
+            advancedPanel?.classList.add("hidden");
+        });
+        let tagAbortController: any;
+
+        searchInput.addEventListener('input', async (e) => {
+            const value = (e.target as HTMLInputElement).value.trim();
+
+            if (!value) {
+                advancedPanel.innerHTML = '';
+                return;
+            }
+
+            // cancel previous request if user types fast
+            tagAbortController?.abort();
+            tagAbortController = new AbortController();
+
+            try {
+                const url = `${this.state.apiUrl}/tags?search=${encodeURIComponent(value)}`;
+                const res = await fetch(url, {
+                    signal: tagAbortController.signal
+                });
+
+                const tags = await res.json();
+                this.renderTagResults(tags, advancedPanel, searchInput);
+            } catch (err) {
+                throw err;
+            }
+        });
 
         this.html.videoPlayers.forEach((player, index) => {
             player.addEventListener('ended', () => {
@@ -201,6 +230,34 @@ class Players {
             player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
         });
     }
+    private renderTagResults(tags: any[], advancedPanel: HTMLElement, searchInput: HTMLInputElement) {
+        advancedPanel.innerHTML = '';
+
+        tags.forEach(tag => {
+            const tagItem = document.createElement('div');
+            tagItem.textContent = tag.title;
+            tagItem.className =
+                'px-3 py-2 hover:bg-gray-200 cursor-pointer rounded';
+
+            tagItem.addEventListener('click', async () => {
+                console.log("Clicked tag:", tag.title);
+                // const video = await this.updateMeta(
+                //     index,
+                //     'tag',
+                //     tag.title,
+                //     tag.id
+                // );
+
+                // advancedPanel.classList.add('hidden');
+                // searchInput.value = '';
+
+                // this.populateMetadataForm(index, video);
+            });
+
+            advancedPanel.appendChild(tagItem);
+        });
+    }
+
     private initializeActive(playerCount: number): Record<number, boolean> {
         const act: Record<number, boolean> = {};
         for (let i = 0; i < playerCount; i++) {
@@ -272,7 +329,7 @@ class Players {
         if (this.active && this.active[index] && !this.state.playing[section]) {
             await player.play();
             console.log("starting to play video index", index);
-            
+
 
             const pair = index % 2 === 0 ? index + 1 : index - 1;
             if (this.html.videoForms[pair] && this.state.advancedMode) {
@@ -539,7 +596,7 @@ class Players {
 
         // Append button and dropdown to the new wrapper
         tagButtonWrapper.append(addTagBtn, tagListDropdown);
-        this.html.videoForms[index].append(titleInput, modelInput, studioInput, tagsWrapper, tagButtonWrapper, uploadBtn, uploadFormWrapper);
+        this.html.videoForms[index].append(tagsWrapper, tagButtonWrapper, titleInput, modelInput, studioInput, uploadBtn, uploadFormWrapper);
     }
     async updateMeta(index: PlayerIndex, key: string, value: string | string[], tagId?: number): Promise<VideoMetadata | null> {
         // gather data to send, assuming you have videos in an array like this:

@@ -567,8 +567,8 @@ select[multiple] {
 }
 
 .tag-button {
-    border-color: black;
-    color: black;
+    border-color:  rgba(244, 238, 238, 0.959);
+    color:  rgba(244, 238, 238, 0.61);
 }
 
 .plus-button {
@@ -606,11 +606,6 @@ select[multiple] {
     overflow-y: auto;
 
     /* Start hidden */
-    display: none;
-}
-
-/* Show class for JS toggle */
-.advanced-panel.is-visible {
     display: block;
 }
 

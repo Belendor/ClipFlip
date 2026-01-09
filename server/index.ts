@@ -199,13 +199,29 @@ app.get('/videos', async (req: Request, res: Response) => {
 
 app.get('/tags', async (req, res) => {
   try {
-    const allTags = await prisma.tag.findMany();
-    res.status(200).json(allTags);
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
+
+    const tags = await prisma.tag.findMany({
+      where: search
+        ? {
+          title: {
+            contains: search,
+          },
+        }
+        : undefined,
+      orderBy: {
+        title: 'asc',
+      },
+      take: 50, // safety limit
+    });
+
+    res.status(200).json(tags);
   } catch (error) {
     console.error('Error fetching tags:', error);
     res.status(500).json({ error: 'Failed to fetch tags' });
   }
 });
+
 
 // Route to get all tags
 app.post('/videos/by-tags', async (req, res) => {
@@ -321,7 +337,7 @@ app.get('/', async (req, res) => {
 app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
   try {
     // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../videos');
+    const outputDir = path.join(__dirname, '../video');
     const files = fsSync.readdirSync(outputDir);
 
     let maxId = 0;
@@ -383,7 +399,7 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
 });
 
 app.get("/download", async (req, res) => {
-  const FULL_SAMPLE_URL = "https://ev-h.phncdn.com/hls/videos/202205/22/408558321/1080P_8000K_408558321.mp4/seg-46-v1-a1.ts?validfrom=1766433638&validto=1766440838&ipa=1&hdl=-1&hash=wylSQLBmogJ%2FsybcXv4wa2ORBMM%3D"
+  const FULL_SAMPLE_URL = "https://ev-h.phncdn.com/hls/videos/202104/23/387000451/1080P_4000K_387000451.mp4/seg-16-v1-a1.ts?validfrom=1767729585&validto=1767736785&ipa=1&hdl=-1&hash=9XlAxe3eFAM74bmZrTM4Zga%2BW4Y%3D"
   // This Regex looks for "/seg-" followed by numbers and captures everything before and after it
   const match = FULL_SAMPLE_URL.match(/^(.*\/seg-)\d+(-v1-a1\.ts)(\?.*)$/);
   if (!match) {

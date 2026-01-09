@@ -11,8 +11,7 @@
 /old
 /new
 script.js
-devtor.db
-dev.db
+*.db
 server/segments
 server/prisma
 cutter.js

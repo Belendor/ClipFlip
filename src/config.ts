@@ -9,8 +9,8 @@ console.log(window.location.hostname);
 export const config = {
     // If Linux (EC2), use the production domain. If Windows, use localhost.
     baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
-    videoSourcePath: isProduction ? './video/' : './videos/',
+    videoSourcePath: isProduction ? './video/' : 'https://clip-flip.com/video/',
     defaultPercentChance: 25,
     defaultEndIndex: 5609,
-    apiUrl: isProduction ? 'https://clip-flip.com/api' : 'http://localhost:3000'
+    apiUrl: isProduction ? 'https://clip-flip.com/api' : 'https://clip-flip.com/api'
 };
