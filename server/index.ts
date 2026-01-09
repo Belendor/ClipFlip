@@ -212,7 +212,6 @@ app.get('/tags', async (req, res) => {
       orderBy: {
         title: 'asc',
       },
-      take: 50, // safety limit
     });
 
     res.status(200).json(tags);

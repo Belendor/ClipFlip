@@ -194,7 +194,9 @@ class Players {
         });
 
         searchInput.addEventListener('focusout', () => {
-            advancedPanel?.classList.add("hidden");
+            setTimeout(() => {
+                advancedPanel?.classList.add("hidden");
+            }, 500); // 500ms delay
         });
         let tagAbortController: any;
 
@@ -241,17 +243,26 @@ class Players {
 
             tagItem.addEventListener('click', async () => {
                 console.log("Clicked tag:", tag.title);
-                // const video = await this.updateMeta(
-                //     index,
-                //     'tag',
-                //     tag.title,
-                //     tag.id
-                // );
 
+                // always update section 1 on click
+                const section: SectionId = 1;
+                const tags = this.state.activeTags[section] || [];
+
+                // toggle tag in the section
+                if (!tags.includes(tag.title)) {
+                    tags.push(tag.title);
+                } else {
+                    this.state.activeTags[section] = tags.filter(t => t !== tag.title);
+                }
+
+                this.state.activeTags[section] = tags;
+
+                // reload videos
+                await this.loadVideos(true, true);
+
+                // optionally hide the panel and clear input
                 // advancedPanel.classList.add('hidden');
-                // searchInput.value = '';
-
-                // this.populateMetadataForm(index, video);
+                searchInput.value = '';
             });
 
             advancedPanel.appendChild(tagItem);
