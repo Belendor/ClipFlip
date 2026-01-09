@@ -64,9 +64,9 @@ class Players {
 
             this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
             this.html.videoPlayers[playerIndex].preload = 'auto';
+            await this.state.modifyPosition(section);
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex, res);
-            await this.state.modifyPosition(section);
         }
     }
     async renderSearchResults(videos: any[]) {
