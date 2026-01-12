@@ -461,7 +461,7 @@ select[multiple] {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     min-width: 10rem;
     /* visible by default */
-    overflow-y: auto;  
+    overflow-y: auto;
     max-height: 240px;
 }
 
@@ -540,11 +540,15 @@ select[multiple] {
     width: 170px;
     height: 20px;
     font-size: 13px;
-    margin-bottom: 8px; /* mb-2 */
+    margin-bottom: 8px;
+    /* mb-2 */
     background-color: transparent;
-    color: #ffffff; /* Switched to white for high contrast on dark backgrounds */
-    border: 1px solid rgba(244, 238, 238, 0.61); /* border-gray-400 equivalent */
-    padding: 4px 8px; /* py-1 px-2 */
+    color: #ffffff;
+    /* Switched to white for high contrast on dark backgrounds */
+    border: 1px solid rgba(244, 238, 238, 0.61);
+    /* border-gray-400 equivalent */
+    padding: 4px 8px;
+    /* py-1 px-2 */
     border-radius: 4px;
     outline: none;
     transition: border-color 0.2s;
@@ -555,7 +559,8 @@ select[multiple] {
 }
 
 .input-fields:focus {
-    border-color: #3b82f6; /* Blue highlight on focus */
+    border-color: #3b82f6;
+    /* Blue highlight on focus */
 }
 
 .active-tag {
@@ -566,10 +571,6 @@ select[multiple] {
     color: white !important;
 }
 
-.tag-button {
-    border-color:  rgba(244, 238, 238, 0.959);
-    color:  rgba(244, 238, 238, 0.61);
-}
 
 .plus-button {
     border-color: black;
@@ -591,22 +592,6 @@ select[multiple] {
     /* Matches your previous responsive requirements */
     width: max-content;
     max-width: 95vw;
-}
-
-.advanced-panel {
-    /* Ensures it matches the width of the toolbar below */
-    width: 100%;
-
-    /* Extends toward the top */
-    height: calc(100vh - 120px);
-
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 12px;
-    overflow-y: auto;
-
-    /* Start hidden */
-    display: block;
 }
 
 .toolbar {
@@ -646,7 +631,7 @@ select[multiple] {
     height: 50%;
 }
 
-.upload-form{
+.upload-form {
     z-index: 3;
 }
 
@@ -654,4 +639,106 @@ select[multiple] {
     #rotateOverlay {
         display: flex !important;
     }
+}
+
+.advanced-panel {
+    width: 100%;
+    height: calc(100vh - 120px);
+
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    /* 👇 split gaps */
+    column-gap: 5px;
+    row-gap: 5px;
+
+    padding: 12px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    align-items: start;
+    align-items: start;
+    /* align items in row */
+    justify-items: start;
+    /* align items in column */
+    align-content: start;
+    /* 👈 prevent rows from stretching to fill container */
+}
+
+/* card */
+.tag-card {
+    position: relative;
+    aspect-ratio: 4 / 2;
+    width: 100%;
+    max-height: 90px;
+    min-height: 70px;
+    padding-top: 5px;
+    /* ← THIS */
+    background-size: cover;
+    background-position: center;
+    border-radius: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    padding-top: 5px;
+}
+
+/* dark overlay */
+.tag-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.7),
+            rgba(0, 0, 0, 0.1));
+}
+
+.tag-card-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* center exactly */
+    z-index: 1;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+}
+
+.tag-button {
+    position: relative;
+    cursor: pointer;
+    border-color: rgba(244, 238, 238, 0.959);
+    color: rgba(244, 238, 238, 0.61);
+}
+.tag-button * {
+  pointer-events: auto;
+}
+
+.tag-delete {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+
+    width: 16px;
+    height: 16px;
+
+    border-radius: 9999px;
+    border: 1px solid rgb(54, 38, 38);
+    background: rgba(244, 238, 238, 0.959);
+
+    color: red;
+    font-size: 10px;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.tag-delete:hover {
+    background: red;
+    color: white;
 }

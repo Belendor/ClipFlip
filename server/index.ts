@@ -83,6 +83,35 @@ app.post('/videos', async (req: Request, res: Response) => {
     });
   }
 });
+app.post('/videos/remove-tag', async (req: Request, res: Response) => {
+  try {
+    const { videoId, tagTitle } = req.body;
+
+    if (!videoId || !tagTitle) {
+      return res.status(400).json({ error: 'videoId and tagTitle are required' });
+    }
+
+    const video = await prisma.video.update({
+      where: { id: Number(videoId) },
+      data: {
+        tags: {
+          disconnect: {
+            title: tagTitle
+          }
+        }
+      },
+      include: {
+        tags: true,
+        models: true
+      }
+    });
+
+    res.json(video);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to remove tag' });
+  }
+});
 
 // Get a specific video by ID
 app.get('/videos/:id', async (req: Request, res: Response) => {

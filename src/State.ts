@@ -17,10 +17,10 @@ class State {
         4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500
     };
     activeTags: Record<SectionId, string[]> = {
-        1: [""],
-        2: [""],
-        3: [""],
-        4: [""]
+        1: [],
+        2: [],
+        3: [],
+        4: []
     };
     playing: Record<SectionId, boolean> = {
         1: false,
@@ -33,11 +33,12 @@ class State {
     constructor() {
         // Read all URL parameters
         const params = new URLSearchParams(window.location.search);
-        
-        // Example: get ?name=Artur
-        const name = params.get("tags");
-        this.activeTags[1] = name ? name.split(",") : [""];
-        
+        console.log(params);
+
+        // // Example: get ?name=Artur
+        // const name = params.get("tags");
+        // this.activeTags[1] = name ? name.split(",") : [""];
+
     }
 
     async modifyPosition(section: SectionId): Promise<void> {
@@ -60,21 +61,16 @@ class State {
                     const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
                     this.positions[section] = randomVideo.id;
                     console.log("assigning random position:", this.positions[section]);
-                    
+
                     return;
                 }
             }
             let currentIndex = videoIds.indexOf(currentId);
 
-            if (currentIndex === -1) {
-                // Video is last in tagged list or not found, reset to first tagged video
-                this.positions[section] = videoIds[0];
-                      console.log("Reseting video:", this.positions[section]);
-                return;
-            }
+            this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
+            console.log("Quing next video:", this.positions[section]);
+            console.log(currentIndex + 1);
 
-            this.positions[section] = videoIds[currentIndex + 1];
-                  console.log("Quing next video:", this.positions[section]);
             return
         }
 
@@ -105,7 +101,7 @@ class State {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tags }),
             });
-            
+
             if (!response.ok) throw new Error(`Server error (${response.status})`);
 
             const videos = await response.json();

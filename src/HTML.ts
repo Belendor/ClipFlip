@@ -28,7 +28,7 @@ export default class HTML {
   videoForms: HTMLDivElement[] = []
   // menu
   tagsWrappers: HTMLDivElement[] = []
-  
+
 
   constructor(state: State) {
     this.state = state;
@@ -143,37 +143,76 @@ export default class HTML {
          </svg>`
   }
 
-  renderTags(container: HTMLElement, tags: string[], index: PlayerIndex, toggleTag?: (btn: HTMLButtonElement) => void) {
-    container.innerHTML = ''; // clear previous tags
-    const visible = 5
-    const section = Math.floor(index / 2) + 1 as SectionId
-    
+  renderTags(
+    container: HTMLElement,
+    tags: string[],
+    index: PlayerIndex,
+    videoId?: number,
+    toggleTag?: (tag: string, section: SectionId, playerIndex: PlayerIndex) => void
+  ) {
+    container.innerHTML = '';
+    const visible = 5;
+    const section = Math.floor(index / 2) + 1 as SectionId;
+
     tags.forEach((tag, i) => {
-      const btn = document.createElement('button')
-      btn.className = `${tag}-id tag-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition 
-  hover:bg-white/10 hover:border-gray-400 ${i >= visible ? 'hidden-tag hidden' : ''}`
+      const btn = document.createElement('button');
+      btn.className = `${tag}-id-${section} tag-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition
+      hover:bg-white/10 hover:border-gray-400 ${i >= visible ? 'hidden-tag hidden' : ''}`;
 
-      if (this.state.activeTags[section] && this.state.activeTags[section].includes(tag)) {
-        btn.classList.add('active-tag')  // mark button active
+      if (this.state.activeTags[section]?.includes(tag)) {
+        btn.classList.add('active-tag');
       }
-      btn.textContent = tag
-      btn.addEventListener('click', () => {
-        if (toggleTag) {
-          toggleTag(btn)
-        }
-      })
 
-      container.appendChild(btn)
-    })
+      btn.textContent = tag;
+
+      btn.addEventListener('click', () => {
+        console.log("clicked tag", tag);
+
+        if (toggleTag) toggleTag(tag, section, index as PlayerIndex);
+      });
+
+      /* 🔴 delete X */
+      const del = document.createElement('span');
+      del.className = 'tag-delete';
+      del.textContent = '×';
+
+      del.addEventListener('click', async (e) => {
+        e.preventDefault();      // 👈 critical
+        e.stopPropagation(); // 👈 don’t toggle tag
+        console.log("clicked delete", tag);
+
+        try {
+          const body = {
+            tagTitle: tag,
+            videoId,
+          };
+          const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          console.log(response);
+          btn.remove();
+
+        } catch (err) {
+          console.error('Failed to delete tag', err);
+        }
+      });
+
+      btn.appendChild(del);
+      container.appendChild(btn);
+    });
 
     if (tags.length > visible) {
-      const toggleBtn = document.createElement('button')
-      toggleBtn.textContent = 'More'
-      toggleBtn.className = 'tag-toggle'
+      const toggleBtn = document.createElement('button');
+      toggleBtn.textContent = 'More';
+      toggleBtn.className = 'tag-toggle';
       toggleBtn.onclick = () => {
-        container.querySelectorAll('.hidden-tag').forEach(el => el.classList.toggle('hidden'))
-      }
-      container.appendChild(toggleBtn)
+        container
+          .querySelectorAll('.hidden-tag')
+          .forEach(el => el.classList.toggle('hidden'));
+      };
+      container.appendChild(toggleBtn);
     }
   }
 }

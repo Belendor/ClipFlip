@@ -189,8 +189,16 @@ class Players {
         const searchInput = document.getElementById('search-input') as HTMLInputElement;
         const advancedPanel = document.getElementById('advancedPanel');
         if (!searchInput || !advancedPanel) return;
-        searchInput.addEventListener('focus', () => {
+        searchInput.addEventListener('focus', async (e) => {
             advancedPanel?.classList.remove("hidden");
+            console.log(advancedPanel?.innerHTML);
+
+
+            try {
+                this.renderTagResults(this.html.allTags, advancedPanel, searchInput);
+            } catch (err) {
+                throw err;
+            }
         });
 
         searchInput.addEventListener('focusout', () => {
@@ -232,43 +240,58 @@ class Players {
             player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
         });
     }
-    private renderTagResults(tags: any[], advancedPanel: HTMLElement, searchInput: HTMLInputElement) {
+    private renderTagResults(
+        tags: any[],
+        advancedPanel: HTMLElement,
+        searchInput: HTMLInputElement
+    ) {
         advancedPanel.innerHTML = '';
 
         tags.forEach(tag => {
-            const tagItem = document.createElement('div');
-            tagItem.textContent = tag.title;
-            tagItem.className =
-                'px-3 py-2 hover:bg-gray-200 cursor-pointer rounded';
+            const card = document.createElement('div');
+            card.className = 'tag-card';
 
-            tagItem.addEventListener('click', async () => {
-                console.log("Clicked tag:", tag.title);
+            // default image
+            const defaultImg = './thumbnails/thumbnail.png';
+            const imgPath = `./thumbnails/${encodeURIComponent(tag.title)}.png`;
 
-                // always update section 1 on click
+            // preload
+            const img = new Image();
+            img.onload = () => {
+                card.style.backgroundImage = `url(${imgPath})`;
+            };
+            img.onerror = () => {
+                card.style.backgroundImage = `url(${defaultImg})`;
+            };
+            img.src = imgPath;
+
+            const title = document.createElement('div');
+            title.className = 'tag-card-title';
+            title.textContent = tag.title;
+
+            card.appendChild(title);
+
+            card.addEventListener('click', async () => {
+                console.log('Clicked tag:', tag.title);
+
                 const section: SectionId = 1;
-                const tags = this.state.activeTags[section] || [];
+                const activeTags = this.state.activeTags[section] || [];
 
-                // toggle tag in the section
-                if (!tags.includes(tag.title)) {
-                    tags.push(tag.title);
+                if (!activeTags.includes(tag.title)) {
+                    activeTags.push(tag.title);
                 } else {
-                    this.state.activeTags[section] = tags.filter(t => t !== tag.title);
+                    this.state.activeTags[section] = activeTags.filter(t => t !== tag.title);
                 }
 
-                this.state.activeTags[section] = tags;
+                this.state.activeTags[section] = activeTags;
 
-                // reload videos
                 await this.loadVideos(true, true);
-
-                // optionally hide the panel and clear input
-                // advancedPanel.classList.add('hidden');
                 searchInput.value = '';
             });
 
-            advancedPanel.appendChild(tagItem);
+            advancedPanel.appendChild(card);
         });
     }
-
     private initializeActive(playerCount: number): Record<number, boolean> {
         const act: Record<number, boolean> = {};
         for (let i = 0; i < playerCount; i++) {
@@ -392,39 +415,37 @@ class Players {
             tagsWrapper,
             data.tags.map(t => t.title),
             index,
+            data.id,
             this.toggleTag.bind(this)
         )
     }
 
-    async toggleTag(btn: HTMLElement) {
-        const tag = btn.textContent?.trim();
-        if (!tag) return;
+    async toggleTag(tag: string, section: SectionId, playerIndex: PlayerIndex) {
+        console.log("clicked toggle");
 
-        const tagClass = `${tag}-id`;
-        const sectionEl = btn.closest('[id^="player"]');
-        if (!sectionEl) throw new Error(`Section element not found for tag "${tag}"`);
+        const tagClass = `${tag}-id-${section}`;
+        const btns = document.querySelectorAll<HTMLButtonElement>(`.${tagClass}`);
+        if (!btns.length) return;
 
-        // toggle active-tag class for all matching elements in the same section
-        const isActive = btn.classList.toggle('active-tag');
-        sectionEl.querySelectorAll<HTMLElement>(`.${tagClass}`).forEach(el => {
-            if (el !== btn) el.classList.toggle('active-tag', isActive);
+        // 🔑 decide once
+        const tags = this.state.activeTags[section] ?? [];
+        const willBeActive = !tags.includes(tag);
+
+        // update DOM (both players in section)
+        btns.forEach(btn => {
+            btn.classList.toggle('active-tag', willBeActive);
         });
 
-        // extract player number (e.g. player3 → 3)
-        const playerId = sectionEl.id.match(/\d+/);
-        if (!playerId) return;
-
-        const playerNumber = parseInt(playerId[0], 10) as PlayerIndex;
-        const section = Math.floor(playerNumber / 2 + 1) as SectionId;
-        const tags = this.state.activeTags[section];
-
-        // sync tag state
-        if (isActive) {
-            if (!tags.includes(tag)) tags.push(tag);
+        // update state ONCE
+        if (willBeActive) {
+            this.state.activeTags[section] = [...tags, tag];
+            console.log("activated tag", this.state.activeTags[section]);
         } else {
             this.state.activeTags[section] = tags.filter(t => t !== tag);
+            console.log("deactivated tag", this.state.activeTags[section]);
         }
 
+        // reload once
         await this.loadVideos(true);
     }
 
