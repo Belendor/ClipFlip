@@ -573,8 +573,11 @@ select[multiple] {
 
 
 .plus-button {
-    border-color: black;
-    color: black;
+    border-color: rgba(244, 238, 238, 0.973);
+    color:  rgba(244, 238, 238, 0.973);
+    font-size: 14px;
+    cursor: pointer;
+    border-width: 2px;
 }
 
 .ui-wrapper {
@@ -714,8 +717,9 @@ select[multiple] {
     border-color: rgba(244, 238, 238, 0.959);
     color: rgba(244, 238, 238, 0.61);
 }
+
 .tag-button * {
-  pointer-events: auto;
+    pointer-events: auto;
 }
 
 .tag-delete {

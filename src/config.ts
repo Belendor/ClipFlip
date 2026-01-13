@@ -3,8 +3,6 @@
 const isBrowser = typeof window !== 'undefined';
 const isProduction = isBrowser && (window.location.hostname === 'clip-flip.com' || window.location.hostname === 'www.clip-flip.com');
 console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
-console.log(window.location.hostname);
-
 
 export const config = {
     // If Linux (EC2), use the production domain. If Windows, use localhost.

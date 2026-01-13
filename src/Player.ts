@@ -49,13 +49,47 @@ class Players {
                 continue;
             }
 
-            if (reload && !this.html.videoPlayers[i].src) {
+            const section = Math.ceil((i + 1) / 2) as SectionId;
+            if (reload) {
+                console.log("reload");
+                const position = this.html.videoPlayers[i].src;
+                
+                const match = position.match(/\/(\d+)\.mp4$/);
+                if (!match && position !== '') {
+                    throw new Error("Could not extract video ID from source URL");
+                }
+                const res0 = await this.getVideoMetadata(Number(match?.[1]));
+                console.log("Below");
+                
+                console.log(res0?.tags);
+                console.log(this.state.activeTags[section]);
+                
+                const hasActiveTag = res0?.tags?.some(tag => this.state.activeTags[section].includes(tag.title));
+                console.log(hasActiveTag);
+                
+                if (hasActiveTag) {
+                    console.log("Video match active tags, skipping");
+                    continue; // or continue in a loop
+                }
 
+                // const res0 = await this.getVideoMetadata(position);
+
+                await this.state.modifyPosition(section, true);
+                const pos = this.state.positions[section];
+                const playerIndex = i as PlayerIndex;
+
+                this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
+                this.html.videoPlayers[playerIndex].preload = 'auto';
+                const res = await this.getVideoMetadata(pos);
+                this.populateMetadataForm(playerIndex, res);
+                continue
             } else if (active && this.active && this.active[i] && this.html.videoPlayers[i].src) {
+                console.log("skipping", i);
+                
                 continue;
             }
-
-            const section = Math.ceil((i + 1) / 2) as SectionId;
+            console.log("not reloaded");
+            
 
             // get current position for that section
 
@@ -191,9 +225,6 @@ class Players {
         if (!searchInput || !advancedPanel) return;
         searchInput.addEventListener('focus', async (e) => {
             advancedPanel?.classList.remove("hidden");
-            console.log(advancedPanel?.innerHTML);
-
-
             try {
                 this.renderTagResults(this.html.allTags, advancedPanel, searchInput);
             } catch (err) {
@@ -273,19 +304,19 @@ class Players {
 
             card.addEventListener('click', async () => {
                 console.log('Clicked tag:', tag.title);
+                Object.entries(this.state.activeTags).forEach(([section, tags], index) => {
+                    const sectionId = Number(section) as SectionId;
+                    if (!tags.includes(tag.title)) {
+                        this.toggleTag(tag.title, sectionId, index as PlayerIndex, false);
+                        tags.push(tag.title);
+                    } else {
+                        this.toggleTag(tag.title, sectionId, index as PlayerIndex, false);
+                        tags.splice(tags.indexOf(tag.title), 1);
+                        return;
+                    }
+                });
 
-                const section: SectionId = 1;
-                const activeTags = this.state.activeTags[section] || [];
-
-                if (!activeTags.includes(tag.title)) {
-                    activeTags.push(tag.title);
-                } else {
-                    this.state.activeTags[section] = activeTags.filter(t => t !== tag.title);
-                }
-
-                this.state.activeTags[section] = activeTags;
-
-                await this.loadVideos(true, true);
+                await this.loadVideos(false, true);
                 searchInput.value = '';
             });
 
@@ -420,7 +451,7 @@ class Players {
         )
     }
 
-    async toggleTag(tag: string, section: SectionId, playerIndex: PlayerIndex) {
+    async toggleTag(tag: string, section: SectionId, playerIndex: PlayerIndex, reset: boolean = true): Promise<void> {
         console.log("clicked toggle");
 
         const tagClass = `${tag}-id-${section}`;
@@ -444,7 +475,7 @@ class Players {
             this.state.activeTags[section] = tags.filter(t => t !== tag);
             console.log("deactivated tag", this.state.activeTags[section]);
         }
-
+        if (!reset) return;
         // reload once
         await this.loadVideos(true);
     }

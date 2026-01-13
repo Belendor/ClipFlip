@@ -33,7 +33,6 @@ class State {
     constructor() {
         // Read all URL parameters
         const params = new URLSearchParams(window.location.search);
-        console.log(params);
 
         // // Example: get ?name=Artur
         // const name = params.get("tags");
@@ -41,7 +40,7 @@ class State {
 
     }
 
-    async modifyPosition(section: SectionId): Promise<void> {
+    async modifyPosition(section: SectionId, random: boolean = false): Promise<void> {
         if (!(section in this.positions)) {
             throw new Error(`Invalid section: ${section}`);
         }
@@ -54,9 +53,11 @@ class State {
             const videoIds = taggedVideos.map(v => v.id);
 
             // Random within tagged
-            if (this.randomized) {
+            if (this.randomized ) {
+                console.log("randomizing");
+                
                 const roll = Math.random() * 100;
-                if (roll < this.percentChance) {
+                if (roll < this.percentChance || random) {
                     // pick random from taggedVideos
                     const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
                     this.positions[section] = randomVideo.id;
@@ -69,7 +70,6 @@ class State {
 
             this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
             console.log("Quing next video:", this.positions[section]);
-            console.log(currentIndex + 1);
 
             return
         }
