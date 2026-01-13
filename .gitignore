@@ -18,3 +18,4 @@ cutter.js
 *.ppk
 downloads
 /thumbnails
+/server/prisma

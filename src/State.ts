@@ -31,12 +31,7 @@ class State {
     apiUrl: string = config.apiUrl;
     advancedMode: boolean = false;
     constructor() {
-        // Read all URL parameters
-        const params = new URLSearchParams(window.location.search);
 
-        // // Example: get ?name=Artur
-        // const name = params.get("tags");
-        // this.activeTags[1] = name ? name.split(",") : [""];
 
     }
 

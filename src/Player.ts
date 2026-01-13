@@ -30,6 +30,16 @@ class Players {
 
     }
     async init() {
+        // Read all URL parameters
+        const params = new URLSearchParams(window.location.search);
+
+        const name = params.get("tags");
+        Object.entries(this.state.activeTags).forEach(([key, value]) => {
+            
+            this.state.activeTags[Number(key) as SectionId] = name ? name.split(",") : [];
+        });
+        console.log(this.state.activeTags);
+        
         this.active = this.initializeActive(this.playerCount);
         this.html.allTags = await this.fetchAllTags();
         const videoContainer = this.createVideoContainer()
@@ -38,8 +48,8 @@ class Players {
 
         this.attachEventListeners();
         this.initializeMuteButton();
-
-        await this.loadVideos();
+        
+        await this.loadVideos(true, true);
         // this.updateLayout();
         // this.addFormsToPlayers();
     }
