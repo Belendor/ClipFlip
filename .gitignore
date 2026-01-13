@@ -11,9 +11,7 @@
 /old
 /new
 script.js
-*.db
 server/segments
-server/prisma
 cutter.js
 *.pem
 *.pub
