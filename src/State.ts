@@ -44,6 +44,8 @@ class State {
 
         // Tagged mode
         if (taggedVideos.length > 0) {
+            console.log("starting tagged position change");
+            console.log("tagged videos:", taggedVideos);
             const currentId = this.positions[section];
             const videoIds = taggedVideos.map(v => v.id);
 

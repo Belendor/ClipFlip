@@ -60,9 +60,9 @@ class Players {
             }
 
             const section = Math.ceil((i + 1) / 2) as SectionId;
-            if (reload) {
+            const position = this.html.videoPlayers[i].src;
+            if (reload && position) {
                 console.log("reload");
-                const position = this.html.videoPlayers[i].src;
                 
                 const match = position.match(/\/(\d+)\.mp4$/);
                 if (!match && position !== '') {
@@ -84,7 +84,7 @@ class Players {
 
                 // const res0 = await this.getVideoMetadata(position);
 
-                await this.state.modifyPosition(section, true);
+
                 const pos = this.state.positions[section];
                 const playerIndex = i as PlayerIndex;
 
@@ -368,9 +368,6 @@ class Players {
 
             await secondary.play();
 
-            this.state.modifyPosition(section);
-
-
             // hide/show wrappers instead of videos
             const currentWrapper = primary.parentElement as HTMLElement;
             const nextWrapper = secondary.parentElement as HTMLElement;
@@ -391,6 +388,7 @@ class Players {
 
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
+            this.state.modifyPosition(section);
             // primary.load();
         } catch (err) {
             console.error(`Error in section , player ${playerIndex}:`, err);
