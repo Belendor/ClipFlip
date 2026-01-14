@@ -89,6 +89,7 @@ class Players {
                 const playerIndex = i as PlayerIndex;
 
                 this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
+                await this.waitForVideoLoad(this.html.videoPlayers[playerIndex]); // 👈 blocks next video load
                 this.html.videoPlayers[playerIndex].preload = 'auto';
                 const res = await this.getVideoMetadata(pos);
                 this.populateMetadataForm(playerIndex, res);
@@ -113,6 +114,15 @@ class Players {
             await this.state.modifyPosition(section);
         }
     }
+    waitForVideoLoad(video: HTMLVideoElement): Promise<void> {
+    return new Promise(resolve => {
+        if (video.readyState >= 2) {
+            resolve();
+        } else {
+            video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+        }
+    });
+}
     async renderSearchResults(videos: any[]) {
         const container = document.getElementById('video-container');
         if (!container) return;
