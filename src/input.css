@@ -583,7 +583,7 @@ select[multiple] {
 .ui-wrapper {
     z-index: 1;
     position: fixed;
-    bottom: 20px;
+    bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
 
