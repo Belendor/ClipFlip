@@ -83,13 +83,19 @@ class Players {
 
                 const pos = this.state.positions[section];
                 console.log("New video pos:", pos);
-                
+
                 const playerIndex = i as PlayerIndex;
                 const videoPlayer = this.html.videoPlayers[playerIndex];
                 videoPlayer.preload = 'none';
                 videoPlayer.muted = true;
                 videoPlayer.playsInline = true;
                 videoPlayer.src = this.folder + pos + '.mp4';
+                console.log(this.active);
+
+                if (this.active?.[i]) {
+                    console.log("active start playing");
+                    this.html.videoPlayers[playerIndex].play();
+                }
 
                 const res = await this.getVideoMetadata(pos);
                 this.populateMetadataForm(playerIndex, res);
@@ -111,7 +117,14 @@ class Players {
             this.html.videoPlayers[playerIndex].muted = true;
             this.html.videoPlayers[playerIndex].playsInline = true;
             this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
-            
+            console.log(this.active);
+
+            if (this.active?.[i]) {
+                console.log("active start playing");
+
+                this.html.videoPlayers[playerIndex].load();
+            }
+
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex, res);
         }
@@ -504,7 +517,7 @@ class Players {
 
         if (!reset) return;
         // reload once
-        await this.loadVideos(false,true);
+        await this.loadVideos(false, true);
     }
 
     async fetchAllTags() {
