@@ -16,11 +16,11 @@ class State {
         3: this.randomized ? this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75) : 1000,
         4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500
     };
-    activeTags: Record<SectionId, string[]> = {
-        1: [],
-        2: [],
-        3: [],
-        4: []
+    activeTags: Record<SectionId, string> = {
+        1: '',
+        2: '',
+        3: '',
+        4: ''
     };
     playing: Record<SectionId, boolean> = {
         1: false,
@@ -46,7 +46,8 @@ class State {
         if (taggedVideos.length > 0) {
             const currentId = this.positions[section];
             const videoIds = taggedVideos.map(v => v.id);
-
+            console.log("Tagged video selection");
+            
             // Random within tagged
             if (this.randomized ) {
                 console.log("randomizing");
@@ -87,14 +88,14 @@ class State {
     }
 
     async fetchVideosByTags(section: SectionId): Promise<VideoMetadata[] | null> {
-        const tags = this.activeTags[section];
-        if (!tags || tags.length === 0) return null;
+        const tag = this.activeTags[section];
+        if (!tag || tag.length === 0) return null;
 
         try {
             const response = await fetch(`${this.apiUrl}/videos/by-tags`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tags }),
+                body: JSON.stringify({ tags: [tag], limit: this.endIndex}),
             });
 
             if (!response.ok) throw new Error(`Server error (${response.status})`);
@@ -102,7 +103,7 @@ class State {
             const videos = await response.json();
             return videos;
         } catch (err) {
-            console.error(`Failed to fetch videos for section ${section} with tags ${tags}`, err);
+            console.error(`Failed to fetch videos for section ${section} with tag ${tag}`, err);
             return null;
         }
     }

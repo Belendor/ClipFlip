@@ -34,12 +34,12 @@ class Players {
         const params = new URLSearchParams(window.location.search);
 
         const name = params.get("tags");
-        Object.entries(this.state.activeTags).forEach(([key, value]) => {
-            
-            this.state.activeTags[Number(key) as SectionId] = name ? name.split(",") : [];
-        });
+        // Object.entries(this.state.activeTags).forEach(([key, value]) => {
+
+        //     this.state.activeTags[Number(key) as SectionId] = name ? name.split(",") : [];
+        // });
         console.log(this.state.activeTags);
-        
+
         this.active = this.initializeActive(this.playerCount);
         this.html.allTags = await this.fetchAllTags();
         const videoContainer = this.createVideoContainer()
@@ -48,7 +48,7 @@ class Players {
 
         this.attachEventListeners();
         this.initializeMuteButton();
-        
+
         await this.loadVideos(true, true);
         // this.updateLayout();
         // this.addFormsToPlayers();
@@ -62,67 +62,69 @@ class Players {
             const section = Math.ceil((i + 1) / 2) as SectionId;
             const position = this.html.videoPlayers[i].src;
             if (reload && position) {
-                console.log("reload");
-                
+                console.log("reloading video");
+
                 const match = position.match(/\/(\d+)\.mp4$/);
                 if (!match && position !== '') {
                     throw new Error("Could not extract video ID from source URL");
                 }
                 const res0 = await this.getVideoMetadata(Number(match?.[1]));
-                console.log("Below");
-                
-                console.log(res0?.tags);
-                console.log(this.state.activeTags[section]);
-                
-                const hasActiveTag = res0?.tags?.some(tag => this.state.activeTags[section].includes(tag.title));
+                console.log("Checking video ID:", match?.[1]);
+
+
+                const hasActiveTag = res0?.tags?.some(tag => tag.title === this.state.activeTags[section]);
                 console.log(hasActiveTag);
-                
+
                 if (hasActiveTag) {
                     console.log("Video match active tags, skipping");
                     continue; // or continue in a loop
                 }
-
-                // const res0 = await this.getVideoMetadata(position);
-
+                await this.state.modifyPosition(section);
 
                 const pos = this.state.positions[section];
+                console.log("New video pos:", pos);
+                
                 const playerIndex = i as PlayerIndex;
+                const videoPlayer = this.html.videoPlayers[playerIndex];
+                videoPlayer.preload = 'none';
+                videoPlayer.muted = true;
+                videoPlayer.playsInline = true;
+                videoPlayer.src = this.folder + pos + '.mp4';
 
-                this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
-                await this.waitForVideoLoad(this.html.videoPlayers[playerIndex]); // 👈 blocks next video load
-                this.html.videoPlayers[playerIndex].preload = 'auto';
                 const res = await this.getVideoMetadata(pos);
                 this.populateMetadataForm(playerIndex, res);
                 continue
             } else if (active && this.active && this.active[i] && this.html.videoPlayers[i].src) {
                 console.log("skipping", i);
-                
+
                 continue;
             }
             console.log("not reloaded");
-            
 
+
+            await this.state.modifyPosition(section);
             // get current position for that section
 
             const pos = this.state.positions[section];
             const playerIndex = i as PlayerIndex;
-
-            this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
             this.html.videoPlayers[playerIndex].preload = 'auto';
+            this.html.videoPlayers[playerIndex].muted = true;
+            this.html.videoPlayers[playerIndex].playsInline = true;
+            this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
+            
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex, res);
-            await this.state.modifyPosition(section);
         }
     }
     waitForVideoLoad(video: HTMLVideoElement): Promise<void> {
-    return new Promise(resolve => {
-        if (video.readyState >= 2) {
-            resolve();
-        } else {
-            video.addEventListener('loadedmetadata', () => resolve(), { once: true });
-        }
-    });
-}
+        return new Promise(resolve => {
+            if (video.readyState >= 2) {
+                resolve();
+            } else {
+                video.addEventListener('loadedmetadata', () => resolve(), { once: true });
+            }
+        });
+    }
     async renderSearchResults(videos: any[]) {
         const container = document.getElementById('video-container');
         if (!container) return;
@@ -324,20 +326,30 @@ class Players {
 
             card.addEventListener('click', async () => {
                 console.log('Clicked tag:', tag.title);
-                Object.entries(this.state.activeTags).forEach(([section, tags], index) => {
-                    const sectionId = Number(section) as SectionId;
-                    if (!tags.includes(tag.title)) {
-                        this.toggleTag(tag.title, sectionId, index as PlayerIndex, false);
-                        tags.push(tag.title);
-                    } else {
-                        this.toggleTag(tag.title, sectionId, index as PlayerIndex, false);
-                        tags.splice(tags.indexOf(tag.title), 1);
-                        return;
-                    }
-                });
+                console.log("Current tags:", this.state.activeTags);
+                this.toggleTag(tag.title);
 
-                await this.loadVideos(false, true);
-                searchInput.value = '';
+
+                // Object.entries(this.state.activeTags).forEach((section) => {
+
+                //     console.log("Checking section:", section);
+
+                //     const sectionId = Number(section) as SectionId;
+
+                //     const tags = this.state.activeTags[sectionId];
+                //     if (!tags.includes(tag.title)) {
+                //         // this.toggleTag(tag.title, sectionId, index as PlayerIndex, false);
+                //         // tags = [];
+                //         tags.push(tag.title);
+                //     } else {
+                //         // tags = [];
+                //         // this.toggleTag(tag.title, sectionId, index as PlayerIndex, false);
+                //         return;
+                //     }
+                // });
+
+                // await this.loadVideos(false, true);
+                // searchInput.value = '';
             });
 
             advancedPanel.appendChild(card);
@@ -465,37 +477,34 @@ class Players {
             data.tags.map(t => t.title),
             index,
             data.id,
-            this.toggleTag.bind(this)
+            // this.toggleTag.bind(this)
         )
     }
 
-    async toggleTag(tag: string, section: SectionId, playerIndex: PlayerIndex, reset: boolean = true): Promise<void> {
-        console.log("clicked toggle");
-
-        const tagClass = `${tag}-id-${section}`;
-        const btns = document.querySelectorAll<HTMLButtonElement>(`.${tagClass}`);
-        if (!btns.length) return;
-
-        // 🔑 decide once
-        const tags = this.state.activeTags[section] ?? [];
-        const willBeActive = !tags.includes(tag);
-
-        // update DOM (both players in section)
-        btns.forEach(btn => {
-            btn.classList.toggle('active-tag', willBeActive);
+    async toggleTag(tag: string, reset: boolean = true): Promise<void> {
+        console.log("Activating tags on buttons:", tag);
+        const allButtons = document.querySelectorAll<HTMLButtonElement>(`.tag-button`);
+        allButtons.forEach(btn => {
+            btn.classList.remove('active-tag');
         });
-
-        // update state ONCE
-        if (willBeActive) {
-            this.state.activeTags[section] = [...tags, tag];
-            console.log("activated tag", this.state.activeTags[section]);
-        } else {
-            this.state.activeTags[section] = tags.filter(t => t !== tag);
-            console.log("deactivated tag", this.state.activeTags[section]);
+        console.log("Reseting active first");
+        for (const section in this.state.activeTags) {
+            const sectionId = Number(section) as SectionId;
+            const tagClass = `${tag}-id-${section}`;
+            const btns = document.querySelectorAll<HTMLButtonElement>(`.${tagClass}`);
+            this.state.activeTags[sectionId] = "";
+            this.state.activeTags[sectionId] = tag;
+            if (!btns.length) continue;
+            console.log("Activating active");
+            btns.forEach(btn => {
+                btn.classList.add('active-tag');
+            });
         }
+        console.log("activated taggs", this.state.activeTags);
+
         if (!reset) return;
         // reload once
-        await this.loadVideos(true);
+        await this.loadVideos(false,true);
     }
 
     async fetchAllTags() {
