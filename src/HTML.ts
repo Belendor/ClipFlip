@@ -148,7 +148,7 @@ export default class HTML {
     tags: string[],
     index: PlayerIndex,
     videoId?: number,
-    toggleTag?: (tag: string, section: SectionId, playerIndex: PlayerIndex) => void
+    toggleTag?: (tag: string, active: boolean) => void
   ) {
     container.innerHTML = '';
     const visible = 5;
@@ -168,7 +168,7 @@ export default class HTML {
       btn.addEventListener('click', () => {
         console.log("clicked tag", tag);
 
-        if (toggleTag) toggleTag(tag, section, index as PlayerIndex);
+        if (toggleTag) toggleTag(tag, true);
       });
 
       /* 🔴 delete X */

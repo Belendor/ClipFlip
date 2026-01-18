@@ -56,6 +56,8 @@ class State {
                 if (roll < this.percentChance || random) {
                     // pick random from taggedVideos
                     const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
+                    console.log(randomVideo);
+                    
                     this.positions[section] = randomVideo.id;
                     console.log("assigning random position:", this.positions[section]);
 
@@ -70,20 +72,22 @@ class State {
             return
         }
 
-        // Untagged mode
-        if (this.randomized) {
-            const roll = Math.random() * 100;
-            if (roll < this.percentChance) {
-                const newIndex = Math.floor(Math.random() * this.endIndex) + 1;
-                this.positions[section] = newIndex;
-                return;
-            }
-        }
+        // // Untagged mode
+        // if (this.randomized) {
+        //     const roll = Math.random() * 100;
+        //     if (roll < this.percentChance) {
+        //         const newIndex = Math.floor(Math.random() * this.endIndex) + 1;
+        //         this.positions[section] = newIndex;
+        //         return;
+        //     }
+        // }
 
         const nextValue = this.positions[section] + 1 > this.endIndex ? 1 : this.positions[section] + 1;
 
         // Default increment
         this.positions[section] = nextValue;
+        console.log("Next in order video:", this.positions[section]);
+        
         return
     }
 

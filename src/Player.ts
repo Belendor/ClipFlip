@@ -49,7 +49,7 @@ class Players {
         this.attachEventListeners();
         this.initializeMuteButton();
 
-        await this.loadVideos(true, true);
+        await this.loadVideos();
         // this.updateLayout();
         // this.addFormsToPlayers();
     }
@@ -61,28 +61,21 @@ class Players {
 
             const section = Math.ceil((i + 1) / 2) as SectionId;
             const position = this.html.videoPlayers[i].src;
-            if (reload && position) {
-                console.log("reloading video");
-
-                const match = position.match(/\/(\d+)\.mp4$/);
-                if (!match && position !== '') {
-                    throw new Error("Could not extract video ID from source URL");
-                }
-                const res0 = await this.getVideoMetadata(Number(match?.[1]));
-                console.log("Checking video ID:", match?.[1]);
-
-
-                const hasActiveTag = res0?.tags?.some(tag => tag.title === this.state.activeTags[section]);
-                console.log(hasActiveTag);
-
-                if (hasActiveTag) {
-                    console.log("Video match active tags, skipping");
-                    continue; // or continue in a loop
-                }
-                await this.state.modifyPosition(section);
-
-                const pos = this.state.positions[section];
-                console.log("New video pos:", pos);
+            console.log("reloading video");
+            const match = position.match(/\/(\d+)\.mp4$/);
+            if (!match && position !== '') {
+                throw new Error("Could not extract video ID from source URL");
+            }
+            const video = await this.getVideoMetadata(Number(match?.[1]));
+            console.log("Checking video ID:", match?.[1]);
+            const hasActiveTag = video?.tags?.some(tag => tag.title === this.state.activeTags[section]);
+            if (hasActiveTag) {
+                console.log("Video match active tags, skipping");
+                continue; // or continue in a loop
+            }
+            await this.state.modifyPosition(section);
+            const pos = this.state.positions[section];
+            console.log("New video pos:", pos);
 
                 const playerIndex = i as PlayerIndex;
                 const videoPlayer = this.html.videoPlayers[playerIndex];
@@ -90,43 +83,17 @@ class Players {
                 videoPlayer.muted = true;
                 videoPlayer.playsInline = true;
                 videoPlayer.src = this.folder + pos + '.mp4';
-                console.log(this.active);
 
                 if (this.active?.[i]) {
                     console.log("active start playing");
                     this.html.videoPlayers[playerIndex].play();
+                    this.state.playing[section] = true;
                 }
 
                 const res = await this.getVideoMetadata(pos);
                 this.populateMetadataForm(playerIndex, res);
-                continue
-            } else if (active && this.active && this.active[i] && this.html.videoPlayers[i].src) {
-                console.log("skipping", i);
-
+                
                 continue;
-            }
-            console.log("not reloaded");
-
-
-            await this.state.modifyPosition(section);
-            // get current position for that section
-
-            const pos = this.state.positions[section];
-            const playerIndex = i as PlayerIndex;
-            this.html.videoPlayers[playerIndex].preload = 'auto';
-            this.html.videoPlayers[playerIndex].muted = true;
-            this.html.videoPlayers[playerIndex].playsInline = true;
-            this.html.videoPlayers[playerIndex].src = this.folder + pos + '.mp4';
-            console.log(this.active);
-
-            if (this.active?.[i]) {
-                console.log("active start playing");
-
-                this.html.videoPlayers[playerIndex].load();
-            }
-
-            const res = await this.getVideoMetadata(pos);
-            this.populateMetadataForm(playerIndex, res);
         }
     }
     waitForVideoLoad(video: HTMLVideoElement): Promise<void> {
@@ -415,7 +382,7 @@ class Players {
             }
             this.active[nextPlayerIndex] = true;
             this.active[playerIndex] = false;
-
+            await this.state.modifyPosition(section);
             const pos = this.state.positions[section];
             const filename = `${this.folder}${pos}.mp4`;
             primary.src = filename;
@@ -423,7 +390,7 @@ class Players {
 
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
-            this.state.modifyPosition(section);
+            
             // primary.load();
         } catch (err) {
             console.error(`Error in section , player ${playerIndex}:`, err);
@@ -490,7 +457,7 @@ class Players {
             data.tags.map(t => t.title),
             index,
             data.id,
-            // this.toggleTag.bind(this)
+            this.toggleTag.bind(this)
         )
     }
 
