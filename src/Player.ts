@@ -83,6 +83,7 @@ class Players {
                 videoPlayer.muted = true;
                 videoPlayer.playsInline = true;
                 videoPlayer.src = this.folder + pos + '.mp4';
+                videoPlayer.load();
 
                 if (this.active?.[i]) {
                     console.log("active start playing");
@@ -386,12 +387,11 @@ class Players {
             const pos = this.state.positions[section];
             const filename = `${this.folder}${pos}.mp4`;
             primary.src = filename;
+            primary.load()
             primary.preload = "auto";
 
             const res = await this.getVideoMetadata(pos);
             this.populateMetadataForm(playerIndex as PlayerIndex, res);
-            
-            // primary.load();
         } catch (err) {
             console.error(`Error in section , player ${playerIndex}:`, err);
         }
