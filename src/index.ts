@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async (e) => {
     const state = new State();
     const html = new HTML(state);
     const players = new Players(state, html);
-    await players.init();
+    players.init();
 
     // expose for debugging or external access
     window.html = html;
