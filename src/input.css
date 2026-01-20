@@ -11,6 +11,10 @@ html {
     background-color: #000;
 }
 
+:root {
+    --toolbar-h: 56px;
+}
+
 .app-root {
     position: relative;
     width: 100%;
@@ -250,13 +254,8 @@ html {
 
 /* Small Phone (Under 480px) */
 @media (max-width: 480px) {
-    .control-btn-square {
-        height: 2rem;
-        /* 32px */
-        width: 2rem;
-        /* 32px */
-        border-width: 1.5px;
-        /* Thinner border for tiny buttons */
+    :root {
+        --toolbar-h: 48px;
     }
 
     .control-btn-square svg {
@@ -333,9 +332,10 @@ html {
     width: 100%;
     /* Use min-height to ensure it doesn't collapse to 0 */
     /* Or use height: 100% ONLY if the parent has a fixed height */
-    height: 100%;
+    height: 100vh;
     object-fit: contain;
-    background-color: #000;
+    background: black;
+    /* prevents white flash */
     /* Helps see the container if video fails */
     overflow: hidden;
 }
@@ -597,26 +597,23 @@ select[multiple] {
     max-width: 95vw;
 }
 
+
 .toolbar {
     display: flex;
-    flex-direction: row;
     align-items: center;
     justify-content: center;
-    /* FIX: Gap controls the space between buttons, Padding controls the edges */
     gap: 8px;
-    padding: 11px 8px;
 
-    /* FIX: Shrink the bar to fit the content instead of stretching to the screen edges */
-    width: max-content;
+    height: var(--toolbar-h);
+    min-height: var(--toolbar-h);
 
-    /* FIX: Lower blur and higher transparency for a cleaner look */
+    padding: 0 8px;
+    width: auto;
+
     backdrop-filter: blur(2px);
-    /* Reduced from 10px to be less "strong" */
 
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.15);
-
-    max-height: 55px;
 }
 
 .toolbar-item {
