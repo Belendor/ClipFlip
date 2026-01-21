@@ -1,7 +1,70 @@
 @import "tailwindcss";
 
+/* Core Grid Layout */
+.video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    width: 100vw;
+    height: 100vh;
+    gap: 0;
+    background: #000;
+}
+
+.video-section {
+    position: relative;
+    background: #000;
+    overflow: hidden;
+    transition: opacity 0.5s ease;
+    /* Smooth cross-fade */
+}
+
+/* Base Player Style */
+.player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* The "Active" Video */
+.layer-front {
+    z-index: 2;
+    opacity: 1;
+    pointer-events: auto;
+    /* Accepts clicks/touches */
+}
+
+/* The "Loading/Standby" Video */
+.layer-back {
+    z-index: 1;
+    opacity: 0;
+    pointer-events: none;
+    /* Clicks pass through to the front video */
+}
+
+/* Layout State: Full Screen for Section 1 */
+.video-grid.expanded #section-1 {
+    grid-column: 1 / span 2;
+    grid-row: 1 / span 2;
+}
+
+.video-grid.expanded .video-section:not(#section-1) {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+.video-grid:not(.expanded) #section-1 {
+    grid-column: 1 / span 1;
+    grid-row: 1 / span 1;
+}
+
 body,
 html {
+    position: fixed;
     margin: 0;
     padding: 0;
     height: 100%;
@@ -9,11 +72,39 @@ html {
     overflow: hidden;
     /* Set background to black to match your UI and hide any potential lines */
     background-color: #000;
+    overscroll-behavior: none;
 }
+
+/* Ensure only the front form is visible */
+.metadata-form.layer-back {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    /* This prevents interaction with hidden forms */
+    transition: opacity 0.5s ease;
+}
+
+.metadata-form.layer-front {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transition: opacity 0.5s ease;
+}
+
+/* The Global Hide Button override */
+/* When the user clicks the 'Hide Forms' button, hide even the active ones */
+.video-grid.ui-hidden .metadata-form {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+}
+
 
 :root {
     --toolbar-h: 56px;
 }
+
+
 
 .app-root {
     position: relative;
@@ -340,12 +431,12 @@ html {
     overflow: hidden;
 }
 
-#video-grid {
+/* #video-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     padding: 1rem;
-}
+} */
 
 .button-toolbar button {
     background-color: #1f2937;
@@ -516,7 +607,7 @@ select[multiple] {
 
 .metadata-form {
     /* 1. Perfect Centering Logic */
-    z-index: 1;
+    z-index: 3;
     position: absolute;
     bottom: 90px;
     /* 60px from the bottom edge */
@@ -581,7 +672,7 @@ select[multiple] {
 }
 
 .ui-wrapper {
-    z-index: 1;
+    z-index: 3;
     position: fixed;
     bottom: 40px;
     left: 50%;
@@ -701,7 +792,7 @@ select[multiple] {
     left: 50%;
     transform: translate(-50%, -50%);
     /* center exactly */
-    z-index: 1;
+    z-index: 3;
     color: white;
     font-weight: 600;
     font-size: 14px;
@@ -730,6 +821,7 @@ select[multiple] {
     border-radius: 9999px;
     border: 1px solid rgb(54, 38, 38);
     background: rgba(244, 238, 238, 0.959);
+    z-index: 3;
 
     color: red;
     font-size: 10px;

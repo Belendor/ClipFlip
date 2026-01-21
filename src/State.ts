@@ -1,6 +1,5 @@
-import { type VideoMetadata } from "./Player";
 import { config } from "./config";
-
+import type { Tag, Video } from '../server/node_modules/@prisma/client/index.js';
 export type SectionId = 1 | 2 | 3 | 4;
 export type PlayerIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type PositionsMap = Record<SectionId, number>;
@@ -16,12 +15,7 @@ class State {
         3: this.randomized ? this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75) : 1000,
         4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500
     };
-    activeTags: Record<SectionId, string> = {
-        1: '',
-        2: '',
-        3: '',
-        4: ''
-    };
+    activeTags: Map<SectionId, Tag["title"][]> = new Map();
     playing: Record<SectionId, boolean> = {
         1: false,
         2: false,
@@ -30,8 +24,41 @@ class State {
     };
     apiUrl: string = config.apiUrl;
     advancedMode: boolean = false;
+    active: Record<PlayerIndex, boolean> | undefined;
+    allTags: Tag[] = [];
+    tagsPromise: Promise<void> | undefined;
     constructor() {
+        this.active = this.initializeActive(8);
+        this.tagsPromise = this.fetchAllTags();
+        const params = new URLSearchParams(window.location.search);
+        const queryTagsRaw = params.get("tags");
+        if (queryTagsRaw) {
+            console.log("URL tags found:", queryTagsRaw);
 
+            // 1. Split by comma, trim whitespace, and remove any empty strings
+            const tagsArray = queryTagsRaw
+                .split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag.length > 0);
+
+            // Direct loop over our known SectionIds
+            const ids: SectionId[] = [1, 2, 3, 4];
+
+            ids.forEach((id) => {
+                // Create a unique clone for each specific section
+                this.activeTags.set(id, [...new Set(tagsArray)]);
+            });
+
+            console.log("State: Assigned tags to SectionIds 1-4", this.activeTags);
+        } else {
+            // Direct loop over our known SectionIds
+            const ids: SectionId[] = [1, 2, 3, 4];
+
+            ids.forEach((id) => {
+                // Create a unique clone for each specific section
+                this.activeTags.set(id, []);
+            });
+        }
 
     }
 
@@ -40,24 +67,26 @@ class State {
             throw new Error(`Invalid section: ${section}`);
         }
         // 
-        const taggedVideos: VideoMetadata[] = (await this.fetchVideosByTags(section)) ?? [];
+        const taggedVideos: Video[] = (await this.fetchVideosByTags(section)) ?? [];
+        console.log(taggedVideos);
+
 
         // Tagged mode
         if (taggedVideos.length > 0) {
             const currentId = this.positions[section];
             const videoIds = taggedVideos.map(v => v.id);
             console.log("Tagged video selection");
-            
+
             // Random within tagged
-            if (this.randomized ) {
+            if (this.randomized) {
                 console.log("randomizing");
-                
+
                 const roll = Math.random() * 100;
                 if (roll < this.percentChance || random) {
                     // pick random from taggedVideos
                     const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
                     console.log(randomVideo);
-                    
+
                     this.positions[section] = randomVideo.id;
                     console.log("assigning random position:", this.positions[section]);
 
@@ -72,34 +101,39 @@ class State {
             return
         }
 
-        // // Untagged mode
-        // if (this.randomized) {
-        //     const roll = Math.random() * 100;
-        //     if (roll < this.percentChance) {
-        //         const newIndex = Math.floor(Math.random() * this.endIndex) + 1;
-        //         this.positions[section] = newIndex;
-        //         return;
-        //     }
-        // }
+        // Untagged mode
+        if (this.randomized) {
+            const roll = Math.random() * 100;
+            if (roll < this.percentChance) {
+                const newIndex = Math.floor(Math.random() * this.endIndex) + 1;
+                this.positions[section] = newIndex;
+                return;
+            }
+        }
 
         const nextValue = this.positions[section] + 1 > this.endIndex ? 1 : this.positions[section] + 1;
 
         // Default increment
         this.positions[section] = nextValue;
         console.log("Next in order video:", this.positions[section]);
-        
+
         return
     }
 
-    async fetchVideosByTags(section: SectionId): Promise<VideoMetadata[] | null> {
-        const tag = this.activeTags[section];
-        if (!tag || tag.length === 0) return null;
+    async fetchVideosByTags(section: SectionId): Promise<Video[] | null> {
+        const tags = this.activeTags.get(section);
+        console.log(section);
+        
+        console.log(tags);
+        console.log("before fetch");
+
+        if (!tags || tags.length === 0) return null;
 
         try {
             const response = await fetch(`${this.apiUrl}/videos/by-tags`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tags: [tag], limit: this.endIndex}),
+                body: JSON.stringify({ tags: tags, limit: this.endIndex }),
             });
 
             if (!response.ok) throw new Error(`Server error (${response.status})`);
@@ -107,15 +141,43 @@ class State {
             const videos = await response.json();
             return videos;
         } catch (err) {
-            console.error(`Failed to fetch videos for section ${section} with tag ${tag}`, err);
+            console.error(`Failed to fetch videos for section ${section} with tags ${tags}`, err);
             return null;
         }
     }
 
+    async fetchAllTags() {
+        try {
+            const response = await fetch(`${this.apiUrl}/tags`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const tags = await response.json();
+            const sorted = tags.map((t: any) => ({ ...t }))
+                .sort((a: any, b: any) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+
+            this.allTags = sorted;
+        } catch (error) {
+            console.error('Failed to fetch tags:', error);
+        }
+    }
     private randomInRange(min: number, max: number) {
         const minInt = Math.floor(min);
         const maxInt = Math.floor(max);
         return Math.floor(Math.random() * (maxInt - minInt + 1)) + minInt;
+    }
+    private initializeActive(playerCount: number): Record<number, boolean> {
+        const act: Record<number, boolean> = {};
+        for (let i = 0; i < playerCount; i++) {
+            act[i] = (i % 2 === 0);
+        }
+
+        return act;
     }
 }
 

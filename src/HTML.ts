@@ -1,9 +1,14 @@
-import { VideoMetadata } from "./Player"
 import State, { PlayerIndex, SectionId } from "./State"
+import type { Tag, Video } from '../server/node_modules/@prisma/client/index.js';
 
 export default class HTML {
+
+  state: State
+  appRoot: HTMLElement;
+  videoGrid: HTMLElement;
+  sections: HTMLElement[] = [];
+
   // objects
-  state!: State
   // toolbar buttons
   toolbar: HTMLDivElement = document.getElementById('toolbar') as HTMLDivElement
   hideFormsBtn: HTMLSpanElement = document.getElementById('hideForms') as HTMLSpanElement
@@ -18,8 +23,6 @@ export default class HTML {
   muteIcon!: HTMLSpanElement
   // toolbar buttons
   hideAdvancedIconFormsButton!: HTMLButtonElement
-  // metadata
-  allTags: Array<{ id: number; title: string }> = [];
 
   // video players
   videoPlayers: HTMLVideoElement[] = []
@@ -32,8 +35,33 @@ export default class HTML {
 
   constructor(state: State) {
     this.state = state;
+    // Grab the main containers
+    this.appRoot = document.getElementById('app-root') as HTMLElement;
+    this.videoGrid = document.getElementById('video-grid') as HTMLElement;
+    // Find all 4 sections
+    this.sections = Array.from(document.querySelectorAll('.video-section'));
+    this.mapPlayersById();
   }
+  private mapPlayersById(): void {
+    // We define the exact order to ensure "v1-front" is always index 0
+    const idMap = [
+      'v1-front', 'v1-back',
+      'v2-front', 'v2-back',
+      'v3-front', 'v3-back',
+      'v4-front', 'v4-back'
+    ];
 
+    idMap.forEach((id) => {
+      const el = document.getElementById(id) as HTMLVideoElement;
+      if (el) {
+        this.videoPlayers.push(el);
+      } else {
+        throw new Error(`Video element with ID ${id} not found.`);
+      }
+    });
+
+    console.log("HTML: 8 Players mapped by ID successfully.");
+  }
 
 
   createButton(id: string, content: HTMLElement | SVGSVGElement): HTMLButtonElement {
@@ -145,55 +173,79 @@ export default class HTML {
 
   renderTags(
     container: HTMLElement,
-    tags: string[],
+    tags: Tag[], // This should match your Prisma Tag type
     index: PlayerIndex,
     videoId?: number,
     toggleTag?: (tag: string, active: boolean) => void
   ) {
     container.innerHTML = '';
-    const visible = 5;
-    const section = Math.floor(index / 2) + 1 as SectionId;
+    const visibleCount = 5;
+    const sectionId = (Math.floor(index / 2) + 1) as SectionId;
 
     tags.forEach((tag, i) => {
+      // 1. Create Button Wrapper
       const btn = document.createElement('button');
-      btn.className = `${tag}-id-${section} tag-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition
-      hover:bg-white/10 hover:border-gray-400 ${i >= visible ? 'hidden-tag hidden' : ''}`;
 
-      if (this.state.activeTags[section]?.includes(tag)) {
-        btn.classList.add('active-tag');
+      // Use your specialized class for section-specific styling
+      btn.className = `tag-button section-tag-${sectionId}`;
+
+      // Use Tailwind/Glassmorphism styles for the 'Mint Vanilla' look
+      btn.classList.add(
+        'px-2', 'py-1', 'm-1', 'text-xs', 'rounded-full',
+        'bg-black/40', 'backdrop-blur-md', 'border', 'border-white/20',
+        'text-white/80', 'transition-all', 'hover:bg-white/20'
+      );
+
+      // Hide tags beyond the visible limit
+      if (i >= visibleCount) {
+        btn.classList.add('hidden-tag', 'hidden');
       }
 
-      btn.textContent = tag;
+      // 2. Active State Check
+      const isActive = this.state.activeTags.get(sectionId)?.includes(tag.title);
+      if (isActive) {
+        btn.classList.add('active-tag', 'border-white', 'bg-white', 'text-black');
+        btn.classList.remove('text-white/80', 'bg-black/40');
+      }
 
-      btn.addEventListener('click', () => {
-        console.log("clicked tag", tag);
+      // Set Tag Text
+      const textSpan = document.createElement('span');
+      textSpan.textContent = tag.title;
+      btn.appendChild(textSpan);
 
-        if (toggleTag) toggleTag(tag, true);
+      // 3. Main Click Event (Filter Toggle)
+      btn.addEventListener('click', (e) => {
+        // Prevent triggering the video container click (which expands/shrinks grid)
+        e.stopPropagation();
+        console.log(`Filtering section ${sectionId} by tag: ${tag.title}`);
+
+        if (toggleTag && tag.title) {
+          toggleTag(tag.title, true);
+        }
       });
 
-      /* 🔴 delete X */
+      // 4. Delete Action (The 'X')
       const del = document.createElement('span');
-      del.className = 'tag-delete';
-      del.textContent = '×';
+      del.className = 'ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
+      del.innerHTML = '&times;';
 
       del.addEventListener('click', async (e) => {
-        e.preventDefault();      // 👈 critical
-        e.stopPropagation(); // 👈 don’t toggle tag
-        console.log("clicked delete", tag);
+        e.preventDefault();
+        e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
+
+        if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
 
         try {
-          const body = {
-            tagTitle: tag,
-            videoId,
-          };
           const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
+            body: JSON.stringify({ tagTitle: tag.title, videoId }),
           });
-          console.log(response);
-          btn.remove();
 
+          if (response.ok) {
+            btn.remove();
+            console.log("Tag removed from Prisma DB");
+          }
         } catch (err) {
           console.error('Failed to delete tag', err);
         }
@@ -203,14 +255,17 @@ export default class HTML {
       container.appendChild(btn);
     });
 
-    if (tags.length > visible) {
+    // 5. Expandable 'More' Button
+    if (tags.length > visibleCount) {
       const toggleBtn = document.createElement('button');
-      toggleBtn.textContent = 'More';
-      toggleBtn.className = 'tag-toggle';
-      toggleBtn.onclick = () => {
-        container
-          .querySelectorAll('.hidden-tag')
-          .forEach(el => el.classList.toggle('hidden'));
+      toggleBtn.textContent = '...';
+      toggleBtn.className = 'px-2 py-1 m-1 text-xs rounded-full bg-white/10 text-white hover:bg-white/30';
+
+      toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        const hiddenTags = container.querySelectorAll('.hidden-tag');
+        hiddenTags.forEach(el => el.classList.toggle('hidden'));
+        toggleBtn.textContent = toggleBtn.textContent === '...' ? 'less' : '...';
       };
       container.appendChild(toggleBtn);
     }
