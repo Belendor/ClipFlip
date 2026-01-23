@@ -5,16 +5,15 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    z-index: 2;
 }
 
 .layer-front {
-    z-index: 2;
     opacity: 1;
     pointer-events: auto;
 }
 
 .layer-back {
-    z-index: 1;
     opacity: 0;
     pointer-events: none;
 }
