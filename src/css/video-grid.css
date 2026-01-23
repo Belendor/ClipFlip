@@ -1,11 +1,10 @@
-
+/* Core Grid Layout */
 .video-grid {
-    width: 100%;       /* use parent width, not 100vw */
-    height: 100%;
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
+    width: 100vw;
+    height: 100vh;
     gap: 0;
     background: #000;
-    box-sizing: border-box; /* ensures padding/borders don’t cause overflow */
 }
