@@ -54,10 +54,13 @@ class Players {
             const pos = this.state.positions[section];
             console.log("New video pos:", pos);
             const videoPlayer = this.html.videoPlayers[playerIndex];
-            videoPlayer.preload = 'none';
+            videoPlayer.preload = 'auto';
             videoPlayer.muted = true;
             videoPlayer.playsInline = true;
-            videoPlayer.src = this.folder + pos + '.mp4';
+            const response = await fetch(this.folder + pos + '.mp4');
+            const blob = await response.blob();
+            const videoUrl = URL.createObjectURL(blob);
+            videoPlayer.src = videoUrl; // This is now instant because it's in memory
             videoPlayer.load();
 
             if (this.state.active?.[playerIndex]) {
@@ -135,7 +138,7 @@ class Players {
             this.html.muteToggle.classList.toggle('is-muted');
         });
         this.html.hideFormsBtn.addEventListener('click', () => {
-           const allForms = document.querySelectorAll<HTMLElement>('.metadata-form');
+            const allForms = document.querySelectorAll<HTMLElement>('.metadata-form');
             allForms.forEach(form => {
                 form.classList.toggle('hidden');
             });
@@ -267,43 +270,43 @@ class Players {
         }
     }
     async handlePlayerEnded(playerIndex: PlayerIndex) {
-    try {
-        const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
-        const nextPlayerIndex = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
+        try {
+            const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
+            const nextPlayerIndex = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
 
-        const primary = this.html.videoPlayers[playerIndex];   
-        const secondary = this.html.videoPlayers[nextPlayerIndex]; 
+            const primary = this.html.videoPlayers[playerIndex];
+            const secondary = this.html.videoPlayers[nextPlayerIndex];
 
-        if (!primary || !secondary) return;
+            if (!primary || !secondary) return;
 
-        const currentPoster = primary.poster;
-        if (currentPoster) secondary.poster = currentPoster;
-        // 1. Play the secondary (hidden) video first
-        await secondary.play();
-                // 6. Update the metadata in the hidden form so it's ready for the next swap
-        const currentPos = this.state.positions[section];
-        const res = await this.getVideoMetadata(currentPos);
-        // this.populateMetadataForm(playerIndex, res);
-        // 2. SWAP VIDEO CLASSES (Cross-fade)
-        secondary.classList.replace("layer-back", "layer-front");
-        primary.classList.replace("layer-front", "layer-back");
+            // 1. Play the secondary (hidden) video first
+            await secondary.play();
+            // 6. Update the metadata in the hidden form so it's ready for the next swap
+            const currentPos = this.state.positions[section];
+            const res = await this.getVideoMetadata(currentPos);
+            // this.populateMetadataForm(playerIndex, res);
+            // 2. SWAP VIDEO CLASSES (Cross-fade)
+            secondary.classList.replace("layer-back", "layer-front");
+            primary.classList.replace("layer-front", "layer-back");
 
-        // 4. Update State
-        if (this.state.active) {
-            this.state.active[nextPlayerIndex] = true;
-            this.state.active[playerIndex] = false;
+            // 4. Update State
+            if (this.state.active) {
+                this.state.active[nextPlayerIndex] = true;
+                this.state.active[playerIndex] = false;
+            }
+
+            // 5. Preload the next video into the now-hidden primary player
+            await this.state.modifyPosition(section);
+            const nextPos = this.state.positions[section];
+            const response = await fetch(this.folder + nextPos + '.mp4');
+            const blob = await response.blob();
+            const videoUrl = URL.createObjectURL(blob);
+            primary.src = videoUrl; // This is now instant because it's in memory
+            primary.load();
+        } catch (err) {
+            console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
         }
-
-        // 5. Preload the next video into the now-hidden primary player
-        await this.state.modifyPosition(section);
-        const nextPos = this.state.positions[section];
-
-        primary.src = `${this.folder}${nextPos}.mp4`;
-        primary.load();
-    } catch (err) {
-        console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
     }
-}
 
     private async togglePlayPause(index: PlayerIndex): Promise<void> {
         const player = this.html.videoPlayers[index];
@@ -334,7 +337,7 @@ class Players {
     //         return;
     //     }
     //     console.log("Populating metadata form for player index:", index, data   );
-        
+
     //     const section = Math.floor(index / 2) + 1;
     //     const form = document.getElementById(`metaForm${section}`) as HTMLDivElement;
     //     if (!form) return;
@@ -603,7 +606,7 @@ class Players {
     //         });
 
     //     console.log(response);
-        
+
 
     //         if (!response.ok) {
     //             console.error(`HTTP error! status: ${response.status}`);
