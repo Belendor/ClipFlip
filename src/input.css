@@ -38,11 +38,10 @@
     /* Clicks pass through to the front video */
 }
 
-/* Layout State: Full Screen for Section 1 */
-.video-grid.expanded #section-1 {
+/* .video-grid.expanded #section-1 {
     grid-column: 1 / span 2;
     grid-row: 1 / span 2;
-}
+} */
 
 .video-grid.expanded .video-section:not(#section-1) {
     opacity: 0;
