@@ -11,14 +11,14 @@
     box-sizing: border-box;
 } */
 
-#app-root {
+/* #app-root {
     position: relative;
     width: 100%;
     min-height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-}
+} */
 
 /* Prevent horizontal overflow for all descendants */
 * {
