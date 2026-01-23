@@ -62,7 +62,22 @@ class Players {
             const videoUrl = URL.createObjectURL(blob);
             videoPlayer.src = videoUrl; // This is now instant because it's in memory
             videoPlayer.load();
-            videoPlayer.currentTime = 0;
+            const videoIsReady = new Promise((resolve, reject) => {
+                // Success case
+                videoPlayer.oncanplaythrough = () => {
+                    console.log(`Video buffered.`, videoPlayer);
+                    resolve(true);
+                };
+
+                // Failure case (e.g., corrupted file or 404)
+                videoPlayer.onerror = () => {
+                    console.error(`Error loading video ${pos}`);
+                    reject(new Error("Video load failed"));
+                };
+
+                // Safety timeout: don't hang the app if the browser stalls
+                setTimeout(() => resolve(false), 5000);
+            });
 
             if (this.state.active?.[playerIndex]) {
                 console.log("active start playing");
