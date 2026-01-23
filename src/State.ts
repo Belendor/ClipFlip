@@ -141,7 +141,7 @@ class State {
             const videos = await response.json();
             return videos;
         } catch (err) {
-            console.error(`Failed to fetch videos for section ${section} with tags ${tags}`, err);
+            console.error(`Failed to fetch videos for section ${section} with tag ${tags}`, err);
             return null;
         }
     }

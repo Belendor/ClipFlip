@@ -60,7 +60,7 @@ export default class HTML {
       }
     });
 
-    console.log("HTML: 8 Players mapped by ID successfully.");
+    console.log("HTML: Players mapped by ID successfully.", this.videoPlayers.length);
   }
 
 
@@ -179,6 +179,9 @@ export default class HTML {
     toggleTag?: (tag: string, active: boolean) => void
   ) {
     container.innerHTML = '';
+    if (tags.length === 0) {
+      return
+    }
     const visibleCount = 5;
     const sectionId = (Math.floor(index / 2) + 1) as SectionId;
 

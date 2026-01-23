@@ -21,10 +21,10 @@ class Players {
     }
     async init() {
         this.attachEventListeners();
-        this.initializeMuteButton();
+        // this.initializeMuteButton();
         await this.state.tagsPromise;
         console.log("Tags loaded:", this.state.allTags);
-        this.createVideoContainer();
+        // this.createVideoContainer();
         await this.loadVideos();
     }
     async loadVideos(): Promise<void> {
@@ -65,41 +65,39 @@ class Players {
                 this.html.videoPlayers[playerIndex].play();
                 this.state.playing[section] = true;
                 const res = await this.getVideoMetadata(pos);
-                this.populateMetadataForm(playerIndex, res);
+                // this.populateMetadataForm(playerIndex, res);
             }
 
             continue;
         }
     }
-    private initializeMuteButton(): void {
-        const muteIcon = document.getElementById('muteIcon');
+    // private initializeMuteButton(): void {
+    //     const muteIcon = document.getElementById('muteIcon');
 
-        // set initial state: all players muted + muted icon
-        this.html.videoPlayers.forEach(player => {
-            player.muted = this.muted;
-        });
+    //     // set initial state: all players muted + muted icon
+    //     this.html.videoPlayers.forEach(player => {
+    //         player.muted = this.muted;
+    //     });
 
-        if (muteIcon) {
-            muteIcon.innerHTML = `
-      <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2"
-        viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15 9a3 3 0 010 6" />
-        <path stroke-linecap="round" stroke-linejoin="round" d="M17.5 7.5a6 6 0 010 9" />
-      </svg>`;
-        }
+    //     if (muteIcon) {
+    //         muteIcon.innerHTML = `
+    //   <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2"
+    //     viewBox="0 0 24 24">
+    //     <path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
+    //     <path stroke-linecap="round" stroke-linejoin="round" d="M15 9a3 3 0 010 6" />
+    //     <path stroke-linecap="round" stroke-linejoin="round" d="M17.5 7.5a6 6 0 010 9" />
+    //   </svg>`;
+    //     }
 
-        // add click listener
-        this.html.muteToggle?.addEventListener('click', () => {
-            this.muted = !this.muted;
+    //     // add click listener
+    //     this.html.muteToggle?.addEventListener('click', () => {
+    //         this.muted = !this.muted;
 
-            this.html.videoPlayers.forEach(player => {
-                player.muted = this.muted;
-            });
-
-
-        });
-    }
+    //         this.html.videoPlayers.forEach(player => {
+    //             player.muted = this.muted;
+    //         });
+    //     });
+    // }
     private attachEventListeners() {
         this.html.playPauseBtn.addEventListener('click', () => {
             this.html.playPauseBtn.classList.toggle('is-playing');
@@ -275,27 +273,20 @@ class Players {
 
         const primary = this.html.videoPlayers[playerIndex];   
         const secondary = this.html.videoPlayers[nextPlayerIndex]; 
-        const primaryForm = this.html.videoForms[playerIndex];
-        const secondaryForm = this.html.videoForms[nextPlayerIndex];
 
         if (!primary || !secondary) return;
 
+        const currentPoster = primary.poster;
+        if (currentPoster) secondary.poster = currentPoster;
         // 1. Play the secondary (hidden) video first
         await secondary.play();
                 // 6. Update the metadata in the hidden form so it's ready for the next swap
         const currentPos = this.state.positions[section];
         const res = await this.getVideoMetadata(currentPos);
-        this.populateMetadataForm(playerIndex, res);
+        // this.populateMetadataForm(playerIndex, res);
         // 2. SWAP VIDEO CLASSES (Cross-fade)
         secondary.classList.replace("layer-back", "layer-front");
         primary.classList.replace("layer-front", "layer-back");
-
-        // 3. SWAP FORM CLASSES (Synchronized with video)
-        // Instead of adding .hidden to both, we swap their layers
-        if (primaryForm && secondaryForm) {
-            secondaryForm.classList.replace("layer-back", "layer-front");
-            primaryForm.classList.replace("layer-front", "layer-back");
-        }
 
         // 4. Update State
         if (this.state.active) {
@@ -337,51 +328,51 @@ class Players {
         // this.html.toolbar.classList.toggle('hidden');
     }
 
-    populateMetadataForm(index: PlayerIndex, data: VideoWithRelations | null): void {
-        if (!this.isMetadataValid(data) || !data) {
-            console.warn(`Invalid or empty metadata for Player ${index}`);
-            return;
-        }
-        console.log("Populating metadata form for player index:", index, data   );
+    // populateMetadataForm(index: PlayerIndex, data: VideoWithRelations | null): void {
+    //     if (!this.isMetadataValid(data) || !data) {
+    //         console.warn(`Invalid or empty metadata for Player ${index}`);
+    //         return;
+    //     }
+    //     console.log("Populating metadata form for player index:", index, data   );
         
-        const section = Math.floor(index / 2) + 1;
-        const form = document.getElementById(`metaForm${section}`) as HTMLDivElement;
-        if (!form) return;
+    //     const section = Math.floor(index / 2) + 1;
+    //     const form = document.getElementById(`metaForm${section}`) as HTMLDivElement;
+    //     if (!form) return;
 
-        const inputs = form.querySelectorAll('input');
+    //     const inputs = form.querySelectorAll('input');
 
-        inputs.forEach((input) => {
-            switch (input.placeholder) {
-                case 'id' :
-                    input.value = data.id.toString();
-                    break;
-                case 'Title':
-                    input.value = data.title || '';
-                    break;
-                case 'Models':
-                    input.value = Array.isArray(data.models) ? data.models.join(', ') : (data.models || '');
-                    break;
-                case 'Studio':
-                    input.value = data.studio || '';
-                    break;
-            }
-        });
-        if (!data.tags || data.tags.length === 0) {
-            return;
-        }
+    //     inputs.forEach((input) => {
+    //         switch (input.placeholder) {
+    //             case 'id' :
+    //                 input.value = data.id.toString();
+    //                 break;
+    //             case 'Title':
+    //                 input.value = data.title || '';
+    //                 break;
+    //             case 'Models':
+    //                 input.value = Array.isArray(data.models) ? data.models.join(', ') : (data.models || '');
+    //                 break;
+    //             case 'Studio':
+    //                 input.value = data.studio || '';
+    //                 break;
+    //         }
+    //     });
+    //     // if (!data.tags || data.tags.length === 0) {
+    //     //     return;
+    //     // }
 
-        const tagsWrapper = this.html.tagsWrappers[index as PlayerIndex];
+    //     const tagsWrapper = this.html.tagsWrappers[index as PlayerIndex];
 
-        if (!tagsWrapper) return;
-        // render toggleable tags directly here
-        this.html.renderTags(
-            tagsWrapper,
-            data.tags,
-            index,
-            data.id,
-            this.toggleTag.bind(this)
-        )
-    }
+    //     if (!tagsWrapper) return;
+    //     // render toggleable tags directly here
+    //     this.html.renderTags(
+    //         tagsWrapper,
+    //         data.tags,
+    //         index,
+    //         data.id,
+    //         this.toggleTag.bind(this)
+    //     )
+    // }
 
     async toggleTag(tag: string, reset: boolean = true): Promise<void> {
         console.log("Activating tags on buttons:", tag);
@@ -485,7 +476,7 @@ class Players {
                 if (!tag.title) return;
                 const video = await this.updateMeta(index, 'tag', tag.title, tag.id);
                 tagListDropdown.classList.add('hidden'); // hide dropdown
-                this.populateMetadataForm((index) as PlayerIndex, video);
+                // this.populateMetadataForm((index) as PlayerIndex, video);
             });
             tagListDropdown.appendChild(tagItem);
         });
@@ -611,6 +602,9 @@ class Players {
                 body: JSON.stringify(body),
             });
 
+        console.log(response);
+        
+
             if (!response.ok) {
                 console.error(`HTTP error! status: ${response.status}`);
                 return null;
@@ -624,49 +618,40 @@ class Players {
             return null;
         }
     }
-    createVideoContainer(): HTMLElement {
-        const container = document.getElementById('video-grid');
-        if (!container) {
-            throw new Error('Video grid element not found');
-        }
+    // createVideoContainer(): void {
 
-        this.html.videoPlayers = [];
-        this.html.videoForms = [];
+    //     // 1. Loop through the 4 existing sections in your HTML
+    //     for (let s = 1; s <= 4; s++) {
+    //         const section = document.getElementById(`section-${s}`);
+    //         if (!section) continue;
 
-        // 1. Loop through the 4 existing sections in your HTML
-        for (let s = 1; s <= 4; s++) {
-            const section = document.getElementById(`section-${s}`);
-            if (!section) continue;
+    //         // 2. Find the existing videos (Front and Back) and link them to our array
+    //         const front = section.querySelector(`#v${s}-front`) as HTMLVideoElement;
+    //         const back = section.querySelector(`#v${s}-back`) as HTMLVideoElement;
 
-            // 2. Find the existing videos (Front and Back) and link them to our array
-            const front = section.querySelector(`#v${s}-front`) as HTMLVideoElement;
-            const back = section.querySelector(`#v${s}-back`) as HTMLVideoElement;
+    //         if (front) this.html.videoPlayers.push(front);
+    //         if (back) this.html.videoPlayers.push(back);
 
-            if (front) this.html.videoPlayers.push(front);
-            if (back) this.html.videoPlayers.push(back);
+    //         // 3. Create and Append the Metadata Forms
+    //         // We create two forms (one for front, one for back) 
+    //         // and append them to the section
+    //         [0, 1].forEach((j) => {
+    //             const playerIndex = ((s - 1) * 2 + j) as PlayerIndex;
 
-            // 3. Create and Append the Metadata Forms
-            // We create two forms (one for front, one for back) 
-            // and append them to the section
-            [0, 1].forEach((j) => {
-                const playerIndex = ((s - 1) * 2 + j) as PlayerIndex;
+    //             // Create the form using your existing method
+    //             const form = this.createMetadataForm(playerIndex);
+    //             form.classList.add('metadata-form');
 
-                // Create the form using your existing method
-                const form = this.createMetadataForm(playerIndex);
-                form.classList.add('metadata-form');
-
-                // Link to your tracking array
-                this.html.videoForms[playerIndex] = form as HTMLDivElement;
-                if (j === 1) {
-                  return
-                }
-                // APPEND ONLY: Add it to the existing section div
-                section.appendChild(form);
-            });
-        }
-
-        return container;
-    }
+    //             // Link to your tracking array
+    //             this.html.videoForms[playerIndex] = form as HTMLDivElement;
+    //             if (j === 1) {
+    //               return
+    //             }
+    //             // APPEND ONLY: Add it to the existing section div
+    //             section.appendChild(form);
+    //         });
+    //     }
+    // }
 
 }
 export default Players;
