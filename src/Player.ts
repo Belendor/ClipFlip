@@ -62,22 +62,6 @@ class Players {
             const videoUrl = URL.createObjectURL(blob);
             videoPlayer.src = videoUrl; // This is now instant because it's in memory
             videoPlayer.load();
-            const videoIsReady = new Promise((resolve, reject) => {
-                // Success case
-                videoPlayer.oncanplaythrough = () => {
-                    console.log(`Video buffered.`, videoPlayer);
-                    resolve(true);
-                };
-
-                // Failure case (e.g., corrupted file or 404)
-                videoPlayer.onerror = () => {
-                    console.error(`Error loading video ${pos}`);
-                    reject(new Error("Video load failed"));
-                };
-
-                // Safety timeout: don't hang the app if the browser stalls
-                setTimeout(() => resolve(false), 5000);
-            });
 
             if (this.state.active?.[playerIndex]) {
                 console.log("active start playing");
@@ -295,8 +279,7 @@ class Players {
 
             if (!primary || !secondary) return;
 
-            // 1. Play the secondary (hidden) video first
-            await secondary.play();
+
             // 6. Update the metadata in the hidden form so it's ready for the next swap
             const currentPos = this.state.positions[section];
             const res = await this.getVideoMetadata(currentPos);
@@ -304,7 +287,8 @@ class Players {
             // 2. SWAP VIDEO CLASSES (Cross-fade)
             secondary.classList.replace("layer-back", "layer-front");
             primary.classList.replace("layer-front", "layer-back");
-
+            // 1. Play the secondary (hidden) video first
+            await secondary.play();
             // 4. Update State
             if (this.state.active) {
                 this.state.active[nextPlayerIndex] = true;
@@ -319,7 +303,6 @@ class Players {
             const videoUrl = URL.createObjectURL(blob);
             primary.src = videoUrl; // This is now instant because it's in memory
             primary.load();
-            primary.currentTime = 0;
         } catch (err) {
             console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
         }
