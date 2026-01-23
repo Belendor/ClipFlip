@@ -1,15 +1,15 @@
-/* 1. Root & Body */
+/* 
 html, body {
     margin: 0;
     padding: 0;
     height: 100%;
     width: 100%;
     background-color: #000;
-    overflow-x: hidden;      /* prevent horizontal scroll */
-    overflow-y: auto;        /* allow vertical scroll */
+    overflow-x: hidden;     
+    overflow-y: auto;        
     overscroll-behavior: none;
     position: relative;
-}
+} */
 
 /* 2. App Root */
 .app-root {
