@@ -416,208 +416,208 @@ class Players {
         const data = await res.json();
         return data;
     }
-    createMetadataForm(index: PlayerIndex): HTMLElement {
-        // 💡 UPDATED: Added positioning classes 'absolute top-0 left-0 z-20 relative'.
-        // 'absolute top-0 left-0' places it in the top-left of the parent.
-        // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
-        const section = Math.floor(index / 2) + 1;
-        this.html.videoForms[index] = this.html.createDiv(
-            `metaForm${section}`,
-            'metadata-form hidden'
-        );
+    // createMetadataForm(index: PlayerIndex): HTMLElement {
+    //     // 💡 UPDATED: Added positioning classes 'absolute top-0 left-0 z-20 relative'.
+    //     // 'absolute top-0 left-0' places it in the top-left of the parent.
+    //     // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
+    //     const section = Math.floor(index / 2) + 1;
+    //     this.html.videoForms[index] = this.html.createDiv(
+    //         `metaForm${section}`,
+    //         'metadata-form hidden'
+    //     );
 
-        const shouldHide = this.state.playing[Math.floor(index / 2 + 1) as SectionId];
+    //     const shouldHide = this.state.playing[Math.floor(index / 2 + 1) as SectionId];
 
-        if (shouldHide) {
-            this.html.videoForms[index].classList.add('hidden');
-        }
+    //     if (shouldHide) {
+    //         this.html.videoForms[index].classList.add('hidden');
+    //     }
 
-        const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.placeholder = placeholder;
-            input.className = 'input-fields';
+    //     const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
+    //         const input = document.createElement('input');
+    //         input.type = 'text';
+    //         input.placeholder = placeholder;
+    //         input.className = 'input-fields';
 
-            input.addEventListener('input', async (event) => {
-                event.preventDefault();
-                await this.updateMeta(index, key, input.value);
-            });
+    //         input.addEventListener('input', async (event) => {
+    //             event.preventDefault();
+    //             await this.updateMeta(index, key, input.value);
+    //         });
 
-            return input;
-        };
-        const titleInput = makeInput('Title', 'title');
-        const modelInput = makeInput('Models', 'models'); // or 'model' if that is your key
-        const studioInput = makeInput('Studio', 'studio');
-        const idInput = makeInput('id', 'id');
+    //         return input;
+    //     };
+    //     const titleInput = makeInput('Title', 'title');
+    //     const modelInput = makeInput('Models', 'models'); // or 'model' if that is your key
+    //     const studioInput = makeInput('Studio', 'studio');
+    //     const idInput = makeInput('id', 'id');
 
-        const tagsWrapper = this.html.createDiv(`tags${index}`, 'tag-container');
+    //     const tagsWrapper = this.html.createDiv(`tags${index}`, 'tag-container');
 
-        // in your constructor or before usage
-        this.html.tagsWrappers.push(tagsWrapper);
+    //     // in your constructor or before usage
+    //     this.html.tagsWrappers.push(tagsWrapper);
 
-        // 1. Create a container for the button and the dropdown
-        const tagButtonWrapper = this.html.createDiv('tag-button-wrapper', 'relative inline-block'); // Make this wrapper relative
+    //     // 1. Create a container for the button and the dropdown
+    //     const tagButtonWrapper = this.html.createDiv('tag-button-wrapper', 'relative inline-block'); // Make this wrapper relative
 
-        // + Button to show available tags
-        const addTagBtn = document.createElement('button');
-        addTagBtn.type = 'button';
-        addTagBtn.textContent = '+';
-        addTagBtn.className = 'plus-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
+    //     // + Button to show available tags
+    //     const addTagBtn = document.createElement('button');
+    //     addTagBtn.type = 'button';
+    //     addTagBtn.textContent = '+';
+    //     addTagBtn.className = 'plus-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
 
-        // 2. Adjust dropdown classes to position relative to the new wrapper
-        const tagListDropdown = document.createElement('div');
-        tagListDropdown.className = 'tag-list hidden';
+    //     // 2. Adjust dropdown classes to position relative to the new wrapper
+    //     const tagListDropdown = document.createElement('div');
+    //     tagListDropdown.className = 'tag-list hidden';
 
-        this.state.allTags.forEach((tag) => {
-            const tagItem = document.createElement('div');
-            tagItem.textContent = tag.title
-            tagItem.className = 'px-3 py-2 hover:bg-gray-200 cursor-pointer';
-            tagItem.addEventListener('click', async () => {
-                if (!tag.title) return;
-                const video = await this.updateMeta(index, 'tag', tag.title, tag.id);
-                tagListDropdown.classList.add('hidden'); // hide dropdown
-                // this.populateMetadataForm((index) as PlayerIndex, video);
-            });
-            tagListDropdown.appendChild(tagItem);
-        });
+    //     this.state.allTags.forEach((tag) => {
+    //         const tagItem = document.createElement('div');
+    //         tagItem.textContent = tag.title
+    //         tagItem.className = 'px-3 py-2 hover:bg-gray-200 cursor-pointer';
+    //         tagItem.addEventListener('click', async () => {
+    //             if (!tag.title) return;
+    //             const video = await this.updateMeta(index, 'tag', tag.title, tag.id);
+    //             tagListDropdown.classList.add('hidden'); // hide dropdown
+    //             // this.populateMetadataForm((index) as PlayerIndex, video);
+    //         });
+    //         tagListDropdown.appendChild(tagItem);
+    //     });
 
-        // Toggle tag dropdown visibility
-        addTagBtn.addEventListener('click', () => {
-            tagListDropdown.classList.toggle('hidden');
-        });
+    //     // Toggle tag dropdown visibility
+    //     addTagBtn.addEventListener('click', () => {
+    //         tagListDropdown.classList.toggle('hidden');
+    //     });
 
-        // UPLOAD button + form
-        const uploadBtn = document.createElement('button');
-        uploadBtn.type = 'button';
-        uploadBtn.innerHTML = '📤'; // could be replaced with an icon <svg> if you want
-        uploadBtn.className = 'upload-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
+    //     // UPLOAD button + form
+    //     const uploadBtn = document.createElement('button');
+    //     uploadBtn.type = 'button';
+    //     uploadBtn.innerHTML = '📤'; // could be replaced with an icon <svg> if you want
+    //     uploadBtn.className = 'upload-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
 
-        const uploadFormWrapper = document.createElement('div');
-        // The dropdowns are already set to absolute, which now uses the form (relative) as its context.
-        uploadFormWrapper.className = 'upload-form hidden mt-2 bg-white text-black border border-gray-300 rounded shadow-md p-2 absolute';
-        uploadFormWrapper.style.minWidth = '14rem';
+    //     const uploadFormWrapper = document.createElement('div');
+    //     // The dropdowns are already set to absolute, which now uses the form (relative) as its context.
+    //     uploadFormWrapper.className = 'upload-form hidden mt-2 bg-white text-black border border-gray-300 rounded shadow-md p-2 absolute';
+    //     uploadFormWrapper.style.minWidth = '14rem';
 
-        // form fields inside upload form
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.multiple = true;
-        fileInput.className = 'block w-full mb-2';
+    //     // form fields inside upload form
+    //     const fileInput = document.createElement('input');
+    //     fileInput.type = 'file';
+    //     fileInput.multiple = true;
+    //     fileInput.className = 'block w-full mb-2';
 
-        const uploadTitleInput = document.createElement('input');
-        uploadTitleInput.type = 'text';
-        uploadTitleInput.placeholder = 'Title';
-        uploadTitleInput.className = 'block w-full mb-2 border border-gray-400 px-2 py-1 rounded';
+    //     const uploadTitleInput = document.createElement('input');
+    //     uploadTitleInput.type = 'text';
+    //     uploadTitleInput.placeholder = 'Title';
+    //     uploadTitleInput.className = 'block w-full mb-2 border border-gray-400 px-2 py-1 rounded';
 
-        // tag select for uploaded video
-        const uploadTagSelect = document.createElement('select');
-        uploadTagSelect.className = 'block w-full mb-2 border border-gray-400 px-2 py-1 rounded';
+    //     // tag select for uploaded video
+    //     const uploadTagSelect = document.createElement('select');
+    //     uploadTagSelect.className = 'block w-full mb-2 border border-gray-400 px-2 py-1 rounded';
 
-        this.state.allTags.forEach((tag) => {
-            const opt = document.createElement('option');
-            opt.value = tag.id.toString();
-            opt.textContent = tag.title;
-            uploadTagSelect.appendChild(opt);
-        });
+    //     this.state.allTags.forEach((tag) => {
+    //         const opt = document.createElement('option');
+    //         opt.value = tag.id.toString();
+    //         opt.textContent = tag.title;
+    //         uploadTagSelect.appendChild(opt);
+    //     });
 
-        const submitUploadBtn = document.createElement('button');
-        submitUploadBtn.type = 'button';
-        submitUploadBtn.textContent = 'Upload';
-        submitUploadBtn.className = 'px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700';
+    //     const submitUploadBtn = document.createElement('button');
+    //     submitUploadBtn.type = 'button';
+    //     submitUploadBtn.textContent = 'Upload';
+    //     submitUploadBtn.className = 'px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700';
 
-        submitUploadBtn.addEventListener('click', async () => {
-            if (!fileInput.files?.length) return alert('Please select a file.');
+    //     submitUploadBtn.addEventListener('click', async () => {
+    //         if (!fileInput.files?.length) return alert('Please select a file.');
 
-            const formData = new FormData();
-            // append all selected files
-            Array.from(fileInput.files).forEach((file) => {
-                formData.append('files', file);
-            });
-            formData.append('title', uploadTitleInput.value);
-            formData.append('tagId', uploadTagSelect.value);
+    //         const formData = new FormData();
+    //         // append all selected files
+    //         Array.from(fileInput.files).forEach((file) => {
+    //             formData.append('files', file);
+    //         });
+    //         formData.append('title', uploadTitleInput.value);
+    //         formData.append('tagId', uploadTagSelect.value);
 
-            const res = await fetch(`${this.state.apiUrl}/upload-video`, {
-                method: 'POST',
-                body: formData,
-            });
+    //         const res = await fetch(`${this.state.apiUrl}/upload-video`, {
+    //             method: 'POST',
+    //             body: formData,
+    //         });
 
-            if (res.ok) {
-                alert('Upload successful');
-                uploadFormWrapper.classList.add('hidden');
-            } else {
-                alert('Upload failed');
-            }
-        });
+    //         if (res.ok) {
+    //             alert('Upload successful');
+    //             uploadFormWrapper.classList.add('hidden');
+    //         } else {
+    //             alert('Upload failed');
+    //         }
+    //     });
 
-        uploadFormWrapper.append(fileInput, uploadTitleInput, uploadTagSelect, submitUploadBtn);
+    //     uploadFormWrapper.append(fileInput, uploadTitleInput, uploadTagSelect, submitUploadBtn);
 
-        uploadBtn.addEventListener('click', () => {
-            uploadFormWrapper.classList.toggle('hidden');
-        });
+    //     uploadBtn.addEventListener('click', () => {
+    //         uploadFormWrapper.classList.toggle('hidden');
+    //     });
 
-        // Append button and dropdown to the new wrapper
-        tagButtonWrapper.append(addTagBtn, tagListDropdown);
-        this.html.videoForms[index].append(tagsWrapper, tagButtonWrapper, titleInput, modelInput, studioInput,  idInput, uploadBtn, uploadFormWrapper)
-        return this.html.videoForms[index];
-    }
-    async updateMeta(index: PlayerIndex, key: string, value: string | string[], tagId?: number): Promise<VideoWithRelations | null> {
-        // gather data to send, assuming you have videos in an array like this:
-        const video = this.html.videoPlayers[index];
-        if (!video) {
-            console.error(`Video player for index ${index} not found`);
-            return null;
-        }
+    //     // Append button and dropdown to the new wrapper
+    //     tagButtonWrapper.append(addTagBtn, tagListDropdown);
+    //     this.html.videoForms[index].append(tagsWrapper, tagButtonWrapper, titleInput, modelInput, studioInput,  idInput, uploadBtn, uploadFormWrapper)
+    //     return this.html.videoForms[index];
+    // }
+    // async updateMeta(index: PlayerIndex, key: string, value: string | string[], tagId?: number): Promise<VideoWithRelations | null> {
+    //     // gather data to send, assuming you have videos in an array like this:
+    //     const video = this.html.videoPlayers[index];
+    //     if (!video) {
+    //         console.error(`Video player for index ${index} not found`);
+    //         return null;
+    //     }
 
-        const src = video.src;
-        if (!src) {
-            console.error(`Video source for player at index ${index} is missing`);
-            return null;
-        }
-        const filename = src.split('/').pop();
-        if (!filename) {
-            console.error(`Could not extract filename from src for video at index ${index}`);
-            return null;
-        }
-        const videoId = filename.replace('.mp4', '');
-        if (!videoId) {
-            console.error(`Extracted video ID is empty for video at index ${index}`);
-            return null;
-        }
+    //     const src = video.src;
+    //     if (!src) {
+    //         console.error(`Video source for player at index ${index} is missing`);
+    //         return null;
+    //     }
+    //     const filename = src.split('/').pop();
+    //     if (!filename) {
+    //         console.error(`Could not extract filename from src for video at index ${index}`);
+    //         return null;
+    //     }
+    //     const videoId = filename.replace('.mp4', '');
+    //     if (!videoId) {
+    //         console.error(`Extracted video ID is empty for video at index ${index}`);
+    //         return null;
+    //     }
 
-        const body: any = { id: videoId };
-        // build request body dynamically
-        if (key === 'title') {
-            body.title = value;
-        } else if (key === 'models') {
-            body.models = value;
-        } else if (key === 'studio') {
-            body.studio = value;
-        } else if (key === 'tag') {
-            body.tag = { id: tagId, title: value };
-        }
+    //     const body: any = { id: videoId };
+    //     // build request body dynamically
+    //     if (key === 'title') {
+    //         body.title = value;
+    //     } else if (key === 'models') {
+    //         body.models = value;
+    //     } else if (key === 'studio') {
+    //         body.studio = value;
+    //     } else if (key === 'tag') {
+    //         body.tag = { id: tagId, title: value };
+    //     }
 
-        try {
-            const response = await fetch(`${this.state.apiUrl}/videos`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
+    //     try {
+    //         const response = await fetch(`${this.state.apiUrl}/videos`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify(body),
+    //         });
 
-        console.log(response);
+    //     console.log(response);
         
 
-            if (!response.ok) {
-                console.error(`HTTP error! status: ${response.status}`);
-                return null;
-            }
+    //         if (!response.ok) {
+    //             console.error(`HTTP error! status: ${response.status}`);
+    //             return null;
+    //         }
 
-            // After updating, fetch the latest metadata for this video and return it
-            const updated = await this.getVideoMetadata(Number(videoId));
-            return updated;
-        } catch (error) {
-            console.error(`Failed to update metadata for video ${index}:`, error);
-            return null;
-        }
-    }
+    //         // After updating, fetch the latest metadata for this video and return it
+    //         const updated = await this.getVideoMetadata(Number(videoId));
+    //         return updated;
+    //     } catch (error) {
+    //         console.error(`Failed to update metadata for video ${index}:`, error);
+    //         return null;
+    //     }
+    // }
     // createVideoContainer(): void {
 
     //     // 1. Loop through the 4 existing sections in your HTML
