@@ -285,10 +285,14 @@ class Players {
             const res = await this.getVideoMetadata(currentPos);
             // this.populateMetadataForm(playerIndex, res);
             // 2. SWAP VIDEO CLASSES (Cross-fade)
-            secondary.style.opacity = "1";
-            primary.style.opacity = "0";
-            // 1. Play the secondary (hidden) video first
             await secondary.play();
+
+            // slide current out, slide next in
+            primary.classList.remove("onscreen");
+            primary.classList.add("offscreen-left");
+
+            secondary.classList.remove("offscreen-right", "offscreen-left");
+            secondary.classList.add("onscreen");
             // 4. Update State
             if (this.state.active) {
                 this.state.active[nextPlayerIndex] = true;

@@ -13,3 +13,15 @@
     opacity: 0;
     pointer-events: none;
 }
+
+.offscreen-left {
+    transform: translateX(-110%);
+}
+
+.offscreen-right {
+    transform: translateX(110%);
+}
+
+.onscreen {
+    transform: translateX(0);
+}
