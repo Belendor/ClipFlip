@@ -366,6 +366,7 @@ select[multiple] {
 
 .advanced-panel {
     width: 100%;
+    max-width: 70vw;
     height: calc(100vh - 120px);
 
     backdrop-filter: blur(4px);

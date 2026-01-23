@@ -62,6 +62,7 @@ class Players {
             const videoUrl = URL.createObjectURL(blob);
             videoPlayer.src = videoUrl; // This is now instant because it's in memory
             videoPlayer.load();
+            videoPlayer.currentTime = 0;
 
             if (this.state.active?.[playerIndex]) {
                 console.log("active start playing");
@@ -303,6 +304,7 @@ class Players {
             const videoUrl = URL.createObjectURL(blob);
             primary.src = videoUrl; // This is now instant because it's in memory
             primary.load();
+            primary.currentTime = 0;
         } catch (err) {
             console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
         }
