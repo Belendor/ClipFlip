@@ -1,0 +1,11 @@
+.metadata-form {
+    z-index: 3;
+    position: absolute;
+    bottom: 90px;               /* fixed distance from bottom */
+    left: 10px;
+    width: max-content;
+    opacity: 0;                 /* hidden initially */
+    visibility: hidden;         /* hidden initially */
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}

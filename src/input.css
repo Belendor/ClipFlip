@@ -1,15 +1,8 @@
 @import "tailwindcss";
+@import './css/body.css';
+@import './css/video-grid.css';
+@import './css/toolbar.css';
 
-/* Core Grid Layout */
-.video-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    width: 100vw;
-    height: 100vh;
-    gap: 0;
-    background: #000;
-}
 
 .video-section {
     position: relative;
@@ -60,58 +53,6 @@
 .video-grid:not(.expanded) #section-1 {
     grid-column: 1 / span 1;
     grid-row: 1 / span 1;
-}
-
-html,
-body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background-color: #000;
-    /* keep black background */
-    overflow-x: hidden;
-    /* only hide horizontal scroll if needed */
-    overflow-y: auto;
-    /* let vertical scroll exist naturally */
-    overscroll-behavior: none;
-}
-
-/* Ensure only the front form is visible */
-.metadata-form.layer-back {
-    opacity: 0;
-    pointer-events: none;
-    visibility: hidden;
-    /* This prevents interaction with hidden forms */
-    transition: opacity 0.5s ease;
-}
-
-.metadata-form.layer-front {
-    opacity: 1;
-    pointer-events: auto;
-    visibility: visible;
-    transition: opacity 0.5s ease;
-}
-
-/* The Global Hide Button override */
-/* When the user clicks the 'Hide Forms' button, hide even the active ones */
-.video-grid.ui-hidden .metadata-form {
-    opacity: 0 !important;
-    pointer-events: none !important;
-    visibility: hidden !important;
-}
-
-
-.app-root {
-    position: relative;
-    width: 100%;
-    /* FIX: Use 100% of the parent (html) instead of vh to avoid mobile browser address bar issues */
-    height: 100%;
-    min-height: 100%;
-
-    /* FIX: Prevents child margins from "leaking" out and pushing the container down */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
 }
 
 /* Toggle Logic: Exit icon is hidden by default */
@@ -524,26 +465,6 @@ select[multiple] {
     border-color: #E5E7EB !important;
 }
 
-.metadata-form {
-    /* 1. Perfect Centering Logic */
-    z-index: 3;
-    position: absolute;
-    bottom: 90px;
-    /* 60px from the bottom edge */
-    left: 10px;
-    /* transform: translate(-50%, 50%); */
-
-
-    /* 2. Style - Transparent High Contrast */
-    backdrop-filter: blur(4px);
-    border: 1.5px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
-    padding: 0.75rem;
-    background-color: rgba(0, 0, 0, 0.161);
-    /* 3. Sizing */
-    width: max-content;
-}
-
 .input-fields {
     display: block;
 
@@ -587,49 +508,6 @@ select[multiple] {
     font-size: 14px;
     cursor: pointer;
     border-width: 2px;
-}
-
-.ui-wrapper {
-    z-index: 3;
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-
-    /* This stacks the panel on top of the toolbar */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    /* Matches your previous responsive requirements */
-    width: max-content;
-    max-width: 95vw;
-}
-
-
-.toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    height: 56px;
-    min-height: 56px;
-
-    padding: 0 8px;
-    width: auto;
-
-    backdrop-filter: blur(2px);
-
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.toolbar-item {
-    /* Allow items to grow and shrink, but not go below a minimum width */
-    flex: 1 1 auto;
-    min-width: fit-content;
-    max-width: 100%;
 }
 
 .form-container {

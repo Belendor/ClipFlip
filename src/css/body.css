@@ -1,0 +1,23 @@
+/* 1. Root & Body */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    background-color: #000;
+    overflow-x: hidden;      /* prevent horizontal scroll */
+    overflow-y: auto;        /* allow vertical scroll */
+    overscroll-behavior: none;
+    position: relative;
+}
+
+/* 2. App Root */
+.app-root {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
