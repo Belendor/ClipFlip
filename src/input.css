@@ -100,12 +100,6 @@ html {
 }
 
 
-:root {
-    --toolbar-h: 56px;
-}
-
-
-
 .app-root {
     position: relative;
     width: 100%;
@@ -131,11 +125,6 @@ html {
 
 .control-btn-square.is-fullscreen .icon-exit {
     display: block;
-}
-
-/* Optional: Add a slight rotation to the icon on hover to match the Advanced button style */
-#fullScreenBtn:hover svg {
-    transform: scale(1.1);
 }
 
 /* Toggle Logic: Single icon is hidden by default */
@@ -345,10 +334,6 @@ html {
 
 /* Small Phone (Under 480px) */
 @media (max-width: 480px) {
-    :root {
-        --toolbar-h: 48px;
-    }
-
     .control-btn-square svg {
         width: 1.25rem;
         height: 1.25rem;
@@ -695,8 +680,8 @@ select[multiple] {
     justify-content: center;
     gap: 8px;
 
-    height: var(--toolbar-h);
-    min-height: var(--toolbar-h);
+    height: 56px;
+    min-height: 56px;
 
     padding: 0 8px;
     width: auto;
@@ -726,11 +711,6 @@ select[multiple] {
     z-index: 3;
 }
 
-@media screen and (max-width: 768px) and (orientation: portrait) {
-    #rotateOverlay {
-        display: flex !important;
-    }
-}
 
 .advanced-panel {
     width: 100%;
