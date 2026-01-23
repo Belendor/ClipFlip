@@ -4,3 +4,523 @@
 @import './css/toolbar.css';
 @import './css/player.css';
 
+.hidden {
+    display: none !important;
+}
+
+.control-btn-square.is-muted {
+    opacity: 0.7;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    max-height: 35px;
+}
+
+.search-input-glass {
+    font-size: 0.7rem;
+    height: 2.5rem;
+    /* Matches your 48px buttons */
+    padding: 0 1rem 0 2.5rem;
+    /* Space on left for the icon */
+
+    background: transparent;
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 0.9rem;
+
+    /* Contrast & Visibility */
+    backdrop-filter: blur(4px);
+}
+
+.search-input-glass::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.search-input-glass:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #3b82f6;
+    /* Changes to blue when typing */
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+/* Positioning the Search Icon inside the input */
+.search-icon {
+    position: absolute;
+    left: 12px;
+    color: #ffffff;
+    pointer-events: none;
+}
+
+.search-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Base Button Styling */
+.advanced-toggle-btn {
+    /* Positioning & Layering */
+    position: relative;
+
+    /* Sizing - Slightly bigger */
+    display: flex;
+    max-height: 65px;
+    max-width: 65px;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+
+    /* Borders & Background */
+    border: 2px solid #3b82f6;
+    /* Blue-500 */
+    background-color: transparent;
+    border-radius: 0.5rem;
+    /* rounded-lg */
+    color: #3b82f6;
+
+    /* Transitions */
+    cursor: pointer;
+}
+
+/* Icon Wrapper Styling */
+.icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-wrapper svg {
+    height: 1.5rem;
+    /* 24px */
+    width: 1.5rem;
+}
+
+/* Hover States */
+.advanced-toggle-btn:hover {
+    background-color: #3b82f6;
+    color: #ffffff;
+    /* Blue Shadow Glow */
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+}
+
+/* SVG Rotation on Button Hover */
+.advanced-toggle-btn:hover svg {
+    transform: rotate(90deg);
+}
+
+/* Focus State for Accessibility */
+.advanced-toggle-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.control-btn-square {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 2px solid #ffffff;
+    /* Slightly thinner border looks better on small icons */
+    border-radius: 8px;
+    color: #ffffff;
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+    padding: 3px;
+    /* Desktop Size (Default) */
+    max-height: 65px;
+    max-width: 65px;
+}
+
+/* Icon Sizing */
+.control-btn-square svg {
+    width: 1.75rem;
+    height: 1.75rem;
+}
+
+/* Hover State */
+.control-btn-square:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Toggle Logic: Hidden by default */
+.control-btn-square .icon-pause {
+    display: none;
+}
+
+/* When button has 'is-playing' class, swap icons */
+.control-btn-square.is-playing .icon-play {
+    display: none;
+}
+
+.control-btn-square.is-playing .icon-pause {
+    display: block;
+}
+
+/* .player1 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99;
+    background: black;
+} */
+.index-box {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* #video-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding: 1rem;
+} */
+
+.button-toolbar button {
+    background-color: #1f2937;
+    /* bg-gray-800 */
+    color: #ffffff;
+    /* text-white */
+    border-radius: 0.25rem;
+    /* rounded */
+    padding: 0.5rem;
+}
+
+.button-toolbar button:hover {
+    background-color: #374151;
+    /* hover:bg-gray-700 */
+}
+
+
+
+.form-container {
+    /* position: absolute; */
+    /* bottom: 10px;
+    left: 10px; */
+    /* background: rgba(0, 0, 0, 0.7); */
+    padding: 10px;
+    border-radius: 5px;
+    color: white;
+}
+
+.form-container input,
+.form-container select {
+    margin: 5px;
+    padding: 5px;
+    border-radius: 3px;
+    max-height: 20px;
+}
+
+select[multiple] {
+    height: auto;
+    max-height: 100px;
+    /* Limit height for better UX */
+    overflow-y: auto;
+    /* Scroll for long lists */
+}
+
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    /* or fixed dimensions */
+    height: 100%;
+}
+
+
+.tag-list {
+    position: absolute;
+    bottom: -10px;
+    /* 60px from the bottom edge */
+    left: 185px;
+    /* transform: translate(-50%, 50%); */
+    margin-top: 0.5rem;
+    background: white;
+    color: black;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    min-width: 10rem;
+    /* visible by default */
+    overflow-y: auto;
+    max-height: 240px;
+}
+
+.upload-form {
+    position: absolute;
+    bottom: 0;
+    left: 100%;
+}
+
+.hide-button {
+    stroke: #3B82F6 !important;
+    border: 3px solid #3B82F6 !important;
+    border-radius: 4px;
+    color: #1E40AF !important;
+    display: inline-flex;
+    /* use flex */
+    justify-content: center;
+    /* center horizontally */
+    align-items: center;
+    /* center vertically */
+    padding: 0.5rem 1rem;
+    /* adjust padding as needed */
+}
+
+/* .hide-button::after {
+    content: '';
+    position: relative;
+    top: 50%;
+    right: -2px !important;
+    bottom: 30px !important;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 16px solid #3B82F6;
+    pointer-events: none;
+} */
+
+.hide-button:hover {
+    stroke: #2563EB !important;
+    border-color: #2563EB !important;
+}
+
+.hide-button.inactive {
+    stroke: #9CA3AF !important;
+    border-color: #E5E7EB !important;
+}
+
+.input-fields {
+    display: block;
+
+    width: 170px;
+    height: 20px;
+    font-size: 13px;
+    margin-bottom: 8px;
+    /* mb-2 */
+    background-color: transparent;
+    color: #ffffff;
+    /* Switched to white for high contrast on dark backgrounds */
+    border: 1px solid rgba(244, 238, 238, 0.61);
+    /* border-gray-400 equivalent */
+    padding: 4px 8px;
+    /* py-1 px-2 */
+    border-radius: 4px;
+    outline: none;
+}
+
+.input-fields::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.input-fields:focus {
+    border-color: #3b82f6;
+    /* Blue highlight on focus */
+}
+
+.active-tag {
+    border-color: #22c55e !important;
+    /* nicer green - Tailwind's green-500 */
+    border-width: 2px !important;
+    /* thicker border */
+    color: white !important;
+}
+
+
+.plus-button {
+    border-color: rgba(244, 238, 238, 0.973);
+    color: rgba(244, 238, 238, 0.973);
+    font-size: 14px;
+    cursor: pointer;
+    border-width: 2px;
+}
+
+.form-container {
+    position: absolute;
+    bottom: 5;
+    /* transform: translateX(-50%); */
+    width: 50%;
+    height: 50%;
+}
+
+.upload-form {
+    z-index: 3;
+}
+
+
+.advanced-panel {
+    width: 100%;
+    height: calc(100vh - 120px);
+
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    /* 👇 split gaps */
+    column-gap: 5px;
+    row-gap: 5px;
+
+    padding: 12px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    align-items: start;
+    align-items: start;
+    /* align items in row */
+    justify-items: start;
+    /* align items in column */
+    align-content: start;
+    /* 👈 prevent rows from stretching to fill container */
+}
+
+/* card */
+.tag-card {
+    position: relative;
+    aspect-ratio: 4 / 2;
+    width: 100%;
+    max-height: 90px;
+    min-height: 70px;
+    padding-top: 5px;
+    /* ← THIS */
+    background-size: cover;
+    background-position: center;
+    border-radius: 12px;
+    cursor: pointer;
+    overflow: hidden;
+    padding-top: 5px;
+}
+
+/* dark overlay */
+.tag-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.7),
+            rgba(0, 0, 0, 0.1));
+}
+
+.tag-card-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* center exactly */
+    z-index: 3;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+}
+
+.tag-button {
+    position: relative;
+    cursor: pointer;
+    border-color: rgba(244, 238, 238, 0.959);
+    color: rgba(244, 238, 238, 0.61);
+}
+
+.tag-button * {
+    pointer-events: auto;
+}
+
+.tag-delete {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+
+    width: 16px;
+    height: 16px;
+
+    border-radius: 9999px;
+    border: 1px solid rgb(54, 38, 38);
+    background: rgba(244, 238, 238, 0.959);
+    z-index: 3;
+
+    color: red;
+    font-size: 10px;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.tag-delete:hover {
+    background: red;
+    color: white;
+}
+
+/* Tablet / Large Phone (Under 768px) */
+@media (max-width: 768px) {
+    .control-btn-square {
+        height: 2.5rem;
+        /* 40px */
+        width: 2.5rem;
+        /* 40px */
+    }
+
+    .control-btn-square svg {
+        width: 1.5rem;
+        /* Shrink icon slightly too */
+        height: 1.5rem;
+        padding: 2px;
+    }
+
+    .advanced-toggle-btn {
+        height: 2.5rem;
+        /* 40px */
+        width: 2.5rem;
+        /* 40px */
+    }
+
+    .search-input-glass {
+        font-size: 0.7rem;
+        height: 2.5rem;
+    }
+
+    .metadata-form {
+        bottom: 95px;
+    }
+}
+
+/* Small Phone (Under 480px) */
+@media (max-width: 480px) {
+    .control-btn-square svg {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    .advanced-toggle-btn {
+        height: 2rem;
+        /* 32px */
+        width: 2rem;
+        /* 32px */
+    }
+
+    .search-input-glass {
+        font-size: 0.6rem;
+        height: 2rem;
+    }
+
+    .metadata-form {
+        bottom: 95px;
+    }
+}
