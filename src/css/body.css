@@ -1,5 +1,4 @@
-/* body.css */
-html, body {
+/* html, body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -8,11 +7,10 @@ html, body {
     overscroll-behavior: none;
     position: relative;
     overflow-x: hidden;
-    overflow-y: auto; /* allow natural vertical scroll */
+    overflow-y: auto; 
     box-sizing: border-box;
-}
+} */
 
-/* Ensure #app-root never grows outside body */
 #app-root {
     position: relative;
     width: 100%;
