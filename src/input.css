@@ -62,16 +62,17 @@
     grid-row: 1 / span 1;
 }
 
-body,
-html {
-    position: fixed;
+html,
+body {
     margin: 0;
     padding: 0;
     height: 100%;
-    /* FIX: Changed to hidden to prevent the "ghost" scrollbar */
-    overflow: hidden;
-    /* Set background to black to match your UI and hide any potential lines */
     background-color: #000;
+    /* keep black background */
+    overflow-x: hidden;
+    /* only hide horizontal scroll if needed */
+    overflow-y: auto;
+    /* let vertical scroll exist naturally */
     overscroll-behavior: none;
 }
 
