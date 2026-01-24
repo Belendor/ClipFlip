@@ -274,65 +274,47 @@ class Players {
     async handlePlayerEnded(playerIndex: PlayerIndex) {
         try {
             const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
-            const nextPlayerIndex = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
-            const firstPosition = playerIndex % 2 === 0;
+            const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
 
             const primary = this.html.videoPlayers[playerIndex];
-            const secondary = this.html.videoPlayers[nextPlayerIndex];
-            secondary.play()
+            const secondary = this.html.videoPlayers[nextIdx];
             if (!primary || !secondary) return;
 
-            this.primarySlot = firstPosition ? document.getElementById(`slot-${section}-front`)! : document.getElementById(`slot-${section}-back`)!;
-            this.secondarySlot = firstPosition ? document.getElementById(`slot-${section}-back`)! : document.getElementById(`slot-${section}-front`)!;
-            if (!this.primarySlot || !this.secondarySlot) return;
+            // 1. Start the next video while it is still BEHIND the current one
+            await secondary.play();
 
-            // 6. Update the metadata in the hidden form so it's ready for the next swap
-            const currentPos = this.state.positions[section];
-            const res = await this.getVideoMetadata(currentPos);
-            // this.populateMetadataForm(playerIndex, res);
-            // 2. SWAP VIDEO CLASSES (Cross-fade)
+            // 2. THE FIX: Wait until the playhead actually moves
+            // This guarantees Safari has painted at least one frame
+            await new Promise<void>((resolve) => {
+                const check = () => {
+                    if (secondary.currentTime > 0) {
+                        resolve();
+                    } else {
+                        requestAnimationFrame(check);
+                    }
+                };
+                check();
+            });
 
+            // 3. Swap the "onscreen" class (which now only toggles z-index)
+            primary.parentElement!.classList.remove('onscreen');
+            secondary.parentElement!.classList.add('onscreen');
 
-            // 3. Perform the swap
-            this.primarySlot.className = "video-slot slot-a offscreen-left"; // Move old one out
-            this.secondarySlot.className = "video-slot slot-b onscreen";    // Move new one in
-
-            // /// after animation, recycle the hidden slot
-            // setTimeout(() => {
-            //     this.primarySlot.classList.replace("offscreen-left", "offscreen-right");
-            // }, 260);
-
-            // // after transition, recycle front slot
-            // setTimeout(() => {
-            //     this.primarySlot.classList.replace("offscreen-left", "offscreen-right");
-
-            //     [this.primarySlot, this.secondarySlot] = [this.secondarySlot, this.primarySlot];
-            // }, 260);
-
-            // 4. Update State
-            if (this.state.active) {
-                this.state.active[nextPlayerIndex] = true;
-                this.state.active[playerIndex] = false;
-            }
-
-            // 5. Preload the next video into the now-hidden primary player
+            // 4. Preload next video into the now-hidden primary
             await this.state.modifyPosition(section);
             const nextPos = this.state.positions[section];
             const response = await fetch(this.folder + nextPos + '.mp4');
             const blob = await response.blob();
-            const videoUrl = URL.createObjectURL(blob);
-            this.preload(primary, videoUrl);
-        } catch (err) {
-            console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
-        }
-    }
-    async preload(video: HTMLVideoElement, url: string): Promise<void> {
-        video.src = url;
-        video.load();
 
-        return new Promise(res =>
-            video.addEventListener("canplaythrough", () => res(), { once: true })
-        );
+            // Use a small timeout so the source change doesn't hitch the current animation
+            setTimeout(() => {
+                primary.src = URL.createObjectURL(blob);
+                primary.load();
+            }, 100);
+
+        } catch (err) {
+            console.error("Safari Swap Error:", err);
+        }
     }
 
     private async togglePlayPause(index: PlayerIndex): Promise<void> {

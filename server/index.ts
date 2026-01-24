@@ -427,7 +427,7 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
 });
 
 app.get("/download", async (req, res) => {
-  const FULL_SAMPLE_URL = "https://ev-h.phncdn.com/hls/videos/202209/13/415539331/220916_1803_720P_4000K_415539331.mp4/seg-48-v1-a1.ts?validfrom=1769205722&validto=1769212922&ipa=1&hdl=-1&hash=zmrKvcq5mtYK7jyHkBiV8EeTa28%3D";
+  const FULL_SAMPLE_URL = "https://hv-h.phncdn.com/hls/videos/202504/16/467363385/1080P_4000K_467363385.mp4/seg-1-v1-a1.ts?h=0w5zQ72moN8yQx6ZT%2BYz%2F%2BVa2HE%3D&e=1769227379&f=1";
   // This Regex looks for "/seg-" followed by numbers and captures everything before and after it
   const match = FULL_SAMPLE_URL.match(/^(.*\/seg-)\d+(-v1-a1\.ts)(\?.*)$/);
   if (!match) {
