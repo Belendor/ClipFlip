@@ -14,6 +14,8 @@ class Players {
     folder = config.videoSourcePath;
     muted: boolean = true;
     playerCount: number = 8;
+    primarySlot!: HTMLElement;
+    secondarySlot!: HTMLElement;
 
     constructor(state: State, html: HTML) {
         this.state = state;
@@ -273,26 +275,39 @@ class Players {
         try {
             const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
             const nextPlayerIndex = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
+            const firstPosition = playerIndex % 2 === 0;
 
             const primary = this.html.videoPlayers[playerIndex];
             const secondary = this.html.videoPlayers[nextPlayerIndex];
-
+            secondary.play()
             if (!primary || !secondary) return;
 
+            this.primarySlot = firstPosition ? document.getElementById(`slot-${section}-front`)! : document.getElementById(`slot-${section}-back`)!;
+            this.secondarySlot = firstPosition ? document.getElementById(`slot-${section}-back`)! : document.getElementById(`slot-${section}-front`)!;
+            if (!this.primarySlot || !this.secondarySlot) return;
 
             // 6. Update the metadata in the hidden form so it's ready for the next swap
             const currentPos = this.state.positions[section];
             const res = await this.getVideoMetadata(currentPos);
             // this.populateMetadataForm(playerIndex, res);
             // 2. SWAP VIDEO CLASSES (Cross-fade)
-            await secondary.play();
+            
 
-            // slide current out, slide next in
-            primary.classList.remove("onscreen");
-            primary.classList.add("offscreen-left");
+            this.primarySlot.className = "video-slot slot-a offscreen-right";
+            this.secondarySlot.className = "video-slot slot-b onscreen"; // always onscreen
 
-            secondary.classList.remove("offscreen-right", "offscreen-left");
-            secondary.classList.add("onscreen");
+            /// after animation, recycle the hidden slot
+            setTimeout(() => {
+                this.primarySlot.classList.replace("offscreen-left", "offscreen-right");
+            }, 260);
+
+            // // after transition, recycle front slot
+            // setTimeout(() => {
+            //     this.primarySlot.classList.replace("offscreen-left", "offscreen-right");
+
+            //     [this.primarySlot, this.secondarySlot] = [this.secondarySlot, this.primarySlot];
+            // }, 260);
+
             // 4. Update State
             if (this.state.active) {
                 this.state.active[nextPlayerIndex] = true;
@@ -305,11 +320,18 @@ class Players {
             const response = await fetch(this.folder + nextPos + '.mp4');
             const blob = await response.blob();
             const videoUrl = URL.createObjectURL(blob);
-            primary.src = videoUrl; // This is now instant because it's in memory
-            primary.load();
+            await this.preload(primary, videoUrl);
         } catch (err) {
             console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
         }
+    }
+    async preload(video: HTMLVideoElement, url: string): Promise<void> {
+        video.src = url;
+        video.load();
+
+        return new Promise(res =>
+            video.addEventListener("canplaythrough", () => res(), { once: true })
+        );
     }
 
     private async togglePlayPause(index: PlayerIndex): Promise<void> {

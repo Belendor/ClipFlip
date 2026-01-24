@@ -6,17 +6,21 @@
     height: 100%;
     gap: 0;
     background: #000;
+    position: relative;
+    z-index: 0;
 }
+
 .video-section {
     position: relative;
     background: #000;
     overflow: hidden;
+    isolation: isolate;
 }
 
 .video-grid.expanded #section-1 {
     grid-column: 1 / span 2;
     grid-row: 1 / span 2;
-} 
+}
 
 .video-grid:not(.expanded) #section-1 {
     grid-column: 1 / span 1;
