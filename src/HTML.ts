@@ -19,8 +19,11 @@ export default class HTML {
 
 
   // toolbar icons
-  resizeIcon!: HTMLSpanElement
+  resizeIconActive!: HTMLSpanElement
+  resizeIconInactive!: HTMLSpanElement
   muteIcon!: HTMLSpanElement
+  iconPlay!: HTMLSpanElement
+  iconPause!: HTMLSpanElement
   // toolbar buttons
   hideAdvancedIconFormsButton!: HTMLButtonElement
 
@@ -38,6 +41,14 @@ export default class HTML {
     // Grab the main containers
     this.appRoot = document.getElementById('app-root') as HTMLElement;
     this.videoGrid = document.getElementById('video-grid') as HTMLElement;
+    this.resizeButton = document.getElementById('multiScreenBtn') as HTMLButtonElement;
+    this.resizeIconActive = document.getElementById('icon-grid') as HTMLSpanElement;
+    this.resizeIconInactive = document.getElementById('icon-single') as HTMLSpanElement;
+    this.fullscreenButton = document.getElementById('fullScreenBtn') as HTMLButtonElement;
+    this.muteToggle = document.getElementById('muteBtn') as HTMLButtonElement;
+    this.playPauseBtn = document.getElementById('playPauseBtn') as HTMLButtonElement;
+    this.iconPlay = document.getElementById('icon-play') as HTMLSpanElement;
+    this.iconPause = document.getElementById('icon-pause') as HTMLSpanElement;
     // Find all 4 sections
     this.sections = Array.from(document.querySelectorAll('.video-section'));
     this.mapPlayersById();
@@ -81,12 +92,12 @@ export default class HTML {
   //   return span
   // }
 
-  // createDiv(id: string, className = ''): HTMLDivElement {
-  //   const div = document.createElement('div')
-  //   div.id = id
-  //   div.className = className
-  //   return div
-  // }
+  createDiv(id: string, className = ''): HTMLDivElement {
+    const div = document.createElement('div')
+    div.id = id
+    div.className = className
+    return div
+  }
 
   getPositionClass(i: number): string {
     switch (i) {
@@ -171,106 +182,106 @@ export default class HTML {
   //        </svg>`
   // }
 
-  // renderTags(
-  //   container: HTMLElement,
-  //   tags: Tag[], // This should match your Prisma Tag type
-  //   index: PlayerIndex,
-  //   videoId?: number,
-  //   toggleTag?: (tag: string, active: boolean) => void
-  // ) {
-  //   container.innerHTML = '';
-  //   if (tags.length === 0) {
-  //     return
-  //   }
-  //   const visibleCount = 5;
-  //   const sectionId = (Math.floor(index / 2) + 1) as SectionId;
+  renderTags(
+    container: HTMLElement,
+    tags: Tag[], // This should match your Prisma Tag type
+    index: PlayerIndex,
+    videoId?: number,
+    toggleTag?: (tag: string, active: boolean) => void
+  ) {
+    container.innerHTML = '';
+    if (tags.length === 0) {
+      return
+    }
+    const visibleCount = 5;
+    const sectionId = (Math.floor(index / 2) + 1) as SectionId;
 
-  //   tags.forEach((tag, i) => {
-  //     // 1. Create Button Wrapper
-  //     const btn = document.createElement('button');
+    tags.forEach((tag, i) => {
+      // 1. Create Button Wrapper
+      const btn = document.createElement('button');
 
-  //     // Use your specialized class for section-specific styling
-  //     btn.className = `tag-button section-tag-${sectionId}`;
+      // Use your specialized class for section-specific styling
+      btn.className = `tag-button section-tag-${sectionId}`;
 
-  //     // Use Tailwind/Glassmorphism styles for the 'Mint Vanilla' look
-  //     btn.classList.add(
-  //       'px-2', 'py-1', 'm-1', 'text-xs', 'rounded-full',
-  //       'bg-black/40', 'backdrop-blur-md', 'border', 'border-white/20',
-  //       'text-white/80', 'transition-all', 'hover:bg-white/20'
-  //     );
+      // Use Tailwind/Glassmorphism styles for the 'Mint Vanilla' look
+      btn.classList.add(
+        'px-2', 'py-1', 'm-1', 'text-xs', 'rounded-full',
+        'bg-black/40', 'backdrop-blur-md', 'border', 'border-white/20',
+        'text-white/80', 'transition-all', 'hover:bg-white/20'
+      );
 
-  //     // Hide tags beyond the visible limit
-  //     if (i >= visibleCount) {
-  //       btn.classList.add('hidden-tag', 'hidden');
-  //     }
+      // Hide tags beyond the visible limit
+      if (i >= visibleCount) {
+        btn.classList.add('hidden-tag', 'hidden');
+      }
 
-  //     // 2. Active State Check
-  //     const isActive = this.state.activeTags.get(sectionId)?.includes(tag.title);
-  //     if (isActive) {
-  //       btn.classList.add('active-tag', 'border-white', 'bg-white', 'text-black');
-  //       btn.classList.remove('text-white/80', 'bg-black/40');
-  //     }
+      // 2. Active State Check
+      const isActive = this.state.activeTags.get(sectionId)?.includes(tag.title);
+      if (isActive) {
+        btn.classList.add('active-tag', 'border-white', 'bg-white', 'text-black');
+        btn.classList.remove('text-white/80', 'bg-black/40');
+      }
 
-  //     // Set Tag Text
-  //     const textSpan = document.createElement('span');
-  //     textSpan.textContent = tag.title;
-  //     btn.appendChild(textSpan);
+      // Set Tag Text
+      const textSpan = document.createElement('span');
+      textSpan.textContent = tag.title;
+      btn.appendChild(textSpan);
 
-  //     // 3. Main Click Event (Filter Toggle)
-  //     btn.addEventListener('click', (e) => {
-  //       // Prevent triggering the video container click (which expands/shrinks grid)
-  //       e.stopPropagation();
-  //       console.log(`Filtering section ${sectionId} by tag: ${tag.title}`);
+      // 3. Main Click Event (Filter Toggle)
+      btn.addEventListener('click', (e) => {
+        // Prevent triggering the video container click (which expands/shrinks grid)
+        e.stopPropagation();
+        console.log(`Filtering section ${sectionId} by tag: ${tag.title}`);
 
-  //       if (toggleTag && tag.title) {
-  //         toggleTag(tag.title, true);
-  //       }
-  //     });
+        if (toggleTag && tag.title) {
+          toggleTag(tag.title, true);
+        }
+      });
 
-  //     // 4. Delete Action (The 'X')
-  //     const del = document.createElement('span');
-  //     del.className = 'ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
-  //     del.innerHTML = '&times;';
+      // 4. Delete Action (The 'X')
+      const del = document.createElement('span');
+      del.className = 'ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
+      del.innerHTML = '&times;';
 
-  //     del.addEventListener('click', async (e) => {
-  //       e.preventDefault();
-  //       e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
+      del.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
 
-  //       if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
+        if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
 
-  //       try {
-  //         const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
-  //           method: 'POST',
-  //           headers: { 'Content-Type': 'application/json' },
-  //           body: JSON.stringify({ tagTitle: tag.title, videoId }),
-  //         });
+        try {
+          const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tagTitle: tag.title, videoId }),
+          });
 
-  //         if (response.ok) {
-  //           btn.remove();
-  //           console.log("Tag removed from Prisma DB");
-  //         }
-  //       } catch (err) {
-  //         console.error('Failed to delete tag', err);
-  //       }
-  //     });
+          if (response.ok) {
+            btn.remove();
+            console.log("Tag removed from Prisma DB");
+          }
+        } catch (err) {
+          console.error('Failed to delete tag', err);
+        }
+      });
 
-  //     btn.appendChild(del);
-  //     container.appendChild(btn);
-  //   });
+      btn.appendChild(del);
+      container.appendChild(btn);
+    });
 
-  //   // 5. Expandable 'More' Button
-  //   if (tags.length > visibleCount) {
-  //     const toggleBtn = document.createElement('button');
-  //     toggleBtn.textContent = '...';
-  //     toggleBtn.className = 'px-2 py-1 m-1 text-xs rounded-full bg-white/10 text-white hover:bg-white/30';
+    // 5. Expandable 'More' Button
+    if (tags.length > visibleCount) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.textContent = '...';
+      toggleBtn.className = 'px-2 py-1 m-1 text-xs rounded-full bg-white/10 text-white hover:bg-white/30';
 
-  //     toggleBtn.onclick = (e) => {
-  //       e.stopPropagation();
-  //       const hiddenTags = container.querySelectorAll('.hidden-tag');
-  //       hiddenTags.forEach(el => el.classList.toggle('hidden'));
-  //       toggleBtn.textContent = toggleBtn.textContent === '...' ? 'less' : '...';
-  //     };
-  //     container.appendChild(toggleBtn);
-  //   }
-  // }
+      toggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        const hiddenTags = container.querySelectorAll('.hidden-tag');
+        hiddenTags.forEach(el => el.classList.toggle('hidden'));
+        toggleBtn.textContent = toggleBtn.textContent === '...' ? 'less' : '...';
+      };
+      container.appendChild(toggleBtn);
+    }
+  }
 }

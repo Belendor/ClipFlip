@@ -3,6 +3,7 @@
 @import './css/video-grid.css';
 @import './css/toolbar.css';
 @import './css/player.css';
+@import './css/metadata.css';
 
 .hidden {
     display: none !important;
@@ -148,20 +149,6 @@
 .control-btn-square:hover {
     background-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-}
-
-/* Toggle Logic: Hidden by default */
-.control-btn-square .icon-pause {
-    display: none;
-}
-
-/* When button has 'is-playing' class, swap icons */
-.control-btn-square.is-playing .icon-play {
-    display: none;
-}
-
-.control-btn-square.is-playing .icon-pause {
-    display: block;
 }
 
 /* .player1 {
