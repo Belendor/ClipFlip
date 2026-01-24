@@ -10,12 +10,13 @@ export type VideoWithRelations = Video & {
 class Players {
     state: State;
     html: HTML;
-
+    swappingSections = new Set<number>();
     folder = config.videoSourcePath;
     muted: boolean = true;
     playerCount: number = 8;
     primarySlot!: HTMLElement;
     secondarySlot!: HTMLElement;
+    isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
     constructor(state: State, html: HTML) {
         this.state = state;
@@ -188,10 +189,18 @@ class Players {
                 throw err;
             }
         });
+        // Detect Safari
+
+        // Safari needs 20% buffer, Chrome only needs 2-5% to be safe
+        const threshold = this.isSafari ? 80 : 95;
 
         this.html.videoPlayers.forEach((player, index) => {
-            player.addEventListener('ended', () => {
-                this.handlePlayerEnded(index as PlayerIndex);
+            player.addEventListener('timeupdate', () => {
+                const progress = (player.currentTime / player.duration) * 100;
+
+                if (progress > threshold && this.state.active?.[index as PlayerIndex]) {
+                    this.handlePlayerEnded(index as PlayerIndex);
+                }
             });
             player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
         });
@@ -272,51 +281,59 @@ class Players {
         }
     }
     async handlePlayerEnded(playerIndex: PlayerIndex) {
+        const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
+        if (this.swappingSections.has(section)) return;
+        this.swappingSections.add(section);
+
+        const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
+        const primary = this.html.videoPlayers[playerIndex];   // The video nearing its end
+        const secondary = this.html.videoPlayers[nextIdx];     // The next video
+
         try {
-            const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
-            const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
-
-            const primary = this.html.videoPlayers[playerIndex];
-            const secondary = this.html.videoPlayers[nextIdx];
-            if (!primary || !secondary) return;
-
-            // 1. Start the next video while it is still BEHIND the current one
+            // 2. Start secondary while hidden (warm up decoder)
             await secondary.play();
+            secondary.pause();
+            secondary.currentTime = 0;
 
-            // 2. THE FIX: Wait until the playhead actually moves
-            // This guarantees Safari has painted at least one frame
-            await new Promise<void>((resolve) => {
-                const check = () => {
-                    if (secondary.currentTime > 0) {
-                        resolve();
+            // 2. WAIT FOR PRIMARY TO FINISH
+            await new Promise(r => {
+                const checkEnd = () => {
+                    // Using 0.06s for 30fps or 60fps safety margin
+                    if (primary.ended || (primary.duration - primary.currentTime < 0.06)) {
+                        r(0);
                     } else {
-                        requestAnimationFrame(check);
+                        requestAnimationFrame(checkEnd);
                     }
                 };
-                check();
+                checkEnd();
             });
 
-            // 3. Swap the "onscreen" class (which now only toggles z-index)
+            secondary.play();
+
+            // 4. THE SWAP: Now that the first is done, show the second
             primary.parentElement!.classList.remove('onscreen');
             secondary.parentElement!.classList.add('onscreen');
+            if (this.state && this.state.active) {
+                this.state.active[nextIdx as PlayerIndex] = true;
+                this.state.active[playerIndex as PlayerIndex] = false;
+            }
 
-            // 4. Preload next video into the now-hidden primary
-            await this.state.modifyPosition(section);
-            const nextPos = this.state.positions[section];
-            const response = await fetch(this.folder + nextPos + '.mp4');
-            const blob = await response.blob();
+            // 5. Cleanup and Preload the next clip for the future
+            setTimeout(async () => {
+                primary.pause();
 
-            // Use a small timeout so the source change doesn't hitch the current animation
-            setTimeout(() => {
-                primary.src = URL.createObjectURL(blob);
+                await this.state.modifyPosition(section);
+                const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
+                primary.src = URL.createObjectURL(await res.blob());
                 primary.load();
-            }, 100);
 
-        } catch (err) {
-            console.error("Safari Swap Error:", err);
+                this.swappingSections.delete(section);
+            }, 300);
+
+        } catch (e) {
+            this.swappingSections.delete(section);
         }
     }
-
     private async togglePlayPause(index: PlayerIndex): Promise<void> {
         const player = this.html.videoPlayers[index];
         const section = Math.floor(index / 2 + 1) as SectionId;
