@@ -192,7 +192,7 @@ class Players {
         // Detect Safari
 
         // Safari needs 20% buffer, Chrome only needs 2-5% to be safe
-        const threshold = this.isSafari ? 80 : 95;
+        const threshold = this.isSafari ? 90 : 95;
 
         this.html.videoPlayers.forEach((player, index) => {
             player.addEventListener('timeupdate', () => {
