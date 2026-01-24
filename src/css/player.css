@@ -18,12 +18,14 @@
     transform: translateX(120%);
 }
 
-/* video stays untouched */
+/* Update your .player class */
 .player {
     width: 100%;
     height: 100%;
     position: relative;
-    
     object-fit: cover;
-    background: black;
+    /* Remove background: black; it causes the flash if the video frames drop */
+    background: transparent; 
+    /* Force GPU rendering */
+    -webkit-transform: translateZ(0);
 }

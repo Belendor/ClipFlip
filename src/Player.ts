@@ -291,15 +291,16 @@ class Players {
             const res = await this.getVideoMetadata(currentPos);
             // this.populateMetadataForm(playerIndex, res);
             // 2. SWAP VIDEO CLASSES (Cross-fade)
-            
 
-            this.primarySlot.className = "video-slot slot-a offscreen-right";
-            this.secondarySlot.className = "video-slot slot-b onscreen"; // always onscreen
 
-            /// after animation, recycle the hidden slot
-            setTimeout(() => {
-                this.primarySlot.classList.replace("offscreen-left", "offscreen-right");
-            }, 260);
+            // 3. Perform the swap
+            this.primarySlot.className = "video-slot slot-a offscreen-left"; // Move old one out
+            this.secondarySlot.className = "video-slot slot-b onscreen";    // Move new one in
+
+            // /// after animation, recycle the hidden slot
+            // setTimeout(() => {
+            //     this.primarySlot.classList.replace("offscreen-left", "offscreen-right");
+            // }, 260);
 
             // // after transition, recycle front slot
             // setTimeout(() => {
@@ -320,7 +321,7 @@ class Players {
             const response = await fetch(this.folder + nextPos + '.mp4');
             const blob = await response.blob();
             const videoUrl = URL.createObjectURL(blob);
-            await this.preload(primary, videoUrl);
+            this.preload(primary, videoUrl);
         } catch (err) {
             console.error(`Error swapping players in section ${Math.floor(playerIndex / 2) + 1}:`, err);
         }

@@ -12,11 +12,11 @@
 
 .video-section {
     position: relative;
-    background: #000;
+    /* This color shows if both videos fail; make it match your video's average tone */
+    background: #000; 
     overflow: hidden;
     isolation: isolate;
 }
-
 .video-grid.expanded #section-1 {
     grid-column: 1 / span 2;
     grid-row: 1 / span 2;
