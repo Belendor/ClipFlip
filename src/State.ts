@@ -6,18 +6,16 @@ type PositionsMap = Record<SectionId, number>;
 
 class State {
     multiSection: boolean = false; // Whether to use multiple sections
-    randomized: boolean = false;
+    randomized: boolean = true;
     percentChance = 25; // 25% chance to modify position
     endIndex = config.defaultEndIndex; // Maximum position index
-    position: string | number = 1;
     positions: PositionsMap = {
-        1: this.randomized ? this.randomInRange(1, this.endIndex * 0.75) : 1,
-        2: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex * 0.5) : 500,
-        3: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex * 0.75) : 1000,
+        1: this.randomized ? this.randomInRange(1, this.endIndex * 0.25) : 1,
+        2: this.randomized ? this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5) : 500,
+        3: this.randomized ? this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75) : 1000,
         4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500
     };
     activeTags: Map<SectionId, Tag["title"][]> = new Map();
-    STORAGE_KEY = "playedVideoIds";
     playing: Record<SectionId, boolean> = {
         1: false,
         2: false,
@@ -29,7 +27,6 @@ class State {
     active: Record<PlayerIndex, boolean> | undefined;
     allTags: Tag[] = [];
     tagsPromise: Promise<void> | undefined;
-    taggedVideoCache: Video[] | null = null;
     constructor() {
         this.active = this.initializeActive(8);
         this.tagsPromise = this.fetchAllTags();
@@ -62,116 +59,93 @@ class State {
                 this.activeTags.set(id, []);
             });
         }
+
     }
 
-     modifyPosition(section: SectionId, random = false): void {
+    async modifyPosition(section: SectionId, random: boolean = false): Promise<void> {
         if (!(section in this.positions)) {
             throw new Error(`Invalid section: ${section}`);
         }
-        console.log("Checking if we have tagged cache", this.taggedVideoCache);
-        
-        /* ---------- TAGGED MODE ---------- */
-        if (this.taggedVideoCache && this.taggedVideoCache.length > 0) {
-            const ids = this.taggedVideoCache.map(v => String(v.id));
+        // 
+        const taggedVideos: Video[] = (await this.fetchVideosByTags(section)) ?? [];
+        console.log(taggedVideos);
 
+
+        // Tagged mode
+        if (taggedVideos.length > 0) {
+            const currentId = this.positions[section];
+            const videoIds = taggedVideos.map(v => v.id);
+            console.log("Tagged video selection");
+
+            // Random within tagged
             if (this.randomized) {
+                console.log("randomizing");
+
                 const roll = Math.random() * 100;
                 if (roll < this.percentChance || random) {
-                    const unplayed = ids.filter(
-                        id => !this.hasBeenPlayed(id)
-                    );
+                    // pick random from taggedVideos
+                    const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
+                    console.log(randomVideo);
 
-                    if (unplayed.length === 0) return;
-                    const nextUnplayed = this.getNextUnplayedFromList(unplayed, String(this.positions[section]));
-                    if (!nextUnplayed) {
-                        console.warn(`No unplayed video found for section ${section}`); return;
-                    }
-                    this.positions[section] = Number(nextUnplayed);
+                    this.positions[section] = randomVideo.id;
+                    console.log("assigning random position:", this.positions[section]);
+
                     return;
                 }
             }
+            let currentIndex = videoIds.indexOf(currentId);
 
-            const next = this.getNextUnplayedId(ids, String(this.position));
-            if (!next) return;
+            this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
+            console.log("Quing next video:", this.positions[section]);
 
-            this.positions[section] = Number(next);
-            return;
+            return
         }
 
-        /* ---------- UNTAGGED MODE ---------- */
-
-        const allIds = Array.from(
-            { length: this.endIndex },
-            (_, i) => String(i + 1)
-        );
-
+        // Untagged mode
         if (this.randomized) {
             const roll = Math.random() * 100;
             if (roll < this.percentChance) {
-                const unplayed = allIds.filter(
-                    id => !this.hasBeenPlayed(id)
-                );
-
-                if (unplayed.length === 0) return;
-
-                this.positions[section] = Number(unplayed[Math.floor(Math.random() * unplayed.length)]);
+                const newIndex = Math.floor(Math.random() * this.endIndex) + 1;
+                this.positions[section] = newIndex;
                 return;
             }
         }
 
-        const next = this.getNextUnplayedId(
-            allIds,
-            String(this.positions[section])
-        );
+        const nextValue = this.positions[section] + 1 > this.endIndex ? 1 : this.positions[section] + 1;
 
-        if (!next) {
-            console.warn(`No unplayed video found in untagged mode for section ${section}`); return;
-        }
+        // Default increment
+        this.positions[section] = nextValue;
+        console.log("Next in order video:", this.positions[section]);
 
-        this.positions[section] = Number(next);
+        return
     }
 
-    async fetchVideosByTags(): Promise<Video[] | null> {
-        const tags = this.activeTags.get(1);
-        console.log(tags, "Tags active");
+    async fetchVideosByTags(section: SectionId): Promise<Video[] | null> {
+        const tags = this.activeTags.get(section);
+        console.log(section);
         
+        console.log(tags);
+        console.log("before fetch");
 
-        if (!tags) return null;
+        if (!tags || tags.length === 0) return null;
 
         try {
             const response = await fetch(`${this.apiUrl}/videos/by-tags`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    tags,
-                    limit: this.endIndex
-                })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tags: tags, limit: this.endIndex }),
             });
 
-            if (!response.ok) {
-                throw new Error(`Server error (${response.status})`);
-            }
+            if (!response.ok) throw new Error(`Server error (${response.status})`);
 
-            this.taggedVideoCache = await response.json();
-            console.log("Fetched tagged videos:", this.taggedVideoCache);
-            return this.taggedVideoCache;
+            const videos = await response.json();
+            return videos;
         } catch (err) {
-            console.error("Failed to fetch tagged videos", err);
+            console.error(`Failed to fetch videos for section ${section} with tag ${tags}`, err);
             return null;
         }
     }
 
-
-    async getTaggedVideos(): Promise<Video[]> {
-        if (this.taggedVideoCache) {
-            return this.taggedVideoCache;
-        }
-
-        const videos = (await this.fetchVideosByTags()) ?? [];
-        this.taggedVideoCache = videos;
-
-        return videos;
-    }
     async fetchAllTags() {
         try {
             const response = await fetch(`${this.apiUrl}/tags`, {
@@ -205,75 +179,6 @@ class State {
 
         return act;
     }
-    getPlayedIds(): string[] {
-        try {
-            const item = localStorage.getItem(this.STORAGE_KEY);
-            return item ? JSON.parse(item) : [];
-        } catch {
-            return [];
-        }
-    }
-
-
-    markAsPlayed(videoId: string) {
-        if (!videoId) return;
-
-        const played = this.getPlayedIds();
-        if (!played.includes(videoId)) {
-            played.push(videoId);
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(played));
-        }
-    }
-
-    hasBeenPlayed(videoId: string): boolean {
-        return this.getPlayedIds().includes(videoId);
-    }
-    getNextUnplayedId(
-        ids: string[],
-        currentId?: string
-    ): string | null {
-        if (ids.length === 0) return null;
-
-        const startIndex = currentId
-            ? ids.indexOf(currentId)
-            : -1;
-
-        for (let i = 1; i <= ids.length; i++) {
-            const idx = (startIndex + i) % ids.length;
-            const id = ids[idx];
-
-            if (!this.hasBeenPlayed(id)) {
-                return id;
-            }
-        }
-
-        return null;
-    }
-    pickFirstUnplayed(videoIds: string[]): string | null {
-        return videoIds.find(id => !this.hasBeenPlayed(id)) ?? null;
-    }
-    getNextUnplayedFromList(
-        ids: string[],
-        currentId?: string
-    ): string | null {
-        if (ids.length === 0) return null;
-
-        const startIndex = currentId
-            ? ids.indexOf(currentId)
-            : -1;
-
-        for (let i = 1; i <= ids.length; i++) {
-            const idx = (startIndex + i) % ids.length;
-            const id = ids[idx];
-
-            if (!this.hasBeenPlayed(id)) {
-                return id;
-            }
-        }
-
-        return null;
-    }
-
 }
 
 export default State;
