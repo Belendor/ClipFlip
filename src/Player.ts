@@ -2,6 +2,7 @@ import State, { type SectionId, PlayerIndex } from "./State";
 import HTML from "./HTML";
 import { config } from "./config";
 import type { Video, Tag, Model } from '../server/node_modules/@prisma/client';
+import Hls from 'hls.js';
 // This creates a type that ALWAYS has the arrays, even if empty
 export type VideoWithRelations = Video & {
     tags: Tag[];
@@ -17,6 +18,12 @@ class Players {
     primarySlot!: HTMLElement;
     secondarySlot!: HTMLElement;
     isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    hlsInstance: Hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 60, // Keep previous frames to prevent black frames
+        manifestLoadingMaxRetry: 2
+    });
 
     constructor(state: State, html: HTML) {
         this.state = state;
@@ -32,50 +39,257 @@ class Players {
     }
     async loadVideos(): Promise<void> {
         for (let i = 0; i < this.html.videoPlayers.length; i++) {
-            if (!this.state.multiSection && i > 1) {
+            if (!this.state.multiSection && i > 0) {
                 continue;
             }
 
             const section = Math.ceil((i + 1) / 2) as SectionId;
-            if (this.html.videoPlayers[i].src && this.html.videoPlayers[i].src !== '') {
-                const position = this.html.videoPlayers[i].getAttribute('data-video-id') || '';
-
-                const video = await this.getVideoMetadata(Number(position));
-                console.log("Checking video ID:", position);
-                const activeTags = this.state.activeTags.get(section);
-                const hasActiveTag = video?.tags?.some(tag => activeTags?.includes(tag.title));
-                if (hasActiveTag) {
-                    console.log("Video match active tags, skipping");
-                    continue; // or continue in a loop
-                }
-            }
+            // if (this.html.videoPlayers[i].src && this.html.videoPlayers[i].src !== '') {
+            //     const position = this.html.videoPlayers[i].getAttribute('data-video-id') || '';
+            //     const video = await this.getVideoMetadata(Number(position));
+            //     console.log("Checking video ID:", position);
+            //     const activeTags = this.state.activeTags.get(section);
+            //     const hasActiveTag = video?.tags?.some(tag => activeTags?.includes(tag.title));
+            //     if (hasActiveTag) {
+            //         console.log("Video match active tags, skipping");
+            //         continue; // or continue in a loop
+            //     }
+            // }
             const playerIndex = i as PlayerIndex;
-            await this.state.modifyPosition(section);
-            const pos = this.state.positions[section];
-            console.log("New video pos:", pos);
             const videoPlayer = this.html.videoPlayers[playerIndex];
-            videoPlayer.preload = 'auto';
-            videoPlayer.muted = true;
-            videoPlayer.playsInline = true;
-            const response = await fetch(this.folder + pos + '.mp4');
-            const blob = await response.blob();
-            const videoUrl = URL.createObjectURL(blob);
-            videoPlayer.src = videoUrl; // This is now instant because it's in memory
-            videoPlayer.setAttribute('data-video-id', pos.toString()); // Store it here
-            videoPlayer.load();
-            videoPlayer.pause();
-            videoPlayer.currentTime = 0;
 
-            if (this.state.active?.[playerIndex]) {
-                console.log("active start playing");
-                this.html.videoPlayers[playerIndex].play();
-                this.state.playing[section] = true;
-                const res = await this.getVideoMetadata(pos);
-                this.populateMetadataForm(playerIndex, res);
+            // await this.state.modifyPosition(section);
+            const pos = this.state.positions[section];
+            // console.log("New video pos:", pos);
+            this.setupUniversalPlayer(videoPlayer, section, playerIndex);
+            // // videoPlayer.preload = 'auto';
+            // videoPlayer.muted = true;
+            // videoPlayer.playsInline = true;
+            // this.hlsInstance.attachMedia(videoPlayer);
+            // this.hlsInstance.loadSource("https://clip-flip.com/video/1/index.m3u8");
+            // this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+            //     videoPlayer.play().catch(() => console.log("Auto-play blocked"));
+            //     this.setupTransitionMonitor(this.hlsInstance, videoPlayer, section);
+            // });
+
+            // Using timeupdate to trigger load EARLY (e.g., 0.5s before end)
+            // // This is smoother than waiting for 'ended'
+            // this.setupTransitionMonitor(this.hlsInstance, videoPlayer, section);
+
+            // this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+            //     console.log("HLS manifest parsed, playing");
+            //     videoPlayer.play();
+            //     // --- EDGE / CHROME: watch for end and switch ---
+            //     this.watchVideoEdge(videoPlayer, async () => {
+            //         let number = 2;
+            //         console.log("Video about to end, switching...");
+
+            //         // Example: simple next video hardcoded for test
+            //         // In practice, replace with dynamic next video logic
+            //         const nextSrc = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+            //         videoPlayer.play();
+
+            //         // Load next video using the same hlsInstance
+            //         this.hlsInstance.loadSource(nextSrc);
+            //         // videoPlayer.play();
+            //         this.state.modifyPosition(section);
+            //         console.log("playing pos", this.state.positions[section]);
+
+            //     });
+            // });
+            // const response = await fetch(this.folder + pos + '.mp4');
+            // const blob = await response.blob();
+            // const videoUrl = URL.createObjectURL(blob);
+            // videoPlayer.src = videoUrl; // This is now instant because it's in memory
+            // videoPlayer.setAttribute('data-video-id', pos.toString()); // Store it here
+            // videoPlayer.load();
+            // videoPlayer.pause();
+            // videoPlayer.currentTime = 0;
+
+            // if (this.state.active?.[playerIndex]) {
+            //     console.log("active start playing");
+            //     this.html.videoPlayers[playerIndex].play();
+            //     this.state.playing[section] = true;
+            //     const res = await this.getVideoMetadata(pos);
+            //     this.populateMetadataForm(playerIndex, res);
+            // }
+
+            // continue;
+        }
+    }
+    private setupUniversalPlayer(videoPlayer: HTMLVideoElement, section: SectionId, index: number) {
+        const initialSrc = `https://clip-flip.com/video/1/index.m3u8`;
+        videoPlayer.muted = true;
+        videoPlayer.autoplay = true;
+        videoPlayer.playsInline = true;
+
+        // --- PATH A: SAFARI (Native HLS) ---
+        if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+            videoPlayer.src = initialSrc;
+            this.setupNativeMonitor(videoPlayer, section);
+        } 
+        // --- PATH B: EDGE/CHROME (HLS.js) ---
+        else if (Hls.isSupported()) {
+            const hls = this.hlsInstance
+            if (hls) {
+                hls.attachMedia(videoPlayer);
+                hls.loadSource(initialSrc);
+                
+                this.setupHlsMonitor(hls, videoPlayer, section);
+            }
+        }
+        
+        // videoPlayer.play().catch(() => {});
+    }
+    // EDGE LOGIC: Swap via HLS.js Buffer
+    private setupHlsMonitor(hls: Hls, player: HTMLVideoElement, section: SectionId) {
+        const trigger = () => {
+            if (player.duration && (player.duration - player.currentTime < 0.1)) {
+                player.removeEventListener('timeupdate', trigger);
+                this.state.modifyPosition(section);
+                const next = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+                
+                hls.loadSource(next);
+                // player.play();
+                
+                // Cooldown to prevent double-triggering on the new video
+                setTimeout(() => this.setupHlsMonitor(hls, player, section), 500);
+            }
+        };
+        player.addEventListener('timeupdate', trigger);
+    }
+
+    // SAFARI LOGIC: Swap via Native Engine
+    private setupNativeMonitor(player: HTMLVideoElement, section: SectionId) {
+        const trigger = () => {
+            // Safari is faster if we swap at 0.3s instead of 0s
+            if (player.duration && (player.duration - player.currentTime < 0.3)) {
+                player.removeEventListener('timeupdate', trigger);
+                this.state.modifyPosition(section);
+                
+                // Native Safari "Fast Source" Swap
+                player.src = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+                player.play();
+
+                setTimeout(() => this.setupNativeMonitor(player, section), 500);
+            }
+        };
+        player.addEventListener('timeupdate', trigger);
+    }
+    private setupTransitionMonitor(hls: Hls, player: HTMLVideoElement, section: SectionId) {
+        const threshold = 0.4; // 800ms buffer is the sweet spot for Edge
+
+        const checkTime = () => {
+            if (player.duration && (player.duration - player.currentTime < threshold)) {
+                player.removeEventListener('timeupdate', checkTime);
+                this.performSeamlessSwap(hls, player, section);
+            }
+        };
+
+        player.addEventListener('timeupdate', checkTime);
+    }
+
+    private async performSeamlessSwap(hls: Hls, player: HTMLVideoElement, section: SectionId) {
+        const playerIndex = Array.from(this.html.videoPlayers).indexOf(player);
+
+        // 1. Capture and Show the "Freeze Frame"
+        if (this.mask) {
+            this.mask.width = player.videoWidth;
+            this.mask.height = player.videoHeight;
+            const ctx = this.mask.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(player, 0, 0);
+                this.mask.style.display = 'block'; // Cover the flicker
+            }
+        }
+
+        this.state.modifyPosition(section);
+        const nextSrc = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+
+        // 2. Swap Source
+        hls.loadSource(nextSrc);
+
+        // 3. Wait for the NEW video to actually render a frame
+        const onPlaying = () => {
+            // A small delay (50ms) ensures the first frame is fully rendered 
+            // behind the mask before we hide it.
+            setTimeout(() => {
+                if (this.mask) this.mask.style.display = 'none';
+            }, 50);
+            player.removeEventListener('playing', onPlaying);
+        };
+
+        player.addEventListener('playing', onPlaying);
+
+        try {
+            await player.play();
+            setTimeout(() => this.setupTransitionMonitor(hls, player, section), 1000);
+        } catch (err) {
+            if (this.mask) this.mask.style.display = 'none';
+        }
+    }
+
+    private maskFlicker(player: HTMLVideoElement) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = player.videoWidth;
+            canvas.height = player.videoHeight;
+            const ctx = canvas.getContext('2d');
+
+            if (ctx) {
+                // Draw current frame to canvas
+                ctx.drawImage(player, 0, 0, canvas.width, canvas.height);
+                // Set as background of the video element itself
+                player.style.backgroundSize = 'cover';
+                player.style.backgroundImage = `url(${canvas.toDataURL('image/jpeg', 0.8)})`;
+            }
+        } catch (e) {
+            console.warn("Could not capture frame (likely CORS restriction)");
+        }
+    }
+    switchHlsSource(hls: Hls, player: HTMLVideoElement, section: SectionId) {
+        const nextSrc = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+        this.state.modifyPosition(section);
+
+        console.log("Switching to:", nextSrc);
+
+        // Key for Edge/Chrome: Load source but don't 'detach'
+        hls.loadSource(nextSrc);
+        player.play().catch(e => console.log("Auto-play prevented", e));
+
+        // Re-attach the monitor for the next video
+        setTimeout(() => {
+            player.ontimeupdate = () => {
+                if (player.duration - player.currentTime < 0.1) {
+                    player.ontimeupdate = null;
+                    this.switchHlsSource(hls, player, section);
+                }
+            };
+        }, 1000);
+    }
+    private handleNativeTransition(player: HTMLVideoElement, section: SectionId) {
+        this.state.modifyPosition(section);
+        player.src = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+        player.play();
+    }
+    watchVideoEdge(video: HTMLVideoElement, onEdge: () => void) {
+        const END_MARGIN = 0.12; // seconds before actual end
+        let fired = false;
+
+        function loop() {
+            if (fired) return;
+
+            if (video.readyState >= 2 && video.duration &&
+                (video.ended || (video.duration - video.currentTime <= END_MARGIN))) {
+                fired = true;
+                onEdge();
+                return;
             }
 
-            continue;
+            requestAnimationFrame(loop);
         }
+
+        loop();
     }
 
     private attachEventListeners() {
@@ -172,17 +386,23 @@ class Players {
         // Detect Safari
 
         // Safari needs 20% buffer, Chrome only needs 2-5% to be safe
-        const threshold = this.isSafari ? 80 : 95;
+        const threshold = this.isSafari ? 70 : 95;
 
         this.html.videoPlayers.forEach((player, index) => {
-            player.addEventListener('timeupdate', () => {
-                const progress = (player.currentTime / player.duration) * 100;
+            // player.addEventListener('timeupdate', () => {
+            //     const progress = (player.currentTime / player.duration) * 100;
 
-                if (progress > threshold && this.state.active?.[index as PlayerIndex]) {
-                    this.handlePlayerEnded(index as PlayerIndex);
-                }
-            });
+            //     if (progress > threshold && this.state.active?.[index as PlayerIndex]) {
+            //         this.handlePlayerEnded(index as PlayerIndex);
+            //     }
+            // });
             player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
+            player.onplay = () => {
+                const id = player.getAttribute("data-video-id");
+                if (id) {
+                    this.state.markAsPlayed(id);
+                }
+            };
         });
     }
     private renderTagResults(
@@ -219,28 +439,7 @@ class Players {
             card.addEventListener('click', async () => {
                 console.log('Clicked tag:', tag.title);
 
-                // 1. Correct Map Iteration: Loop directly over the Map entries
-                this.state.activeTags.forEach((currentTags, sectionId) => {
-                    console.log("Processing section:", sectionId);
-
-                    // 2. Check current state before clearing
-                    const isAlreadyActive = currentTags.includes(tag.title);
-
-                    // 3. THE RESET: Empty the array for this section
-                    // currentTags.length = 0 keeps the reference so the Map stays updated
-                    currentTags.length = 0;
-
-                    if (!isAlreadyActive) {
-                        // 4. ASSIGN: Now this is the ONLY active tag
-                        currentTags.push(tag.title);
-
-                        // If toggleTag handles UI state, call it here
-                        this.toggleTag(tag.title, false);
-                    }
-                });
-
-                // 5. RELOAD: Now that all sections are updated, fetch new videos
-                await this.loadVideos();
+                this.toggleTag(tag.title, true);
 
                 // 6. UI CLEANUP
                 searchInput.value = '';
@@ -317,12 +516,12 @@ class Players {
             this.swappingSections.delete(section);
         }
     }
-    private async togglePlayPause(index: PlayerIndex): Promise<void> {
+    togglePlayPause(index: PlayerIndex): void {
         const player = this.html.videoPlayers[index];
         const section = Math.floor(index / 2 + 1) as SectionId;
 
         if (this.state.active && this.state.active[index] && !this.state.playing[section]) {
-            await player.play();
+            player.play();
             console.log("starting to play video index", index);
             this.html.iconPlay.classList.add('hidden');
             this.html.iconPause.classList.remove('hidden');
@@ -410,6 +609,10 @@ class Players {
             });
         });
         console.log("activated taggs", this.state.activeTags);
+        this.state.taggedVideoCache = null;
+        console.log("We now start fetching!!!!!!! of all videos with this tag");
+
+        await this.state.fetchVideosByTags();
 
         if (!reset) return;
         // reload once

@@ -9,7 +9,7 @@ export const config = {
     baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
     videoSourcePath: isProduction ? '/video/' : 'https://clip-flip.com/video/',
     defaultPercentChance: 25,
-    defaultEndIndex: 5609,
+    defaultEndIndex: 10,
     apiUrl: isProduction ? 'https://clip-flip.com/api' : 'https://clip-flip.com/api',
     multiSection: false,
     randomPercentChance: 25,
