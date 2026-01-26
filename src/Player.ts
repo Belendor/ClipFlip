@@ -176,6 +176,58 @@ class Players {
         };
         player.addEventListener('timeupdate', trigger);
     }
+    private setupTransitionMonitor(hls: Hls, player: HTMLVideoElement, section: SectionId) {
+        const threshold = 0.4; // 800ms buffer is the sweet spot for Edge
+
+        const checkTime = () => {
+            if (player.duration && (player.duration - player.currentTime < threshold)) {
+                player.removeEventListener('timeupdate', checkTime);
+                this.performSeamlessSwap(hls, player, section);
+            }
+        };
+
+        player.addEventListener('timeupdate', checkTime);
+    }
+
+    private async performSeamlessSwap(hls: Hls, player: HTMLVideoElement, section: SectionId) {
+        const playerIndex = Array.from(this.html.videoPlayers).indexOf(player);
+
+        // 1. Capture and Show the "Freeze Frame"
+        if (this.mask) {
+            this.mask.width = player.videoWidth;
+            this.mask.height = player.videoHeight;
+            const ctx = this.mask.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(player, 0, 0);
+                this.mask.style.display = 'block'; // Cover the flicker
+            }
+        }
+
+        this.state.modifyPosition(section);
+        const nextSrc = `https://clip-flip.com/video/${this.state.positions[section]}/index.m3u8`;
+
+        // 2. Swap Source
+        hls.loadSource(nextSrc);
+
+        // 3. Wait for the NEW video to actually render a frame
+        const onPlaying = () => {
+            // A small delay (50ms) ensures the first frame is fully rendered 
+            // behind the mask before we hide it.
+            setTimeout(() => {
+                if (this.mask) this.mask.style.display = 'none';
+            }, 50);
+            player.removeEventListener('playing', onPlaying);
+        };
+
+        player.addEventListener('playing', onPlaying);
+
+        try {
+            await player.play();
+            setTimeout(() => this.setupTransitionMonitor(hls, player, section), 1000);
+        } catch (err) {
+            if (this.mask) this.mask.style.display = 'none';
+        }
+    }
 
     private maskFlicker(player: HTMLVideoElement) {
         try {
