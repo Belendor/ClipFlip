@@ -288,8 +288,8 @@ class Players {
             });
 
             await secondary.play();
-            primary.parentElement!.classList.remove('onscreen');
             secondary.parentElement!.classList.add('onscreen');
+            primary.parentElement!.classList.remove('onscreen');
             const pos = this.state.positions[section];
             await this.populateMetadataForm(playerIndex, await this.getVideoMetadata(pos));
 
