@@ -16,7 +16,7 @@ class Players {
     primarySlot!: HTMLElement;
     secondarySlot!: HTMLElement;
     isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
+    firedEvent = false;
     constructor(state: State, html: HTML) {
         this.state = state;
         this.html = html;
@@ -171,14 +171,15 @@ class Players {
         // Detect Safari
 
         // Safari needs 20% buffer, Chrome only needs 2-5% to be safe
-        const threshold = this.isSafari ? 95 : 98;
+        const threshold = this.isSafari ? 70 : 80;
 
         this.html.videoPlayers.forEach((player, index) => {
             player.addEventListener('timeupdate', () => {
                 const progress = (player.currentTime / player.duration) * 100;
 
-                if (progress > threshold && this.state.active?.[index as PlayerIndex]) {
+                if (progress > threshold && this.state.active?.[index as PlayerIndex] && !this.firedEvent) {
                     this.handlePlayerEnded(index as PlayerIndex);
+                    this.firedEvent = true;
                 }
             });
             player.addEventListener('click', () => this.togglePlayPause(index as PlayerIndex));
@@ -298,6 +299,7 @@ class Players {
                 this.state.active[playerIndex as PlayerIndex] = false;
             }
             const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
+            this.firedEvent = false;
             primary.src = URL.createObjectURL(await res.blob());
             primary.setAttribute('data-video-id', this.state.positions[section].toString()); // Store it here
             primary.load();

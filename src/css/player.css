@@ -19,5 +19,5 @@
     height: 100%;
     object-fit: scale-down;
     /* Avoid background: black here; it's what flashes if frames drop */
-    background: transparent !important;
+    background: black;
 }
