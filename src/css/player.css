@@ -17,7 +17,7 @@
 .player {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: scale-down;
     /* Avoid background: black here; it's what flashes if frames drop */
     background: transparent !important;
 }
