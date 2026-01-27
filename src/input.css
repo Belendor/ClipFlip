@@ -352,6 +352,7 @@ select[multiple] {
 
 
 .advanced-panel {
+    z-index: 10;
     width: 100%;
     max-width: 70vw;
     height: calc(100vh - 120px);

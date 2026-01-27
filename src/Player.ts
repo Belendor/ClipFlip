@@ -10,7 +10,6 @@ export type VideoWithRelations = Video & {
 class Players {
     state: State;
     html: HTML;
-    swappingSections = new Set<number>();
     folder = config.videoSourcePath;
     muted: boolean = true;
     playerCount: number = 8;
@@ -50,7 +49,6 @@ class Players {
                 }
             }
             const playerIndex = i as PlayerIndex;
-            await this.state.modifyPosition(section);
             const pos = this.state.positions[section];
             console.log("New video pos:", pos);
             const videoPlayer = this.html.videoPlayers[playerIndex];
@@ -61,20 +59,21 @@ class Players {
             const blob = await response.blob();
             const videoUrl = URL.createObjectURL(blob);
             videoPlayer.src = videoUrl; // This is now instant because it's in memory
-            videoPlayer.setAttribute('data-video-id', pos.toString()); // Store it here
-            videoPlayer.load();
-            videoPlayer.pause();
-            videoPlayer.currentTime = 0;
-
             if (this.state.active?.[playerIndex]) {
                 console.log("active start playing");
                 this.html.videoPlayers[playerIndex].play();
+                this.state.modifyPosition(section);
                 this.state.playing[section] = true;
                 const res = await this.getVideoMetadata(pos);
                 this.populateMetadataForm(playerIndex, res);
+                videoPlayer.setAttribute('data-video-id', pos.toString()); // Store it here
+                continue
             }
-
-            continue;
+            videoPlayer.setAttribute('data-video-id', pos.toString()); // Store it here
+            videoPlayer.load();
+            // videoPlayer.pause();
+            // videoPlayer.currentTime = 0;
+            this.state.modifyPosition(section);
         }
     }
 
@@ -172,7 +171,7 @@ class Players {
         // Detect Safari
 
         // Safari needs 20% buffer, Chrome only needs 2-5% to be safe
-        const threshold = this.isSafari ? 80 : 95;
+        const threshold = this.isSafari ? 95 : 98;
 
         this.html.videoPlayers.forEach((player, index) => {
             player.addEventListener('timeupdate', () => {
@@ -261,25 +260,24 @@ class Players {
         }
     }
     async handlePlayerEnded(playerIndex: PlayerIndex) {
+        console.log("End event for player index:", playerIndex);
+        
         const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
-        if (this.swappingSections.has(section)) return;
-        this.swappingSections.add(section);
-
         const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
         const primary = this.html.videoPlayers[playerIndex];   // The video nearing its end
         const secondary = this.html.videoPlayers[nextIdx];     // The next video
 
         try {
-            // 2. Start secondary while hidden (warm up decoder)
-            await secondary.play();
-            secondary.pause();
-            secondary.currentTime = 0;
+            // // 2. Start secondary while hidden (warm up decoder)
+            // await secondary.play();
+            // secondary.pause();
+            // secondary.currentTime = 0;
 
             // 2. WAIT FOR PRIMARY TO FINISH
             await new Promise(r => {
                 const checkEnd = () => {
                     // Using 0.06s for 30fps or 60fps safety margin
-                    if (primary.ended || (primary.duration - primary.currentTime < 0.06)) {
+                    if (primary.ended || (primary.duration - primary.currentTime < 0.03)) {
                         r(0);
                     } else {
                         requestAnimationFrame(checkEnd);
@@ -288,41 +286,34 @@ class Players {
                 checkEnd();
             });
 
-            secondary.play();
+            await secondary.play();
+            primary.parentElement!.classList.remove('onscreen');
+            secondary.parentElement!.classList.add('onscreen');
             const pos = this.state.positions[section];
             await this.populateMetadataForm(playerIndex, await this.getVideoMetadata(pos));
 
             // 4. THE SWAP: Now that the first is done, show the second
-            primary.parentElement!.classList.remove('onscreen');
-            secondary.parentElement!.classList.add('onscreen');
             if (this.state && this.state.active) {
                 this.state.active[nextIdx as PlayerIndex] = true;
                 this.state.active[playerIndex as PlayerIndex] = false;
             }
-
-            // 5. Cleanup and Preload the next clip for the future
-            setTimeout(async () => {
-                primary.pause();
-
-                await this.state.modifyPosition(section);
-                const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
-                primary.src = URL.createObjectURL(await res.blob());
-                primary.setAttribute('data-video-id', this.state.positions[section].toString()); // Store it here
-                primary.load();
-
-                this.swappingSections.delete(section);
-            }, 300);
-
+            const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
+            primary.src = URL.createObjectURL(await res.blob());
+            primary.setAttribute('data-video-id', this.state.positions[section].toString()); // Store it here
+            primary.load();
+            await this.state.modifyPosition(section);
         } catch (e) {
-            this.swappingSections.delete(section);
+            console.error("Error during player swap:", e);
         }
     }
     private async togglePlayPause(index: PlayerIndex): Promise<void> {
         const player = this.html.videoPlayers[index];
         const section = Math.floor(index / 2 + 1) as SectionId;
 
-        if (this.state.active && this.state.active[index] && !this.state.playing[section]) {
-            await player.play();
+        if (this.state.active && this.state.active[index]) {
+            player.pause();
+            console.log(player);
+            
             console.log("starting to play video index", index);
             this.html.iconPlay.classList.add('hidden');
             this.html.iconPause.classList.remove('hidden');
@@ -333,18 +324,22 @@ class Players {
             if (this.html.videoForms[pair] && this.state.advancedMode) {
                 this.html.videoForms[pair].classList.add('hidden');
             }
-            this.state.playing[section] = true;
+            this.state.playing[section] = false;
+            this.state.active[index] = false;
         } else {
-            player.pause();
+            player.play();
             this.html.iconPlay.classList.remove('hidden');
             this.html.iconPause.classList.add('hidden');
             console.log("pausing video index", index);
-            this.state.playing[section] = false;
-        }
+            this.state.playing[section] = true;
+            if (this.state.active) { 
+                this.state.active[index] = true;
+            }
+
 
         // this.html.toolbar.classList.toggle('hidden');
     }
-
+}
     async populateMetadataForm(index: PlayerIndex, data: VideoWithRelations | null): Promise<void> {
         if (!this.isMetadataValid(data) || !data) {
             console.warn(`Invalid or empty metadata for Player ${index}`);

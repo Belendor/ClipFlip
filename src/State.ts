@@ -7,7 +7,7 @@ type PositionsMap = Record<SectionId, number>;
 class State {
     multiSection: boolean = false; // Whether to use multiple sections
     randomized: boolean = true;
-    percentChance = 25; // 25% chance to modify position
+    percentChance = config.defaultPercentChance; // 25% chance to modify position
     endIndex = config.defaultEndIndex; // Maximum position index
     positions: PositionsMap = {
         1: this.randomized ? this.randomInRange(1, this.endIndex * 0.25) : 1,
@@ -29,6 +29,7 @@ class State {
     tagsPromise: Promise<void> | undefined;
     constructor() {
         this.active = this.initializeActive(8);
+        console.log("State: Initialized active players", this.active);
         this.tagsPromise = this.fetchAllTags();
         const params = new URLSearchParams(window.location.search);
         const queryTagsRaw = params.get("tags");
@@ -85,10 +86,8 @@ class State {
                 if (roll < this.percentChance || random) {
                     // pick random from taggedVideos
                     const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
-                    console.log(randomVideo);
-
                     this.positions[section] = randomVideo.id;
-                    console.log("assigning random position:", this.positions[section]);
+                    console.log("Quing next Random Tagged Video:", this.positions[section]);
 
                     return;
                 }
@@ -96,9 +95,9 @@ class State {
             let currentIndex = videoIds.indexOf(currentId);
 
             this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
-            console.log("Quing next video:", this.positions[section]);
+            console.log("Quing next Tagged Video:", this.positions[section]);
 
-            return
+            return;
         }
 
         // Untagged mode
@@ -107,6 +106,7 @@ class State {
             if (roll < this.percentChance) {
                 const newIndex = Math.floor(Math.random() * this.endIndex) + 1;
                 this.positions[section] = newIndex;
+                console.log("Quing next Random Untagged Video:", this.positions[section]);
                 return;
             }
         }
@@ -115,7 +115,7 @@ class State {
 
         // Default increment
         this.positions[section] = nextValue;
-        console.log("Next in order video:", this.positions[section]);
+        console.log("Quing next Untagged Video:", this.positions[section]);
 
         return
     }
