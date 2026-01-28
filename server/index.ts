@@ -260,13 +260,15 @@ app.post('/videos/by-tags', async (req, res) => {
   try {
     const videos = await prisma.video.findMany({
       where: {
-        tags: {
-          some: {
-            title: {
-              in: tags
-            }
+        AND: tags.map(tagTitle => ({
+          tags: {
+            some: { title: tagTitle }
           }
-        }
+        }))
+      },
+      include: {
+        tags: true,
+        models: true
       }
     });
     res.json(videos);

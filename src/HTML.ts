@@ -41,9 +41,9 @@ export default class HTML {
     // Grab the main containers
     this.appRoot = document.getElementById('app-root') as HTMLElement;
     this.videoGrid = document.getElementById('video-grid') as HTMLElement;
-    this.resizeButton = document.getElementById('multiScreenBtn') as HTMLButtonElement;
-    this.resizeIconActive = document.getElementById('icon-grid') as HTMLSpanElement;
-    this.resizeIconInactive = document.getElementById('icon-single') as HTMLSpanElement;
+    // this.resizeButton = document.getElementById('multiScreenBtn') as HTMLButtonElement;
+    // this.resizeIconActive = document.getElementById('icon-grid') as HTMLSpanElement;
+    // this.resizeIconInactive = document.getElementById('icon-single') as HTMLSpanElement;
     this.fullscreenButton = document.getElementById('fullScreenBtn') as HTMLButtonElement;
     this.muteToggle = document.getElementById('muteBtn') as HTMLButtonElement;
     this.playPauseBtn = document.getElementById('playPauseBtn') as HTMLButtonElement;
@@ -182,32 +182,43 @@ export default class HTML {
   //        </svg>`
   // }
 
-  renderTags(
+  async renderTags(
     container: HTMLElement,
     tags: Tag[], // This should match your Prisma Tag type
-    index: PlayerIndex,
+    section: SectionId,
     videoId?: number,
     toggleTag?: (tag: string, active: boolean) => void
   ) {
-    container.innerHTML = '';
+    container.innerHTML = ''; // Clear existing tags
+
     if (tags.length === 0) {
       return
     }
-    const visibleCount = 5;
-    const sectionId = (Math.floor(index / 2) + 1) as SectionId;
+    const visibleCount = 7;
 
     tags.forEach((tag, i) => {
       // 1. Create Button Wrapper
       const btn = document.createElement('button');
 
       // Use your specialized class for section-specific styling
-      btn.className = `tag-button section-tag-${sectionId}`;
-
-      // Use Tailwind/Glassmorphism styles for the 'Mint Vanilla' look
+      btn.className = `tag-button section-tag-${section}`;
       btn.classList.add(
-        'px-2', 'py-1', 'm-1', 'text-xs', 'rounded-full',
-        'bg-black/40', 'backdrop-blur-md', 'border', 'border-white/20',
-        'text-white/80', 'transition-all', 'hover:bg-white/20'
+        'px-2',             // wider
+        'py-1',           // taller
+        'text-base',        // bigger, readable text
+        'font-semibold',    // bold enough
+        'rounded-2xl',      // more rounded corners
+        'bg-black/30',      // darker semi-transparent background
+        'backdrop-blur-lg', // stronger blur for glass effect
+        'border',
+        'border-white/40',
+        'text-white',
+        'shadow-md',        // subtle depth
+        'hover:bg-black/50',
+        'hover:scale-105',  // slight hover zoom
+        'transition-all',
+        'duration-200',
+        'ease-out'
       );
 
       // Hide tags beyond the visible limit
@@ -216,22 +227,23 @@ export default class HTML {
       }
 
       // 2. Active State Check
-      const isActive = this.state.activeTags.get(sectionId)?.includes(tag.title);
+
+      const isActive = this.state.activeTags.get(section)?.includes(tag.title);
       if (isActive) {
-        btn.classList.add('active-tag', 'border-white', 'bg-white', 'text-black');
-        btn.classList.remove('text-white/80', 'bg-black/40');
+        btn.classList.add('active-tag');
       }
 
       // Set Tag Text
       const textSpan = document.createElement('span');
       textSpan.textContent = tag.title;
+
       btn.appendChild(textSpan);
 
       // 3. Main Click Event (Filter Toggle)
       btn.addEventListener('click', (e) => {
         // Prevent triggering the video container click (which expands/shrinks grid)
         e.stopPropagation();
-        console.log(`Filtering section ${sectionId} by tag: ${tag.title}`);
+        console.log(`Filtering section ${section} by tag: ${tag.title}`);
 
         if (toggleTag && tag.title) {
           toggleTag(tag.title, true);
@@ -240,7 +252,7 @@ export default class HTML {
 
       // 4. Delete Action (The 'X')
       const del = document.createElement('span');
-      del.className = 'ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
+      del.className = 'tag-delete ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
       del.innerHTML = '&times;';
 
       del.addEventListener('click', async (e) => {
@@ -266,7 +278,9 @@ export default class HTML {
       });
 
       btn.appendChild(del);
+      console.log("before append", container.querySelectorAll(".tag-button").length);
       container.appendChild(btn);
+      console.log("after append", container.querySelectorAll(".tag-button").length);
     });
 
     // 5. Expandable 'More' Button

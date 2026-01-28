@@ -34,8 +34,10 @@ class Players {
             if (!this.state.multiSection && i > 1) {
                 continue;
             }
-
+            console.log(this.state.active, "status before loading videos");
+            const playerIndex = i as PlayerIndex;
             const section = Math.ceil((i + 1) / 2) as SectionId;
+            await this.state.modifyPosition(section)
             if (this.html.videoPlayers[i].src && this.html.videoPlayers[i].src !== '') {
                 const position = this.html.videoPlayers[i].getAttribute('data-video-id') || '';
 
@@ -45,27 +47,32 @@ class Players {
                 const hasActiveTag = video?.tags?.some(tag => activeTags?.includes(tag.title));
                 if (hasActiveTag) {
                     console.log("Video match active tags, skipping");
+                    console.log(this.state.active?.[playerIndex]);
+
+                    if (this.state.active && this.state.active[playerIndex]) {
+                        this.populateMetadataForm(section, video);
+                    }
                     continue; // or continue in a loop
                 }
             }
-            const playerIndex = i as PlayerIndex;
+
             const pos = this.state.positions[section];
             console.log("New video pos:", pos);
             const videoPlayer = this.html.videoPlayers[playerIndex];
             videoPlayer.preload = 'auto';
-            videoPlayer.muted = true;
+            videoPlayer.muted = this.muted;
             videoPlayer.playsInline = true;
             const response = await fetch(this.folder + pos + '.mp4');
             const blob = await response.blob();
             const videoUrl = URL.createObjectURL(blob);
             videoPlayer.src = videoUrl; // This is now instant because it's in memory
-            if (this.state.active?.[playerIndex]) {
+            if (this.state.active && this.state.active[playerIndex]) {
                 console.log("active start playing");
                 this.html.videoPlayers[playerIndex].play();
-                this.state.modifyPosition(section);
-                this.state.playing[section] = true;
+                this.state.playing[playerIndex] = true;
                 const res = await this.getVideoMetadata(pos);
-                this.populateMetadataForm(playerIndex, res);
+                this.populateMetadataForm(section, res);
+                console.log("initial metadata population");
                 videoPlayer.setAttribute('data-video-id', pos.toString()); // Store it here
                 continue
             }
@@ -73,7 +80,6 @@ class Players {
             videoPlayer.load();
             // videoPlayer.pause();
             // videoPlayer.currentTime = 0;
-            this.state.modifyPosition(section);
         }
     }
 
@@ -106,16 +112,21 @@ class Players {
             this.html.fullscreenButton.classList.toggle('is-fullscreen', !!document.fullscreenElement);
         });
 
-        this.html.resizeButton.addEventListener('click', () => {
-            this.html.resizeButton.classList.toggle('is-multi');
-            this.state.multiSection ? this.html.videoGrid.classList.add('single-view') : this.html.videoGrid.classList.remove('single-view');
-            this.state.multiSection ? this.html.resizeIconActive.classList.remove('hidden') : this.html.resizeIconActive.classList.add('hidden');
-            this.state.multiSection ? this.html.resizeIconInactive.classList.add('hidden') : this.html.resizeIconInactive.classList.remove('hidden');
-            this.state.multiSection = !this.state.multiSection;
-            this.loadVideos();
-        });
+        // this.html.resizeButton.addEventListener('click', () => {
+        //     this.html.resizeButton.classList.toggle('is-multi');
+        //     this.state.multiSection ? this.html.videoGrid.classList.add('single-view') : this.html.videoGrid.classList.remove('single-view');
+        //     this.state.multiSection ? this.html.resizeIconActive.classList.remove('hidden') : this.html.resizeIconActive.classList.add('hidden');
+        //     this.state.multiSection ? this.html.resizeIconInactive.classList.add('hidden') : this.html.resizeIconInactive.classList.remove('hidden');
+        //     this.state.multiSection = !this.state.multiSection;
+        //     this.loadVideos();
+        // });
         this.html.muteToggle.addEventListener('click', () => {
             this.html.muteToggle.classList.toggle('is-muted');
+            this.muted = !this.muted;
+            this.html.videoPlayers.forEach((player) => {
+                player.muted = this.muted;
+                player.volume = 0.1;
+            });
         });
         this.html.hideFormsBtn.addEventListener('click', () => {
             console.log("cl;ick");
@@ -217,30 +228,34 @@ class Players {
             card.appendChild(title);
 
             card.addEventListener('click', async () => {
-                console.log('Clicked tag:', tag.title);
+                console.log("Clicked tag:", tag.title);
+                console.log("Current active tags", this.state.activeTags);
 
-                // 1. Correct Map Iteration: Loop directly over the Map entries
-                this.state.activeTags.forEach((currentTags, sectionId) => {
-                    console.log("Processing section:", sectionId);
+                this.state.activeTags.set(1, [...new Set([tag.title])]);
+                console.log("Assigned new active tag:", this.state.activeTags);
+                console.log("Fetching videos for section 1");
+                await this.state.fetchVideosByTags(1);
+                this.toggleTag(tag.title, true);
+                // // 1. Correct Map Iteration: Loop directly over the Map entries
+                // this.state.activeTags.forEach((currentTags, sectionId) => {
+                //     console.log("Processing section:", sectionId);
 
-                    // 2. Check current state before clearing
-                    const isAlreadyActive = currentTags.includes(tag.title);
+                //     // 2. Check current state before clearing
+                //     const isAlreadyActive = currentTags.includes(tag.title);
 
-                    // 3. THE RESET: Empty the array for this section
-                    // currentTags.length = 0 keeps the reference so the Map stays updated
-                    currentTags.length = 0;
+                //     // 3. THE RESET: Empty the array for this section
+                //     // currentTags.length = 0 keeps the reference so the Map stays updated
+                //     currentTags.length = 0;
 
-                    if (!isAlreadyActive) {
-                        // 4. ASSIGN: Now this is the ONLY active tag
-                        currentTags.push(tag.title);
+                //     if (!isAlreadyActive) {
+                //         // 4. ASSIGN: Now this is the ONLY active tag
+                //         currentTags.push(tag.title);
+                //          this.loadVideos();
+                //         // If toggleTag handles UI state, call it here
 
-                        // If toggleTag handles UI state, call it here
-                        this.toggleTag(tag.title, false);
-                    }
-                });
+                //     }
+                // });
 
-                // 5. RELOAD: Now that all sections are updated, fetch new videos
-                await this.loadVideos();
 
                 // 6. UI CLEANUP
                 searchInput.value = '';
@@ -262,8 +277,10 @@ class Players {
     }
     async handlePlayerEnded(playerIndex: PlayerIndex) {
         console.log("End event for player index:", playerIndex);
-        
+
         const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
+        console.log("section", section);
+
         const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
         const primary = this.html.videoPlayers[playerIndex];   // The video nearing its end
         const secondary = this.html.videoPlayers[nextIdx];     // The next video
@@ -273,7 +290,6 @@ class Players {
             // await secondary.play();
             // secondary.pause();
             // secondary.currentTime = 0;
-
             // 2. WAIT FOR PRIMARY TO FINISH
             await new Promise(r => {
                 const checkEnd = () => {
@@ -290,20 +306,32 @@ class Players {
             await secondary.play();
             secondary.parentElement!.classList.add('onscreen');
             primary.parentElement!.classList.remove('onscreen');
-            const pos = this.state.positions[section];
-            await this.populateMetadataForm(playerIndex, await this.getVideoMetadata(pos));
+            const pos = secondary.getAttribute('data-video-id');
+            // if (!pos) {
+            //     console.warn("No data-video-id on secondary player");
+            //     return;
+            // }
 
+
+            console.log(this.state.active, "checking active state");
             // 4. THE SWAP: Now that the first is done, show the second
             if (this.state && this.state.active) {
                 this.state.active[nextIdx as PlayerIndex] = true;
+                this.state.playing[nextIdx as PlayerIndex] = true;
                 this.state.active[playerIndex as PlayerIndex] = false;
+                this.state.playing[playerIndex as PlayerIndex] = false;
             }
+            console.log(this.state.active, "checking active state after");
+            console.log("populating metadata for", nextIdx);
+
+            await this.populateMetadataForm(section, await this.getVideoMetadata(Number(pos)));
+            console.log("populated metadata for", section);
+            await this.state.modifyPosition(section);
             const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
             this.firedEvent = false;
             primary.src = URL.createObjectURL(await res.blob());
             primary.setAttribute('data-video-id', this.state.positions[section].toString()); // Store it here
             primary.load();
-            await this.state.modifyPosition(section);
         } catch (e) {
             console.error("Error during player swap:", e);
         }
@@ -312,13 +340,13 @@ class Players {
         const player = this.html.videoPlayers[index];
         const section = Math.floor(index / 2 + 1) as SectionId;
 
-        if (this.state.active && this.state.active[index]) {
+        if (this.state.active && this.state.active[index] && this.state.playing[index]) {
             player.pause();
             console.log(player);
-            
+
             console.log("starting to play video index", index);
-            this.html.iconPlay.classList.add('hidden');
-            this.html.iconPause.classList.remove('hidden');
+            this.html.iconPlay.classList.remove('hidden');
+            this.html.iconPause.classList.add('hidden');
 
 
 
@@ -326,31 +354,27 @@ class Players {
             if (this.html.videoForms[pair] && this.state.advancedMode) {
                 this.html.videoForms[pair].classList.add('hidden');
             }
-            this.state.playing[section] = false;
-            this.state.active[index] = false;
+            this.state.playing[index] = false;
         } else {
             player.play();
-            this.html.iconPlay.classList.remove('hidden');
-            this.html.iconPause.classList.add('hidden');
+            this.html.iconPlay.classList.add('hidden');
+            this.html.iconPause.classList.remove('hidden');
             console.log("pausing video index", index);
-            this.state.playing[section] = true;
-            if (this.state.active) { 
-                this.state.active[index] = true;
-            }
-
-
-        // this.html.toolbar.classList.toggle('hidden');
-    }
-}
-    async populateMetadataForm(index: PlayerIndex, data: VideoWithRelations | null): Promise<void> {
-        if (!this.isMetadataValid(data) || !data) {
-            console.warn(`Invalid or empty metadata for Player ${index}`);
-            return;
+            this.state.playing[index] = true;
+            // this.html.toolbar.classList.toggle('hidden');
         }
-        console.log("Populating metadata form for player index:", index, data);
+    }
+    async populateMetadataForm(section: SectionId, data: VideoWithRelations | null): Promise<void> {
+        // if (!this.isMetadataValid(data) || !data) {
+        //     console.warn(`Invalid or empty metadata for Player ${index}`);
+        //     return;
+        // }
+        const video = data as VideoWithRelations;
+        console.log("Populating metadata form for section:", section, data);
 
-        const section = Math.floor(index / 2) + 1;
         const form = document.getElementById(`metaForm${section}`) as HTMLDivElement;
+        console.log("got this form", form);
+
         if (!form) return;
 
         const inputs = form.querySelectorAll('input');
@@ -358,16 +382,16 @@ class Players {
         inputs.forEach((input) => {
             switch (input.placeholder) {
                 case 'id':
-                    input.value = data.id.toString();
+                    input.value = video.id.toString();
                     break;
                 case 'Title':
-                    input.value = data.title || '';
+                    input.value = video.title || '';
                     break;
                 case 'Models':
-                    input.value = Array.isArray(data.models) ? data.models.join(', ') : (data.models || '');
+                    input.value = Array.isArray(video.models) ? video.models.join(', ') : (video.models || '');
                     break;
                 case 'Studio':
-                    input.value = data.studio || '';
+                    input.value = video.studio || '';
                     break;
             }
         });
@@ -375,15 +399,17 @@ class Players {
         //     return;
         // }
 
-        const tagsWrapper = this.html.tagsWrappers[index as PlayerIndex];
+        const tagsWrapper = this.html.tagsWrappers[section - 1];
+        console.log(tagsWrapper);
+
 
         if (!tagsWrapper) return;
         // render toggleable tags directly here
-        this.html.renderTags(
+        await this.html.renderTags(
             tagsWrapper,
-            data.tags,
-            index,
-            data.id,
+            video.tags,
+            section,
+            video.id,
             this.toggleTag.bind(this)
         )
     }
@@ -394,12 +420,19 @@ class Players {
         allButtons.forEach(btn => {
             btn.classList.remove('active-tag');
         });
-        console.log("Reseting active first");
+        console.log("Reseting active tags first");
         this.state.activeTags.forEach((currentTags, sectionId) => {
             const tagClass = `${tag}-id-${sectionId}`;
             const btns = document.querySelectorAll<HTMLButtonElement>(`.${tagClass}`);
-            currentTags.length = 0;
-            currentTags.push(tag);
+            // Remove tag if it exists, otherwise add it
+            const index = currentTags.indexOf(tag);
+            if (index >= 0) {
+                currentTags.splice(index, 1);
+                console.log(`Removed tag "${tag}" from section ${sectionId}`);
+            } else {
+                currentTags.push(tag);
+                console.log(`Added tag "${tag}" to section ${sectionId}`);
+            }
             if (!btns.length) return;
             console.log("Activating active");
             btns.forEach(btn => {
@@ -409,7 +442,8 @@ class Players {
         console.log("activated taggs", this.state.activeTags);
 
         if (!reset) return;
-        // reload once
+        // // reload once
+        // this.state.modifyPosition(1);
         await this.loadVideos();
     }
 
@@ -419,9 +453,9 @@ class Players {
         const hasTitle = !!data.title?.trim();
         const hasModels = Array.isArray(data.models) && data.models.length > 0;
         const hasStudio = !!data.studio?.trim();
-        const hasTags = Array.isArray(data.tags) && data.tags.length > 0;
+        // const hasTags = Array.isArray(data.tags) && data.tags.length > 0;
 
-        return hasTitle || hasModels || hasStudio || hasTags;
+        return hasTitle || hasModels || hasStudio;
     }
     async fetchVideos(query?: string) {
         const url = query ? `${this.state.apiUrl}/videos?search=${encodeURIComponent(query)}` : `${this.state.apiUrl}/videos`;
@@ -430,21 +464,16 @@ class Players {
         const data = await res.json();
         return data;
     }
-    createMetadataForm(index: PlayerIndex): HTMLElement {
+    createMetadataForm(section: SectionId): HTMLElement {
         // 💡 UPDATED: Added positioning classes 'absolute top-0 left-0 z-20 relative'.
         // 'absolute top-0 left-0' places it in the top-left of the parent.
         // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
-        const section = Math.floor(index / 2) + 1;
-        this.html.videoForms[index] = this.html.createDiv(
+        console.log("Got such section", section);
+
+        this.html.videoForms[section] = this.html.createDiv(
             `metaForm${section}`,
             'metadata-form hidden'
         );
-
-        const shouldHide = this.state.playing[Math.floor(index / 2 + 1) as SectionId];
-
-        if (shouldHide) {
-            this.html.videoForms[index].classList.add('hidden');
-        }
 
         const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
             const input = document.createElement('input');
@@ -454,7 +483,7 @@ class Players {
 
             input.addEventListener('input', async (event) => {
                 event.preventDefault();
-                await this.updateMeta(index, key, input.value);
+                await this.updateMeta(section, key, input.value);
             });
 
             return input;
@@ -464,7 +493,7 @@ class Players {
         const studioInput = makeInput('Studio', 'studio');
         const idInput = makeInput('id', 'id');
 
-        const tagsWrapper = this.html.createDiv(`tags${index}`, 'tag-container');
+        const tagsWrapper = this.html.createDiv(`tags${section}`, 'tag-container');
 
         // in your constructor or before usage
         this.html.tagsWrappers.push(tagsWrapper);
@@ -475,9 +504,8 @@ class Players {
         // + Button to show available tags
         const addTagBtn = document.createElement('button');
         addTagBtn.type = 'button';
-        addTagBtn.textContent = '+';
-        addTagBtn.className = 'plus-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
-
+        addTagBtn.textContent = '+ Add Tag';
+        addTagBtn.className = 'plus-button px-2 py-1 m-1 text-sm  bg-black/30 backdrop-blur-lg rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
         // 2. Adjust dropdown classes to position relative to the new wrapper
         const tagListDropdown = document.createElement('div');
         tagListDropdown.className = 'tag-list hidden';
@@ -488,9 +516,10 @@ class Players {
             tagItem.className = 'px-3 py-2 hover:bg-gray-200 cursor-pointer';
             tagItem.addEventListener('click', async () => {
                 if (!tag.title) return;
-                const video = await this.updateMeta(index, 'tag', tag.title, tag.id);
+                const res = await this.updateMeta(section, 'tag', tag.title, tag.id);
+                console.log("Update meta response:", res);
+                this.populateMetadataForm(section, res);
                 tagListDropdown.classList.add('hidden'); // hide dropdown
-                await this.populateMetadataForm((index) as PlayerIndex, video);
             });
             tagListDropdown.appendChild(tagItem);
         });
@@ -503,8 +532,10 @@ class Players {
         // UPLOAD button + form
         const uploadBtn = document.createElement('button');
         uploadBtn.type = 'button';
-        uploadBtn.innerHTML = '📤'; // could be replaced with an icon <svg> if you want
-        uploadBtn.className = 'upload-button px-2 py-1 m-1 text-sm rounded border border-transparent text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
+        uploadBtn.innerHTML = '📤 Upload New Video'; // could be replaced with an icon <svg> if you want
+        uploadBtn.className = 'upload-button px-2 py-1 m-1 text-sm rounded border border-gray-300 text-gray-300 transition hover:bg-white/10 hover:border-gray-400';
+        uploadBtn.style.cursor = 'pointer';
+        uploadBtn.style.marginLeft = '10px';
 
         const uploadFormWrapper = document.createElement('div');
         // The dropdowns are already set to absolute, which now uses the form (relative) as its context.
@@ -536,6 +567,7 @@ class Players {
         const submitUploadBtn = document.createElement('button');
         submitUploadBtn.type = 'button';
         submitUploadBtn.textContent = 'Upload';
+        // submitUploadBtn.innerHTML = 'Upload';
         submitUploadBtn.className = 'px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700';
 
         submitUploadBtn.addEventListener('click', async () => {
@@ -570,16 +602,28 @@ class Players {
 
         // Append button and dropdown to the new wrapper
         tagButtonWrapper.append(addTagBtn, tagListDropdown);
-        this.html.videoForms[index].append(tagsWrapper, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
-        return this.html.videoForms[index];
+        this.html.videoForms[section].append(tagsWrapper, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
+        return this.html.videoForms[section];
     }
-    async updateMeta(index: PlayerIndex, key: string, value: string | string[], tagId?: number): Promise<VideoWithRelations | null> {
+    getActiveIndexForSection(section: number): number | null {
+        // section is 1-based
+        const base = (section - 1) * 2;
+
+        if (this.state.active?.[base as PlayerIndex]) return base;
+        if (this.state.active?.[(base + 1) as PlayerIndex]) return base + 1;
+
+        return null;
+    }
+    async updateMeta(section: SectionId, key: string, value: string | string[], tagId?: number): Promise<VideoWithRelations | null> {
         // gather data to send, assuming you have videos in an array like this:
-        const video = this.html.videoPlayers[index];
+        const activeIndex = this.getActiveIndexForSection(section);
+        const video = this.html.videoPlayers[activeIndex as PlayerIndex];
+        console.log("video clicked to update", video);
+
         const videoId = video.getAttribute('data-video-id');
 
         if (!videoId) {
-            console.error(`Extracted video ID is empty for video at index ${index}`);
+            console.error(`Extracted video ID is empty for video at index ${activeIndex}`);
             return null;
         }
 
@@ -612,20 +656,20 @@ class Players {
             const updated = await this.getVideoMetadata(Number(videoId));
             return updated;
         } catch (error) {
-            console.error(`Failed to update metadata for video ${index}:`, error);
+            console.error(`Failed to update metadata for video ${activeIndex}:`, error);
             return null;
         }
     }
     createVideoContainer(): void {
 
         // 1. Loop through the 4 existing sections in your HTML
-        for (let s = 1; s <= 4; s++) {
-            const section = document.getElementById(`section-${s}`);
-            if (!section) continue;
+        for (let section = 1; section <= 4; section++) {
+            const sectionHTML = document.getElementById(`section-${section}`);
+            if (!sectionHTML) continue;
 
             // 2. Find the existing videos (Front and Back) and link them to our array
-            const front = section.querySelector(`#v${s}-front`) as HTMLVideoElement;
-            const back = section.querySelector(`#v${s}-back`) as HTMLVideoElement;
+            const front = sectionHTML.querySelector(`#v${section}-front`) as HTMLVideoElement;
+            const back = sectionHTML.querySelector(`#v${section}-back`) as HTMLVideoElement;
 
             if (front) this.html.videoPlayers.push(front);
             if (back) this.html.videoPlayers.push(back);
@@ -634,10 +678,10 @@ class Players {
             // We create two forms (one for front, one for back) 
             // and append them to the section
             [0, 1].forEach((j) => {
-                const playerIndex = ((s - 1) * 2 + j) as PlayerIndex;
+                const playerIndex = ((section - 1) * 2 + j) as PlayerIndex;
 
                 // Create the form using your existing method
-                const form = this.createMetadataForm(playerIndex);
+                const form = this.createMetadataForm(section as unknown as SectionId);
 
                 // Link to your tracking array
                 this.html.videoForms[playerIndex] = form as HTMLDivElement;
@@ -645,7 +689,7 @@ class Players {
                     return
                 }
                 // APPEND ONLY: Add it to the existing section div
-                section.appendChild(form);
+                sectionHTML.appendChild(form);
             });
         }
     }

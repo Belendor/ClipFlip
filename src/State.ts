@@ -16,13 +16,18 @@ class State {
         4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500
     };
     activeTags: Map<SectionId, Tag["title"][]> = new Map();
-    playing: Record<SectionId, boolean> = {
+    playing: Record<PlayerIndex, boolean> = {
+        0: false,
         1: false,
         2: false,
         3: false,
-        4: false
+        4: false,
+        5: false,
+        6: false,
+        7: false,
     };
     apiUrl: string = config.apiUrl;
+    taggedVideos: Video[] = [];
     advancedMode: boolean = false;
     active: Record<PlayerIndex, boolean> | undefined;
     allTags: Tag[] = [];
@@ -67,15 +72,13 @@ class State {
         if (!(section in this.positions)) {
             throw new Error(`Invalid section: ${section}`);
         }
-        // 
-        const taggedVideos: Video[] = (await this.fetchVideosByTags(section)) ?? [];
-        console.log(taggedVideos);
+
 
 
         // Tagged mode
-        if (taggedVideos.length > 0) {
+        if (this.taggedVideos.length > 0) {
             const currentId = this.positions[section];
-            const videoIds = taggedVideos.map(v => v.id);
+            const videoIds = this.taggedVideos.map(v => v.id);
             console.log("Tagged video selection");
 
             // Random within tagged
@@ -85,7 +88,7 @@ class State {
                 const roll = Math.random() * 100;
                 if (roll < this.percentChance || random) {
                     // pick random from taggedVideos
-                    const randomVideo = taggedVideos[Math.floor(Math.random() * taggedVideos.length)];
+                    const randomVideo = this.taggedVideos[Math.floor(Math.random() * this.taggedVideos.length)];
                     this.positions[section] = randomVideo.id;
                     console.log("Quing next Random Tagged Video:", this.positions[section]);
 
@@ -120,29 +123,30 @@ class State {
         return
     }
 
-    async fetchVideosByTags(section: SectionId): Promise<Video[] | null> {
+    async fetchVideosByTags(section: SectionId): Promise<void> {
         const tags = this.activeTags.get(section);
-        console.log(section);
+        console.log("fetching videos for section", section, "with tags:", tags);
+
+
+        if (!tags || tags.length === 0) return;
+        console.log("Fetching videos for tag:", tags); 
         
-        console.log(tags);
-        console.log("before fetch");
-
-        if (!tags || tags.length === 0) return null;
-
         try {
             const response = await fetch(`${this.apiUrl}/videos/by-tags`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tags: tags, limit: this.endIndex }),
+                body: JSON.stringify({ tags: tags, limit: this.endIndex, matchType: 'all' }),
             });
 
             if (!response.ok) throw new Error(`Server error (${response.status})`);
 
             const videos = await response.json();
-            return videos;
+            console.log("Retrieved number of videos:" , videos.length);
+            
+           this.taggedVideos = videos;
         } catch (err) {
             console.error(`Failed to fetch videos for section ${section} with tag ${tags}`, err);
-            return null;
+            return;
         }
     }
 
