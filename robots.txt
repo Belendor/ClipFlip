@@ -1,9 +1,8 @@
 User-agent: *
-Allow: /
 Disallow: /admin/
 Disallow: /login/
-Disallow: /search?*  # If you have dynamic search pages that create duplicates
-Disallow: /*?replytocom  # Common comment spam/duplicates if applicable
+Disallow: /search?*
+Disallow: /*?replytocom
 
 User-agent: GPTBot
 Disallow: /
@@ -29,5 +28,29 @@ Disallow: /
 User-agent: Omgilibot
 Disallow: /
 
+User-agent: Omgili
+Disallow: /
+
 User-agent: FacebookBot
 Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Grok
+Disallow: /
+
+User-agent: xAI
+Disallow: /
+
+# Optional: Add this if you have a sitemap (recommended for SEO)
+# Sitemap: https://clipflip.com/sitemap.xml

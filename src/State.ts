@@ -63,7 +63,7 @@ class State {
                 // Create a unique clone for each specific section
                 this.activeTags.set(id, [...new Set(tagsArray)]);
             });
-
+            this.fetchVideosByTags(1);
             console.log("State: Assigned tags to SectionIds 1-4", this.activeTags);
         } else {
             // Direct loop over our known SectionIds
