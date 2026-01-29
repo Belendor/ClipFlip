@@ -284,7 +284,7 @@ class Players {
             await new Promise(r => {
                 const checkEnd = () => {
                     // Using 0.06s for 30fps or 60fps safety margin
-                    if (primary.ended || (primary.duration - primary.currentTime < 0.12)) {
+                    if (primary.ended || (primary.duration - primary.currentTime < 0.06)) {
                         r(0);
                     } else {
                         requestAnimationFrame(checkEnd);
