@@ -29,7 +29,16 @@ class State {
     apiUrl: string = config.apiUrl;
     taggedVideos: Video[] = [];
     advancedMode: boolean = false;
-    active: Record<PlayerIndex, boolean> | undefined;
+    active = {
+        0: true,
+        1: false,
+        2: true,
+        3: false,
+        4: true,
+        5: false,
+        6: true,
+        7: false
+    } as Record<PlayerIndex, boolean>;
     allTags: Tag[] = [];
     tagsPromise: Promise<void> | undefined;
     constructor() {
@@ -129,8 +138,8 @@ class State {
 
 
         if (!tags || tags.length === 0) return;
-        console.log("Fetching videos for tag:", tags); 
-        
+        console.log("Fetching videos for tag:", tags);
+
         try {
             const response = await fetch(`${this.apiUrl}/videos/by-tags`, {
                 method: 'POST',
@@ -141,9 +150,9 @@ class State {
             if (!response.ok) throw new Error(`Server error (${response.status})`);
 
             const videos = await response.json();
-            console.log("Retrieved number of videos:" , videos.length);
-            
-           this.taggedVideos = videos;
+            console.log("Retrieved number of videos:", videos.length);
+
+            this.taggedVideos = videos;
         } catch (err) {
             console.error(`Failed to fetch videos for section ${section} with tag ${tags}`, err);
             return;

@@ -33,7 +33,7 @@ export default class HTML {
   // video forms
   videoForms: HTMLDivElement[] = []
   // menu
-  tagsWrappers: HTMLDivElement[] = []
+  videoTagsContainers: HTMLDivElement[] = []
 
 
   constructor(state: State) {
@@ -250,34 +250,42 @@ export default class HTML {
         }
       });
 
-      // 4. Delete Action (The 'X')
-      const del = document.createElement('span');
-      del.className = 'tag-delete ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
-      del.innerHTML = '&times;';
-
-      del.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
-
-        if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
-
-        try {
-          const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tagTitle: tag.title, videoId }),
-          });
-
-          if (response.ok) {
-            btn.remove();
-            console.log("Tag removed from Prisma DB");
-          }
-        } catch (err) {
-          console.error('Failed to delete tag', err);
+        // 4. Delete Action (The 'X')
+        const del = document.createElement('span');
+        del.className = 'tag-delete ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
+        console.log("adding or removing avanced mode", this.state.advancedMode);
+        
+        if (this.state.advancedMode) {
+          del.classList.remove('hidden');
+        }else{
+          del.classList.add('hidden');
         }
-      });
+        del.innerHTML = '&times;';
 
-      btn.appendChild(del);
+        del.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
+
+          if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
+
+          try {
+            const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tagTitle: tag.title, videoId }),
+            });
+
+            if (response.ok) {
+              btn.remove();
+              console.log("Tag removed from Prisma DB");
+            }
+          } catch (err) {
+            console.error('Failed to delete tag', err);
+          }
+        });
+
+        btn.appendChild(del);
+      
       console.log("before append", container.querySelectorAll(".tag-button").length);
       container.appendChild(btn);
       console.log("after append", container.querySelectorAll(".tag-button").length);

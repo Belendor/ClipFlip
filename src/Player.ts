@@ -82,18 +82,33 @@ class Players {
             // videoPlayer.currentTime = 0;
         }
     }
-
     private attachEventListeners() {
-        this.html.playPauseBtn.addEventListener('click', () => {
-            this.html.playPauseBtn.classList.toggle('is-playing');
+        this.html.playPauseBtn.addEventListener('click', async () => {
+            if (!this.state.active) return;
 
+            const activeIndexes = Object.keys(this.state.active)
+                .map(Number)
+                .filter(idx => this.state.active[idx as PlayerIndex]);
+            if (activeIndexes.length === 0) return;
 
-            this.html.videoPlayers.forEach((player, index) => {
-                this.togglePlayPause(index as PlayerIndex);
+            // check if any active video is currently playing
+            const anyPlaying = activeIndexes.some(idx => this.state.playing[idx as PlayerIndex]);
 
-            });
+            // toggle all in parallel
+            await Promise.all(activeIndexes.map(idx => this.togglePlayPause(idx as PlayerIndex, true)));
 
+            // update master button icon correctly
+            if (anyPlaying) {
+                // we just paused them, show play
+                this.html.iconPlay.classList.remove('hidden');
+                this.html.iconPause.classList.add('hidden');
+            } else {
+                // we just played them, show pause
+                this.html.iconPlay.classList.add('hidden');
+                this.html.iconPause.classList.remove('hidden');
+            }
         });
+
         this.html.fullscreenButton.addEventListener('click', () => {
             // Target document.documentElement for the "Whole Document"
             const docElm = document.documentElement;
@@ -129,8 +144,6 @@ class Players {
             });
         });
         this.html.hideFormsBtn.addEventListener('click', () => {
-            console.log("cl;ick");
-
             const allForms = document.querySelectorAll<HTMLElement>('.metadata-form');
             allForms.forEach(form => {
                 form.classList.toggle('hidden');
@@ -206,6 +219,9 @@ class Players {
         tags.forEach(tag => {
             const card = document.createElement('div');
             card.className = 'tag-card';
+            if (this.state.activeTags.get(1)?.includes(tag.title)) {
+                card.classList.add('active-tag');
+            }
 
             // default image
             const defaultImg = './thumbnails/thumbnail.jpg';
@@ -230,41 +246,13 @@ class Players {
             card.addEventListener('click', async () => {
                 console.log("Clicked tag:", tag.title);
                 console.log("Current active tags", this.state.activeTags);
-
-                this.state.activeTags.set(1, [...new Set([tag.title])]);
-                console.log("Assigned new active tag:", this.state.activeTags);
-                console.log("Fetching videos for section 1");
-                await this.state.fetchVideosByTags(1);
                 this.toggleTag(tag.title, true);
-                // // 1. Correct Map Iteration: Loop directly over the Map entries
-                // this.state.activeTags.forEach((currentTags, sectionId) => {
-                //     console.log("Processing section:", sectionId);
-
-                //     // 2. Check current state before clearing
-                //     const isAlreadyActive = currentTags.includes(tag.title);
-
-                //     // 3. THE RESET: Empty the array for this section
-                //     // currentTags.length = 0 keeps the reference so the Map stays updated
-                //     currentTags.length = 0;
-
-                //     if (!isAlreadyActive) {
-                //         // 4. ASSIGN: Now this is the ONLY active tag
-                //         currentTags.push(tag.title);
-                //          this.loadVideos();
-                //         // If toggleTag handles UI state, call it here
-
-                //     }
-                // });
-
-
-                // 6. UI CLEANUP
                 searchInput.value = '';
             });
 
             advancedPanel.appendChild(card);
         });
     }
-
     async getVideoMetadata(videoId: number): Promise<VideoWithRelations | null> {
         try {
             const response = await fetch(`${this.state.apiUrl}/videos/${videoId}`);
@@ -336,29 +324,31 @@ class Players {
             console.error("Error during player swap:", e);
         }
     }
-    private async togglePlayPause(index: PlayerIndex): Promise<void> {
+    private async togglePlayPause(index: PlayerIndex, multi: boolean = false): Promise<void> {
         const player = this.html.videoPlayers[index];
         const section = Math.floor(index / 2 + 1) as SectionId;
 
         if (this.state.active && this.state.active[index] && this.state.playing[index]) {
             player.pause();
             console.log(player);
-
-            console.log("starting to play video index", index);
-            this.html.iconPlay.classList.remove('hidden');
-            this.html.iconPause.classList.add('hidden');
-
+            if (!multi) {
+                console.log("starting to play video index", index);
+                this.html.iconPlay.classList.remove('hidden');
+                this.html.iconPause.classList.add('hidden');
+            }
 
 
             const pair = index % 2 === 0 ? index + 1 : index - 1;
-            if (this.html.videoForms[pair] && this.state.advancedMode) {
-                this.html.videoForms[pair].classList.add('hidden');
-            }
+            // if (this.html.videoForms[pair] && this.state.advancedMode) {
+            //     this.html.videoForms[pair].classList.add('hidden');
+            // }
             this.state.playing[index] = false;
         } else {
             player.play();
-            this.html.iconPlay.classList.add('hidden');
-            this.html.iconPause.classList.remove('hidden');
+            if (!multi) {
+                this.html.iconPlay.classList.add('hidden');
+                this.html.iconPause.classList.remove('hidden');
+            }
             console.log("pausing video index", index);
             this.state.playing[index] = true;
             // this.html.toolbar.classList.toggle('hidden');
@@ -399,7 +389,7 @@ class Players {
         //     return;
         // }
 
-        const tagsWrapper = this.html.tagsWrappers[section - 1];
+        const tagsWrapper = this.html.videoTagsContainers[section - 1];
         console.log(tagsWrapper);
 
 
@@ -413,7 +403,6 @@ class Players {
             this.toggleTag.bind(this)
         )
     }
-
     async toggleTag(tag: string, reset: boolean = true): Promise<void> {
         console.log("Activating tags on buttons:", tag);
         const allButtons = document.querySelectorAll<HTMLButtonElement>(`.tag-button`);
@@ -444,9 +433,9 @@ class Players {
         if (!reset) return;
         // // reload once
         // this.state.modifyPosition(1);
+        await this.state.fetchVideosByTags(1);
         await this.loadVideos();
     }
-
     isMetadataValid(data: VideoWithRelations | null): boolean {
         if (!data) return false;
 
@@ -465,11 +454,6 @@ class Players {
         return data;
     }
     createMetadataForm(section: SectionId): HTMLElement {
-        // 💡 UPDATED: Added positioning classes 'absolute top-0 left-0 z-20 relative'.
-        // 'absolute top-0 left-0' places it in the top-left of the parent.
-        // 'relative' is crucial for the internal dropdowns (tagListDropdown, uploadFormWrapper) to position correctly relative to the form.
-        console.log("Got such section", section);
-
         this.html.videoForms[section] = this.html.createDiv(
             `metaForm${section}`,
             'metadata-form hidden'
@@ -492,11 +476,48 @@ class Players {
         const modelInput = makeInput('Models', 'models'); // or 'model' if that is your key
         const studioInput = makeInput('Studio', 'studio');
         const idInput = makeInput('id', 'id');
+        // OUTER container (never cleared)
+        const videoTagsContainer = this.html.createDiv(
+            `video-tags-${section}`,
+            'tag-section video-tags mt-2'
+        );
 
-        const tagsWrapper = this.html.createDiv(`tags${section}`, 'tag-container');
+        // LABEL (never removed)
+        const videoTagsLabel = document.createElement('div');
+        videoTagsLabel.textContent = '🎬 Video tags';
+        videoTagsLabel.className = 'tag-section-label text-white mb-1';
 
-        // in your constructor or before usage
-        this.html.tagsWrappers.push(tagsWrapper);
+        // INNER wrapper (this is what you mutate)
+        const videoTagsWrapper = this.html.createDiv(
+            `video-tags-wrapper-${section}`,
+            'tag-container'
+        );
+
+        const editToggleBtn = document.createElement('button');
+        editToggleBtn.type = 'button';
+        editToggleBtn.className = `
+    absolute 
+    top-2 
+    right-2
+    p-2 rounded-lg
+    bg-white/10 backdrop-blur
+    text-gray-300
+    hover:text-white
+    hover:bg-white/20
+    transition
+`;
+
+        editToggleBtn.innerHTML = '✏️';
+        editToggleBtn.title = 'Edit metadata';
+        // assemble
+        videoTagsContainer.append(
+            editToggleBtn,
+            videoTagsLabel,
+            videoTagsWrapper
+        );
+
+        // store reference to the INNER wrapper, not the container
+        this.html.videoTagsContainers.push(videoTagsWrapper);
 
         // 1. Create a container for the button and the dropdown
         const tagButtonWrapper = this.html.createDiv('tag-button-wrapper', 'relative inline-block'); // Make this wrapper relative
@@ -602,7 +623,55 @@ class Players {
 
         // Append button and dropdown to the new wrapper
         tagButtonWrapper.append(addTagBtn, tagListDropdown);
-        this.html.videoForms[section].append(tagsWrapper, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
+        if (true) {
+            tagButtonWrapper.classList.add('hidden');
+            titleInput.classList.add('hidden');
+            modelInput.classList.add('hidden');
+            studioInput.classList.add('hidden');
+            idInput.classList.add('hidden');
+            uploadBtn.classList.add('hidden');
+            uploadFormWrapper.classList.add('hidden');
+        }
+        const toggleEditMode = () => {
+
+            const show = (el: HTMLElement) => el.classList.remove('hidden');
+            const hide = (el: HTMLElement) => el.classList.add('hidden');
+
+            if (!this.state.advancedMode) {
+                show(tagButtonWrapper);
+                show(titleInput);
+                show(modelInput);
+                show(studioInput);
+                show(idInput);
+                show(uploadBtn);
+                const deleteButtons: NodeListOf<HTMLButtonElement> = window.document.querySelectorAll('.tag-delete');
+                console.log(deleteButtons);
+                
+                deleteButtons.forEach(btn => show(btn));
+
+                editToggleBtn.innerHTML = '👁️';
+                editToggleBtn.title = 'View mode';
+            } else {
+                hide(tagButtonWrapper);
+                hide(titleInput);
+                hide(modelInput);
+                hide(studioInput);
+                hide(idInput);
+                hide(uploadBtn);
+                hide(uploadFormWrapper);
+                const deleteButtons: NodeListOf<HTMLButtonElement> = window.document.querySelectorAll('.tag-delete');
+                              console.log(deleteButtons);
+                deleteButtons.forEach(btn => hide(btn));
+
+                editToggleBtn.innerHTML = '✏️';
+                editToggleBtn.title = 'Edit metadata';
+            }
+            this.state.advancedMode = !this.state.advancedMode;
+        };
+        editToggleBtn.addEventListener('click', () => {
+            toggleEditMode();
+        });
+        this.html.videoForms[section].append(videoTagsContainer, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
         return this.html.videoForms[section];
     }
     getActiveIndexForSection(section: number): number | null {
