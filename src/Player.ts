@@ -272,7 +272,9 @@ class Players {
         const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
         const primary = this.html.videoPlayers[playerIndex];   // The video nearing its end
         const secondary = this.html.videoPlayers[nextIdx];     // The next video
-
+        secondary.play()
+        secondary.pause();
+        secondary.currentTime = 0;
         try {
             // // 2. Start secondary while hidden (warm up decoder)
             // await secondary.play();
