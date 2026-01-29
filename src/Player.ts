@@ -25,6 +25,7 @@ class Players {
         this.attachEventListeners();
         // this.initializeMuteButton();
         await this.state.tagsPromise;
+        await this.state.taggedVideosPromise;
         console.log("Tags loaded:", this.state.allTags);
         this.createVideoContainer();
         await this.loadVideos();
@@ -648,7 +649,7 @@ class Players {
                 show(uploadBtn);
                 const deleteButtons: NodeListOf<HTMLButtonElement> = window.document.querySelectorAll('.tag-delete');
                 console.log(deleteButtons);
-                
+
                 deleteButtons.forEach(btn => show(btn));
 
                 editToggleBtn.innerHTML = '👁️';
@@ -662,7 +663,7 @@ class Players {
                 hide(uploadBtn);
                 hide(uploadFormWrapper);
                 const deleteButtons: NodeListOf<HTMLButtonElement> = window.document.querySelectorAll('.tag-delete');
-                              console.log(deleteButtons);
+                console.log(deleteButtons);
                 deleteButtons.forEach(btn => hide(btn));
 
                 editToggleBtn.innerHTML = '✏️';

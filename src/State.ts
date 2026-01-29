@@ -28,6 +28,7 @@ class State {
     };
     apiUrl: string = config.apiUrl;
     taggedVideos: Video[] = [];
+    taggedVideosPromise: Promise<void> | undefined;
     advancedMode: boolean = false;
     active = {
         0: true,
@@ -41,10 +42,14 @@ class State {
     } as Record<PlayerIndex, boolean>;
     allTags: Tag[] = [];
     tagsPromise: Promise<void> | undefined;
+
     constructor() {
         this.active = this.initializeActive(8);
         console.log("State: Initialized active players", this.active);
         this.tagsPromise = this.fetchAllTags();
+        this.taggedVideosPromise = this.queryTags();
+    }
+    async queryTags(): Promise<void> {
         const params = new URLSearchParams(window.location.search);
         const queryTagsRaw = params.get("tags");
         if (queryTagsRaw) {
@@ -63,7 +68,8 @@ class State {
                 // Create a unique clone for each specific section
                 this.activeTags.set(id, [...new Set(tagsArray)]);
             });
-            this.fetchVideosByTags(1);
+            await this.fetchVideosByTags(1);
+            await this.modifyPosition(1);
             console.log("State: Assigned tags to SectionIds 1-4", this.activeTags);
         } else {
             // Direct loop over our known SectionIds
@@ -74,9 +80,7 @@ class State {
                 this.activeTags.set(id, []);
             });
         }
-
     }
-
     async modifyPosition(section: SectionId, random: boolean = false): Promise<void> {
         if (!(section in this.positions)) {
             throw new Error(`Invalid section: ${section}`);
