@@ -1,7 +1,7 @@
 .metadata-form {
     z-index: 3;
     position: absolute;
-    bottom: 110px;
+    bottom: 200px;
     /* fixed distance from bottom */
     left: 30px;
     max-width: 350px;
