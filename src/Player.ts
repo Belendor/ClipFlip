@@ -291,7 +291,7 @@ class Players {
                 checkEnd();
             });
 
-            await secondary.play();
+            secondary.play();
             secondary.parentElement!.classList.add('onscreen');
             primary.parentElement!.classList.remove('onscreen');
             const pos = secondary.getAttribute('data-video-id');
