@@ -1,0 +1,29 @@
+# llms.txt for clip-flip.com
+# Purpose: describe site content for large language models
+
+site_name: ClipFlip
+site_url: https://clip-flip.com
+site_type: adult video streaming platform
+
+description:
+ClipFlip is a free adult clip player offering endless short porn videos.
+Content is organized and filtered by tags such as anal, amateur, fetish,
+trans, panties, BDSM, and many more. No registration is required.
+
+content_notes:
+- Adult and NSFW content
+- Short-form video clips
+- Tag-based navigation
+- User-facing video player interface
+
+allowed_usage:
+- Summarization
+- High-level description
+- Categorization by topic
+
+disallowed_usage:
+- Republishing full video content
+- Mirroring or redistribution of media
+
+contact:
+https://clip-flip.com
