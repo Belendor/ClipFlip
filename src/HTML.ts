@@ -70,8 +70,6 @@ export default class HTML {
         throw new Error(`Video element with ID ${id} not found.`);
       }
     });
-
-    console.log("HTML: Players mapped by ID successfully.", this.videoPlayers.length);
   }
 
 
@@ -250,45 +248,42 @@ export default class HTML {
         }
       });
 
-        // 4. Delete Action (The 'X')
-        const del = document.createElement('span');
-        del.className = 'tag-delete ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
-        console.log("adding or removing avanced mode", this.state.advancedMode);
-        
-        if (this.state.advancedMode) {
-          del.classList.remove('hidden');
-        }else{
-          del.classList.add('hidden');
-        }
-        del.innerHTML = '&times;';
+      // 4. Delete Action (The 'X')
+      const del = document.createElement('span');
+      del.className = 'tag-delete ml-2 px-1 hover:text-red-500 transition-colors cursor-pointer font-bold';
 
-        del.addEventListener('click', async (e) => {
-          e.preventDefault();
-          e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
+      if (this.state.advancedMode) {
+        del.classList.remove('hidden');
+      } else {
+        del.classList.add('hidden');
+      }
+      del.innerHTML = '&times;';
 
-          if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
+      del.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // CRITICAL: Stop the 'btn' click from firing
 
-          try {
-            const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tagTitle: tag.title, videoId }),
-            });
+        if (!confirm(`Remove tag "${tag.title}" from this video?`)) return;
 
-            if (response.ok) {
-              btn.remove();
-              console.log("Tag removed from Prisma DB");
-            }
-          } catch (err) {
-            console.error('Failed to delete tag', err);
+        try {
+          const response = await fetch(`${this.state.apiUrl}/videos/remove-tag`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tagTitle: tag.title, videoId }),
+          });
+
+          if (response.ok) {
+            btn.remove();
+            console.log("Tag removed from Prisma DB");
           }
-        });
+        } catch (err) {
+          console.error('Failed to delete tag', err);
+        }
+      });
 
-        btn.appendChild(del);
-      
-      console.log("before append", container.querySelectorAll(".tag-button").length);
+      btn.appendChild(del);
+
       container.appendChild(btn);
-      console.log("after append", container.querySelectorAll(".tag-button").length);
     });
 
     // 5. Expandable 'More' Button

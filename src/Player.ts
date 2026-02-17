@@ -19,14 +19,16 @@ class Players {
     firedEvent = false;
     constructor(state: State, html: HTML) {
         this.state = state;
+        this.state.onEmptyPlays = () => this.showNoVideosBox();
         this.html = html;
     }
     async init() {
         this.attachEventListeners();
-        // this.initializeMuteButton();
         await this.state.tagsPromise;
         await this.state.taggedVideosPromise;
-        console.log("Tags loaded:", this.state.allTags);
+        console.log("Tags loaded:", this.state.allTags.length)
+        console.log("Active tags:", this.state.activeTags)
+        console.log("Videos for tag loaded :", this.state.taggedVideos);
         this.createVideoContainer();
         await this.loadVideos();
     }
@@ -35,31 +37,57 @@ class Players {
             if (!this.state.multiSection && i > 1) {
                 continue;
             }
-            console.log(this.state.active, "status before loading videos");
             const playerIndex = i as PlayerIndex;
             const section = Math.ceil((i + 1) / 2) as SectionId;
             await this.state.modifyPosition(section)
+            console.log("loading new videos", this.state.positions[section]);
+
+
+            // if (this.state.positions[section] === 0 && this.state.active[playerIndex]) {
+            //     console.warn("Position is 0, skipping load for section", section);
+            //     this.html.videoPlayers[i].src = '';
+            //     this.html.videoPlayers[i].poster = '';
+            //     this.showNoVideosBox()
+            //     continue;
+            // }
+
             if (this.html.videoPlayers[i].src && this.html.videoPlayers[i].src !== '') {
                 const position = this.html.videoPlayers[i].getAttribute('data-video-id') || '';
 
-                const video = await this.getVideoMetadata(Number(position));
-                console.log("Checking video ID:", position);
-                const activeTags = this.state.activeTags.get(section);
-                const hasActiveTag = video?.tags?.some(tag => activeTags?.includes(tag.title));
-                if (hasActiveTag) {
-                    console.log("Video match active tags, skipping");
-                    console.log(this.state.active?.[playerIndex]);
+                if (Number(position) !== 0) {
+                    const video = await this.getVideoMetadata(Number(position));
+                    console.log(this.state.positions[section]);
 
-                    if (this.state.active && this.state.active[playerIndex]) {
-                        this.populateMetadataForm(section, video);
+                    const activeTags = this.state.activeTags.get(section);
+                    const hasAllActiveTags = activeTags?.every(activeTag =>
+                        video?.tags?.some(tag => tag.title === activeTag)
+                    );
+                    if (hasAllActiveTags) {
+                        console.log("Video match active tags, skipping");
+                        console.log(this.state.active?.[playerIndex]);
+
+                        if (this.state.active && this.state.active[playerIndex]) {
+                            this.populateMetadataForm(section, video);
+                            // this.html.videoPlayers[i].play()
+                        }
+
+                        continue; // or continue in a loop
                     }
-                    continue; // or continue in a loop
                 }
+
             }
 
             const pos = this.state.positions[section];
+            if (this.state.positions[section] == 0) {
+                // primary.src = "";
+                // primary.poster = ""
+                this.showNoVideosBox();
+
+                return
+            }
             console.log("New video pos:", pos);
             const videoPlayer = this.html.videoPlayers[playerIndex];
+            videoPlayer.poster = this.folder + "thumbnails/" + pos + '.jpg'
             videoPlayer.preload = 'auto';
             videoPlayer.muted = this.muted;
             videoPlayer.playsInline = true;
@@ -68,9 +96,11 @@ class Players {
             const videoUrl = URL.createObjectURL(blob);
             videoPlayer.src = videoUrl; // This is now instant because it's in memory
             if (this.state.active && this.state.active[playerIndex]) {
-                console.log("active start playing");
+                console.log("Active start playing section: ", section);
                 this.html.videoPlayers[playerIndex].play();
                 this.state.playing[playerIndex] = true;
+                console.log("checking this postion: ", pos);
+
                 const res = await this.getVideoMetadata(pos);
                 this.populateMetadataForm(section, res);
                 console.log("initial metadata population");
@@ -246,8 +276,8 @@ class Players {
 
             card.addEventListener('click', async () => {
                 console.log("Clicked tag:", tag.title);
+                await this.toggleTag(tag.title, true);
                 console.log("Current active tags", this.state.activeTags);
-                this.toggleTag(tag.title, true);
                 searchInput.value = '';
             });
 
@@ -266,8 +296,8 @@ class Players {
     }
     async handlePlayerEnded(playerIndex: PlayerIndex) {
         console.log("End event for player index:", playerIndex);
-
         const section = (Math.floor(playerIndex / 2) + 1) as SectionId;
+
         console.log("section", section);
 
         const nextIdx = (playerIndex % 2 === 0 ? playerIndex + 1 : playerIndex - 1) as PlayerIndex;
@@ -282,6 +312,8 @@ class Players {
             // secondary.pause();
             // secondary.currentTime = 0;
             // 2. WAIT FOR PRIMARY TO FINISH
+            const position = primary.getAttribute('data-video-id') || '';
+            this.state.markVideoAsPlayed(Number(position));
             await new Promise(r => {
                 const checkEnd = () => {
                     // Using 0.06s for 30fps or 60fps safety margin
@@ -303,8 +335,6 @@ class Players {
             //     return;
             // }
 
-
-            console.log(this.state.active, "checking active state");
             // 4. THE SWAP: Now that the first is done, show the second
             if (this.state && this.state.active) {
                 this.state.active[nextIdx as PlayerIndex] = true;
@@ -312,17 +342,23 @@ class Players {
                 this.state.active[playerIndex as PlayerIndex] = false;
                 this.state.playing[playerIndex as PlayerIndex] = false;
             }
-            console.log(this.state.active, "checking active state after");
-            console.log("populating metadata for", nextIdx);
 
-            await this.populateMetadataForm(section, await this.getVideoMetadata(Number(pos)));
-            console.log("populated metadata for", section);
             await this.state.modifyPosition(section);
-            const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
-            this.firedEvent = false;
-            primary.src = URL.createObjectURL(await res.blob());
-            primary.setAttribute('data-video-id', this.state.positions[section].toString()); // Store it here
-            primary.load();
+            if (this.state.positions[section] == 0) {
+                // primary.src = "";
+                // primary.poster = ""
+                setTimeout(() => {
+                    this.showNoVideosBox();
+                }, 2000);
+            } else {
+                await this.populateMetadataForm(section, await this.getVideoMetadata(Number(pos)));
+                const res = await fetch(`${this.folder}${this.state.positions[section]}.mp4`);
+                this.firedEvent = false;
+                primary.src = URL.createObjectURL(await res.blob());
+                primary.setAttribute('data-video-id', this.state.positions[section].toString()); // Store it here
+                primary.load();
+
+            }
         } catch (e) {
             console.error("Error during player swap:", e);
         }
@@ -333,9 +369,8 @@ class Players {
 
         if (this.state.active && this.state.active[index] && this.state.playing[index]) {
             player.pause();
-            console.log(player);
             if (!multi) {
-                console.log("starting to play video index", index);
+                console.log("Pausing video index", index);
                 this.html.iconPlay.classList.remove('hidden');
                 this.html.iconPause.classList.add('hidden');
             }
@@ -352,7 +387,7 @@ class Players {
                 this.html.iconPlay.classList.add('hidden');
                 this.html.iconPause.classList.remove('hidden');
             }
-            console.log("pausing video index", index);
+            console.log("Playing video index", index);
             this.state.playing[index] = true;
             // this.html.toolbar.classList.toggle('hidden');
         }
@@ -366,7 +401,6 @@ class Players {
         console.log("Populating metadata form for section:", section, data);
 
         const form = document.getElementById(`metaForm${section}`) as HTMLDivElement;
-        console.log("got this form", form);
 
         if (!form) return;
 
@@ -393,8 +427,6 @@ class Players {
         // }
 
         const tagsWrapper = this.html.videoTagsContainers[section - 1];
-        console.log(tagsWrapper);
-
 
         if (!tagsWrapper) return;
         // render toggleable tags directly here
@@ -406,13 +438,76 @@ class Players {
             this.toggleTag.bind(this)
         )
     }
+    showNoVideosBox() {
+        console.log("running no no videos box");
+        this.state.advancedMode = false;
+        // reset all video players
+        for (let i = 0; i < this.html.videoPlayers.length; i++) {
+            const player = this.html.videoPlayers[i];
+            player.src = '';
+            player.poster = '';
+            player.pause();
+            player.setAttribute('data-video-id', '');
+        }
+
+        this.firedEvent = false;
+
+        // get existing HTML elements by ID
+        const box = document.getElementById("no-videos-box")!;
+        const tagsBox = document.getElementById("active-tags")!;
+        const resetWrapper = document.getElementById("reset-section")!;
+        const resetInfo = resetWrapper.querySelector(".reset-info") as HTMLParagraphElement;
+        const resetBtn = resetWrapper.querySelector("#reset-btn") as HTMLButtonElement;
+
+        // clear old tags
+        tagsBox.innerHTML = "";
+
+        // get unique active tags
+        const rawTags = this.state.activeTags.get(1) ?? [];
+        const uniqueTags = [...new Set(rawTags)];
+
+        // adapt strings -> Tag[]
+        const tags: Tag[] = uniqueTags.map(t => ({ title: t })) as Tag[];
+
+        // reuse same renderer
+        this.html.renderTags(
+            tagsBox,
+            tags,
+            1,            // section
+            undefined,    // no videoId
+            (tag) => {
+                box.setAttribute("hidden", "");
+                this.toggleTag(tag, true);
+            }
+        );
+
+        // update reset description text
+        resetInfo.textContent =
+            "You have watched all available videos. Reset your progress to clear cached data and watch everything again.";
+
+        // reset button click handler
+        resetBtn.onclick = () => {
+            resetBtn.disabled = true;
+            resetBtn.textContent = "Resetting...";
+            box.setAttribute("hidden", "");
+            this.state.resetVideoProgress();
+            this.loadVideos();
+        };
+
+        // make sure box flex layout
+        box.classList.remove("items-center");
+        box.classList.add("flex", "flex-col");
+
+        // show box
+        box.removeAttribute("hidden");
+    }
+
     async toggleTag(tag: string, reset: boolean = true): Promise<void> {
         console.log("Activating tags on buttons:", tag);
         const allButtons = document.querySelectorAll<HTMLButtonElement>(`.tag-button`);
         allButtons.forEach(btn => {
             btn.classList.remove('active-tag');
         });
-        console.log("Reseting active tags first");
         this.state.activeTags.forEach((currentTags, sectionId) => {
             const tagClass = `${tag}-id-${sectionId}`;
             const btns = document.querySelectorAll<HTMLButtonElement>(`.${tagClass}`);
@@ -423,7 +518,6 @@ class Players {
                 console.log(`Removed tag "${tag}" from section ${sectionId}`);
             } else {
                 currentTags.push(tag);
-                console.log(`Added tag "${tag}" to section ${sectionId}`);
             }
             if (!btns.length) return;
             console.log("Activating active");
@@ -431,12 +525,14 @@ class Players {
                 btn.classList.add('active-tag');
             });
         });
-        console.log("activated taggs", this.state.activeTags);
 
         if (!reset) return;
-        // // reload once
-        // this.state.modifyPosition(1);
         await this.state.fetchVideosByTags(1);
+        // this.state.emptyPlays = false;
+        // // reload once
+        // this.state.clearPlayedVideos();
+        // this.state.enableTagsAgain();
+        // this.state.hideNoVideosBox();
         await this.loadVideos();
     }
     isMetadataValid(data: VideoWithRelations | null): boolean {
@@ -504,10 +600,12 @@ class Players {
     right-2
     p-2 rounded-lg
     bg-white/10 backdrop-blur
-    text-gray-300
+    text-white
+    text-lg
     hover:text-white
     hover:bg-white/20
     transition
+    edit-toggle
 `;
 
         editToggleBtn.innerHTML = '✏️';
@@ -652,7 +750,7 @@ class Players {
 
                 deleteButtons.forEach(btn => show(btn));
 
-                editToggleBtn.innerHTML = '👁️';
+                editToggleBtn.innerHTML = '⏷';
                 editToggleBtn.title = 'View mode';
             } else {
                 hide(tagButtonWrapper);
