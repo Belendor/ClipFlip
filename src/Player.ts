@@ -175,10 +175,7 @@ class Players {
             });
         });
         this.html.hideFormsBtn.addEventListener('click', () => {
-            const allForms = document.querySelectorAll<HTMLElement>('.metadata-form');
-            allForms.forEach(form => {
-                form.classList.toggle('hidden');
-            });
+            this.html.videoForms[0].classList.toggle('hidden');
         });
         const searchInput = document.getElementById('search-input') as HTMLInputElement;
         const advancedPanel = document.getElementById('advancedPanel');
@@ -553,10 +550,10 @@ class Players {
         return data;
     }
     createMetadataForm(section: SectionId): HTMLElement {
-        this.html.videoForms[section] = this.html.createDiv(
-            `metaForm${section}`,
-            'metadata-form hidden'
-        );
+        const form = window.document.getElementById(`metaForm${section}`)
+        if(!form){
+            throw new Error("Metada form not found")
+        }
 
         const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
             const input = document.createElement('input');
@@ -772,8 +769,10 @@ class Players {
         editToggleBtn.addEventListener('click', () => {
             toggleEditMode();
         });
-        this.html.videoForms[section].append(videoTagsContainer, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
-        return this.html.videoForms[section];
+        form.append(videoTagsContainer, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
+
+        this.html.videoForms.push(form)
+        return form;
     }
     getActiveIndexForSection(section: number): number | null {
         // section is 1-based
@@ -847,20 +846,21 @@ class Players {
             // 3. Create and Append the Metadata Forms
             // We create two forms (one for front, one for back) 
             // and append them to the section
-            [0, 1].forEach((j) => {
-                const playerIndex = ((section - 1) * 2 + j) as PlayerIndex;
-
+            // [0, 1].forEach((j) => {
+                // const playerIndex = ((section - 1) * 2 + j) as PlayerIndex;
+                // console.log("creating forms fpr :", section);
+                
                 // Create the form using your existing method
-                const form = this.createMetadataForm(section as unknown as SectionId);
+                this.createMetadataForm(section as unknown as SectionId);
 
-                // Link to your tracking array
-                this.html.videoForms[playerIndex] = form as HTMLDivElement;
-                if (j === 1) {
-                    return
-                }
-                // APPEND ONLY: Add it to the existing section div
-                sectionHTML.appendChild(form);
-            });
+                // // Link to your tracking array
+                // this.html.videoForms[playerIndex] = form as HTMLDivElement;
+                // if (j === 1) {
+                //     return
+                // }
+                // // APPEND ONLY: Add it to the existing section div
+                // sectionHTML.appendChild(form);
+            // });
         }
     }
 

@@ -32,7 +32,7 @@ export default class HTML {
   videoPlayers: HTMLVideoElement[] = []
 
   // video forms
-  videoForms: HTMLDivElement[] = []
+  videoForms: HTMLElement[] = []
   // menu
   videoTagsContainers: HTMLDivElement[] = []
 
