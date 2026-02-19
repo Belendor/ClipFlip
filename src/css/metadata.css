@@ -1,5 +1,5 @@
 .metadata-form {
-    z-index: 3;
+    z-index: 4;
     position: absolute;
     bottom: 13%;
     /* fixed distance from bottom */
@@ -7,6 +7,11 @@
     max-width: 350px;
     max-height: 350px;
     width: 90%;
+        bottom: calc(
+        10px +              
+        60px +               
+        env(safe-area-inset-bottom)
+    );
     /* max-width: 100vw; */
     backdrop-filter: blur(2px);
     background: rgba(0, 0, 0, 0.1);

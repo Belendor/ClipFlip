@@ -2,15 +2,13 @@
 .ui-wrapper {
     z-index: 3;
     position: fixed;
-    bottom: 40px;
-    /* fixed distance from bottom */
     left: 50%;
     transform: translateX(-50%);
+    bottom: calc(10px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     align-items: center;
     width: max-content;
-    max-width: 95vw;
 }
 
 

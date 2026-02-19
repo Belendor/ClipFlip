@@ -8,7 +8,7 @@ export default class HTML {
   videoGrid: HTMLElement;
   sections: HTMLElement[] = [];
   hideTimeout: number | null = null;
-  readonly HIDE_DELAY = 2000; // ms
+  readonly HIDE_DELAY = 4000; // ms
 
   // objects
   // toolbar buttons
@@ -55,8 +55,8 @@ export default class HTML {
     this.mapPlayersById();
     this.init()
   }
-  private init () {
-        // start hidden
+  private init() {
+    // start hidden
     this.hideToolbar();
 
     // mouse movement inside player
@@ -66,16 +66,18 @@ export default class HTML {
     // optional: keyboard
     window.addEventListener('keydown', this.handleInteraction);
   }
-    private handleInteraction = () => {
+  private handleInteraction = () => {
     this.showToolbar();
 
     if (this.hideTimeout) {
       clearTimeout(this.hideTimeout);
     }
+    if (this.state.playing[0] || this.state.playing[1]) {
+      this.hideTimeout = window.setTimeout(() => {
+        this.hideToolbar();
+      }, this.HIDE_DELAY);
+    }
 
-    this.hideTimeout = window.setTimeout(() => {
-      this.hideToolbar();
-    }, this.HIDE_DELAY);
   };
 
   private showToolbar() {
