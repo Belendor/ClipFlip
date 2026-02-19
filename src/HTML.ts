@@ -7,6 +7,8 @@ export default class HTML {
   appRoot: HTMLElement;
   videoGrid: HTMLElement;
   sections: HTMLElement[] = [];
+  hideTimeout: number | null = null;
+  readonly HIDE_DELAY = 2000; // ms
 
   // objects
   // toolbar buttons
@@ -16,7 +18,6 @@ export default class HTML {
   fullscreenButton: HTMLButtonElement = document.getElementById('fullScreenBtn') as HTMLButtonElement
   resizeButton: HTMLButtonElement = document.getElementById('multiScreenBtn') as HTMLButtonElement
   muteToggle: HTMLButtonElement = document.getElementById('muteBtn') as HTMLButtonElement
-
 
   // toolbar icons
   resizeIconActive!: HTMLSpanElement
@@ -52,6 +53,39 @@ export default class HTML {
     // Find all 4 sections
     this.sections = Array.from(document.querySelectorAll('.video-section'));
     this.mapPlayersById();
+    this.init()
+  }
+  private init () {
+        // start hidden
+    this.hideToolbar();
+
+    // mouse movement inside player
+    this.appRoot.addEventListener('mousemove', this.handleInteraction);
+    this.appRoot.addEventListener('click', this.handleInteraction);
+
+    // optional: keyboard
+    window.addEventListener('keydown', this.handleInteraction);
+  }
+    private handleInteraction = () => {
+    this.showToolbar();
+
+    if (this.hideTimeout) {
+      clearTimeout(this.hideTimeout);
+    }
+
+    this.hideTimeout = window.setTimeout(() => {
+      this.hideToolbar();
+    }, this.HIDE_DELAY);
+  };
+
+  private showToolbar() {
+    this.toolbar.style.opacity = '1';
+    this.toolbar.style.pointerEvents = 'auto';
+  }
+
+  private hideToolbar() {
+    this.toolbar.style.opacity = '0';
+    this.toolbar.style.pointerEvents = 'none';
   }
   private mapPlayersById(): void {
     // We define the exact order to ensure "v1-front" is always index 0

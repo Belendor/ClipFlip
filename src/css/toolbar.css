@@ -2,7 +2,8 @@
 .ui-wrapper {
     z-index: 3;
     position: fixed;
-    bottom: 40px;               /* fixed distance from bottom */
+    bottom: 40px;
+    /* fixed distance from bottom */
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -29,8 +30,9 @@
 
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.15);
-
-    flex-shrink: 0; 
+    transition: opacity 0.3s ease;
+    opacity: 0;
+    flex-shrink: 0;
 }
 
 .toolbar-item {
