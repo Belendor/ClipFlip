@@ -6,7 +6,7 @@
         max-width: 350px;
         max-height: 350px;
         width: 90%;
-        bottom: calc(10px + 60px + env(safe-area-inset-bottom));
+        bottom: calc(10px + 60px );
         /* max-width: 100vw; */
         backdrop-filter: blur(2px);
         background: rgba(0, 0, 0, 0.1);
