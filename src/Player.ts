@@ -549,8 +549,8 @@ class Players {
         const data = await res.json();
         return data;
     }
-    createMetadataForm(section: SectionId): HTMLElement {
-        const form = window.document.getElementById(`metaForm${section}`)
+    createMetadataForm(section: SectionId): void {
+        const form = this.html.videoForms[section-1]
         if(!form){
             throw new Error("Metada form not found")
         }
@@ -770,9 +770,6 @@ class Players {
             toggleEditMode();
         });
         form.append(videoTagsContainer, tagButtonWrapper, titleInput, modelInput, studioInput, idInput, uploadBtn, uploadFormWrapper)
-
-        this.html.videoForms.push(form)
-        return form;
     }
     getActiveIndexForSection(section: number): number | null {
         // section is 1-based

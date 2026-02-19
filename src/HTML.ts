@@ -52,6 +52,7 @@ export default class HTML {
     this.iconPause = document.getElementById('icon-pause') as HTMLSpanElement;
     // Find all 4 sections
     this.sections = Array.from(document.querySelectorAll('.video-section'));
+    this.videoForms = Array.from(document.querySelectorAll('.metadata-form'));
     this.mapPlayersById();
     this.init()
   }
@@ -65,6 +66,9 @@ export default class HTML {
 
     // optional: keyboard
     window.addEventListener('keydown', this.handleInteraction);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", this.positionMetadata);
+    }
   }
   private handleInteraction = () => {
     this.showToolbar();
@@ -79,7 +83,17 @@ export default class HTML {
     }
 
   };
+  positionMetadata() {
+    const toolbar = document.querySelector('.toolbar');
+    const metadata = this.videoForms[0];
 
+    if (!toolbar || !metadata) return;
+
+    const toolbarRect = toolbar.getBoundingClientRect();
+
+    metadata.style.bottom =
+      window.innerHeight - toolbarRect.top + 10 + "px";
+  }
   private showToolbar() {
     this.toolbar.style.opacity = '1';
     this.toolbar.style.pointerEvents = 'auto';
