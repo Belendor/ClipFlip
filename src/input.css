@@ -451,45 +451,57 @@ select[multiple] {
 
 
 .advanced-panel {
-    position: fixed; /* if overlaying video */
-    left: 50%;
-    top: 50%;           /* center vertically */
-    transform: translate(-50%, -50%); /* perfect centering */
+    z-index: 10;
     width: 100%;
     max-width: 70vw;
-    max-height: 80dvh;
-    
+    max-height: 80vh;
+
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
 
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+
+    /* 👇 split gaps */
     column-gap: 5px;
     row-gap: 5px;
+
+    /* padding: 12px; */
+    margin-bottom: 10px;
     box-sizing: border-box;
     overflow-y: auto;
-
     align-items: start;
+    align-items: start;
+    /* align items in row */
     justify-items: start;
+    /* align items in column */
     align-content: start;
+    /* 👈 prevent rows from stretching to fill container */
+}
+
+/* reduce height for short screens */
+@media (max-height: 500px) {
+    .advanced-panel {
+        max-height: 200px;
+    }
 }
 
 .advanced-panel::-webkit-scrollbar {
-  width: 8px;
+    width: 8px;
 }
 
 .advanced-panel::-webkit-scrollbar-track {
-  background: transparent;
+    background: transparent;
 }
 
 .advanced-panel::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.3);
-  border-radius: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
 }
 
 .advanced-panel::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.5);
+    background: rgba(255, 255, 255, 0.5);
 }
 
 /* card */

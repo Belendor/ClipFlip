@@ -1,7 +1,7 @@
 /* 3. UI Wrapper */
 .ui-wrapper {
     z-index: 3;
-    position: fixed;;
+    position: fixed;
     left: 50%;
     transform: translateX(-50%);
     bottom: 50px;
