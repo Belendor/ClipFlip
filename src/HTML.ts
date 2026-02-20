@@ -84,12 +84,11 @@ export default class HTML {
 
   };
   positionMetadata() {
-    const toolbar = document.querySelector('.toolbar');
     const metadata = this.videoForms[0];
 
-    if (!toolbar || !metadata) return;
+    if (!this.toolbar || !metadata) return;
 
-    const toolbarRect = toolbar.getBoundingClientRect();
+    const toolbarRect = this.toolbar.getBoundingClientRect();
 
     metadata.style.bottom =
       window.innerHeight - toolbarRect.top + 10 + "px";
