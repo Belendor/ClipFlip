@@ -66,9 +66,9 @@ export default class HTML {
 
     // optional: keyboard
     window.addEventListener('keydown', this.handleInteraction);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", this.positionMetadata);
-    }
+    // if (window.visualViewport) {
+    //   window.visualViewport.addEventListener("resize", this.positionMetadata);
+    // }
   }
   private handleInteraction = () => {
     this.showToolbar();

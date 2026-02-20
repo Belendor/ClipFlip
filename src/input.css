@@ -467,7 +467,7 @@ select[multiple] {
     column-gap: 5px;
     row-gap: 5px;
 
-    padding: 12px;
+    /* padding: 12px; */
     margin-bottom: 10px;
     box-sizing: border-box;
     overflow-y: auto;
