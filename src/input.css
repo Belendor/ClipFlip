@@ -451,33 +451,28 @@ select[multiple] {
 
 
 .advanced-panel {
-    z-index: 10;
+    position: fixed; /* if overlaying video */
+    left: 50%;
+    top: 50%;           /* center vertically */
+    transform: translate(-50%, -50%); /* perfect centering */
     width: 100%;
     max-width: 70vw;
-    max-height: 80vh;
-
+    max-height: 80dvh;
+    
     backdrop-filter: blur(4px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
 
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-
-    /* 👇 split gaps */
     column-gap: 5px;
     row-gap: 5px;
-
-    /* padding: 12px; */
-    margin-bottom: 10px;
     box-sizing: border-box;
     overflow-y: auto;
+
     align-items: start;
-    align-items: start;
-    /* align items in row */
     justify-items: start;
-    /* align items in column */
     align-content: start;
-    /* 👈 prevent rows from stretching to fill container */
 }
 
 .advanced-panel::-webkit-scrollbar {
