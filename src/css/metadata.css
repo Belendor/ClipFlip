@@ -1,12 +1,12 @@
     .metadata-form {
         z-index: 3;
-        position: fixed;
+        position: absolute;
         /* fixed distance from bottom */
         left: 30px;
         max-width: 350px;
         max-height: 350px;
         width: 90%;
-        bottom: calc(10px + 60px );
+        bottom: 120px;
         /* max-width: 100vw; */
         backdrop-filter: blur(2px);
         background: rgba(0, 0, 0, 0.1);
