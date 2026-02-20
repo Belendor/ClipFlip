@@ -21,7 +21,7 @@
     width: 100%;
     height: 100%;
     object-fit: contain; /* keeps 16:9 without forcing container size */
-    transform: scale(1.2);
+    transform: scale(1.0);
 }
 @media (max-width: 500px),
 (max-height: 500px) {
