@@ -39,7 +39,6 @@ export default class HTML {
 
     private init() {
         this.setMetadataVisibility(true);
-        this.hideToolbar();
         this.appRoot.addEventListener("mousemove", this.handleInteraction);
         this.appRoot.addEventListener("click", this.handleInteraction);
         window.addEventListener("keydown", this.handleInteraction);
