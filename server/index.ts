@@ -228,22 +228,38 @@ app.get('/videos', async (req: Request, res: Response) => {
 
 app.get('/tags', async (req, res) => {
   try {
-    const search = typeof req.query.search === 'string' ? req.query.search.trim() : undefined;
+    const search =
+      typeof req.query.search === 'string'
+        ? req.query.search.trim()
+        : undefined;
 
     const tags = await prisma.tag.findMany({
       where: search
         ? {
-          title: {
-            contains: search,
-          },
-        }
+            title: {
+              contains: search,
+            },
+          }
         : undefined,
       orderBy: {
         title: 'asc',
       },
+      include: {
+        _count: {
+          select: {
+            videos: true, // relation name in your schema
+          },
+        },
+      },
     });
 
-    res.status(200).json(tags);
+    const result = tags.map((tag) => ({
+      ...tag,
+      videoCount: tag._count.videos,
+      _count: undefined,
+    }));
+
+    res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching tags:', error);
     res.status(500).json({ error: 'Failed to fetch tags' });
@@ -367,7 +383,7 @@ app.get('/', async (req, res) => {
 app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
   try {
     // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../video');
+    const outputDir = path.join(__dirname, '../videos');
     const files = fsSync.readdirSync(outputDir);
 
     let maxId = 0;

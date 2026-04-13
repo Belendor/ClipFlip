@@ -1,33 +1,31 @@
-/* html {
-    height: 100dvh;
+:root {
+    --surface-strong: rgba(12, 14, 18, 0.88);
+    --surface-soft: rgba(22, 24, 29, 0.64);
+    --surface-border: rgba(255, 255, 255, 0.14);
+    --surface-highlight: rgba(255, 255, 255, 0.22);
+    --text-primary: #f5f7fb;
+    --text-muted: rgba(245, 247, 251, 0.62);
+    --accent: #8fd3ff;
+    --accent-strong: #5ab8ff;
+    --success: #6ee7b7;
+    --danger: #ff7c7c;
+    --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.34);
 }
 
+html,
 body {
-    margin: 0;
-    padding: 0;
-    background-color: #0000ff;
-    overflow: hidden;
-    overscroll-behavior: none;
-    height: 100dvh;
-}
-
-#app-root {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-} */
-
-html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     min-height: 100dvh;
-    background: #000;
+    background:
+        radial-gradient(circle at top, rgba(65, 108, 157, 0.22), transparent 24%),
+        radial-gradient(circle at bottom, rgba(255, 255, 255, 0.05), transparent 20%),
+        linear-gradient(180deg, #040507 0%, #0a0c10 100%);
     overflow: hidden;
+    color: var(--text-primary);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 #app-root {
@@ -37,4 +35,5 @@ html, body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    isolation: isolate;
 }

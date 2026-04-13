@@ -1,36 +1,34 @@
-/* .video-slot {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    transform: translateZ(0); 
-    -webkit-transform: translateZ(0);
-    z-index: 1;
-    visibility: visible;
-    aspect-ratio: 16 / 9
-} */
- .video-slot {
+.video-slot {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     z-index: 1;
-    visibility: visible;
+    visibility: hidden;
+    opacity: 1;
+    transform: none;
+    transition: visibility 0s linear 0s;
+    will-change: auto;
 }
+
 .video-slot video {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* keeps 16:9 without forcing container size */
+    object-fit: contain;
 }
-/* Simply bring the active one to the front */
+
 .video-slot.onscreen {
     z-index: 2;
+    visibility: visible;
+}
+
+.video-slot.offscreen-right {
+    z-index: 1;
+    visibility: hidden;
 }
 
 .player {
     width: 100%;
     height: 100%;
-    /* object-fit: scale-down; */
-    /* Avoid background: black here; it's what flashes if frames drop */
-    background: black;
+    background: #020202;
 }

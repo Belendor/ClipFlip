@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2017",
-    "module": "esnext", // Change this line if necessary
-    "moduleResolution": "node",
+    "target": "es2020",
+    "module": "node16",
+    "moduleResolution": "node16",
     "preserveConstEnums": true,
     "outDir": "./dist",
     "rootDir": "./src",
@@ -10,8 +10,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "lib": ["es2015", "dom"]
+    "lib": ["es2020", "dom"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "tmp_uploads", "videos", "server"]
 }

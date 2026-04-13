@@ -1,15 +1,20 @@
-// Detect environment based on the URL in the browser
-// If 'window' is undefined (like during SSR), it defaults to localhost
 const isBrowser = typeof window !== 'undefined';
 const isProduction = isBrowser && (window.location.hostname === 'clip-flip.com' || window.location.hostname === 'www.clip-flip.com');
+
 console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
+const local = false;
+const apiURL = local ? "http://localhost:3000/api" : "https://clip-flip.com/api";
+const endIndex = local ? 3792 : 10052;
+const videoPath = local ? "./videos/" : "https://clip-flip.com/video/";
+const thumbnailPath = local ? "./thumbnails/" : "https://clip-flip.com/thumbnails/";
+
 export const config = {
-    // If Linux (EC2), use the production domain. If Windows, use localhost.
     baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
-    videoSourcePath: isProduction ? '/video/' : 'https://clip-flip.com/video/',
+    videoSourcePath: videoPath,
+    thumbnailSourcePath: thumbnailPath,
     defaultPercentChance: 25,
-    defaultEndIndex: 10052,
-    apiUrl: isProduction ? 'https://clip-flip.com/api' : 'https://clip-flip.com/api',
+    defaultEndIndex: endIndex,
+    apiUrl: apiURL,
     multiSection: false,
 };

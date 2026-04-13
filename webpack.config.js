@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  mode: 'development', // Set the mode to 'development' or 'production'
+  mode: 'development',
   entry: './src/index.ts',
   module: {
     rules: [
