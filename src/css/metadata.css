@@ -150,7 +150,7 @@
     transform: translateY(-1px);
 }
 
-@media (max-width: 720px) {
+/* @media (max-width: 720px) {
     .metadata-form {
         left: 10px;
         bottom: max(136px, env(safe-area-inset-bottom, 0px) + 118px);
@@ -164,4 +164,4 @@
         bottom: max(198px, env(safe-area-inset-bottom, 0px) + 176px);
         width: min(calc(100vw - 20px), 320px);
     }
-}
+} */
