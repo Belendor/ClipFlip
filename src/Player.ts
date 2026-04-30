@@ -20,7 +20,6 @@ class Players {
     private loadRevision = 0;
     private muted = true;
     private searchAbortController: AbortController | null = null;
-    private readonly isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     private readonly editIcon = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M12 20h9" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -33,12 +32,6 @@ class Players {
     private readonly addTagIcon = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke-linecap="round"></path>
-        </svg>`;
-    private readonly uploadIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
-            <path d="M12 16V4" stroke-linecap="round"></path>
-            <path d="m7 9 5-5 5 5" stroke-linecap="round" stroke-linejoin="round"></path>
-            <path d="M5 20h14" stroke-linecap="round"></path>
         </svg>`;
     private uploadFormWrapper: HTMLDivElement | null = null;
     private uploadToolbarButton: HTMLButtonElement | null = null;
@@ -288,6 +281,9 @@ class Players {
                 player.muted = this.muted;
                 player.volume = 0.1;
             });
+        });
+        this.html.reloadToggle.addEventListener("click", () => {
+            window.location.reload();
         });
 
         this.html.hideFormsBtn.addEventListener("click", () => {

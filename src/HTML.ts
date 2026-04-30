@@ -17,6 +17,7 @@ export default class HTML {
     playPauseBtn: HTMLButtonElement = document.getElementById("playPauseBtn") as HTMLButtonElement;
     fullscreenButton: HTMLButtonElement = document.getElementById("fullScreenBtn") as HTMLButtonElement;
     muteToggle: HTMLButtonElement = document.getElementById("muteBtn") as HTMLButtonElement;
+    reloadToggle: HTMLButtonElement = document.getElementById("reloadBtn") as HTMLButtonElement;
     iconPlay: HTMLSpanElement;
     iconPause: HTMLSpanElement;
 

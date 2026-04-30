@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import ollama from 'ollama'
+import OpenAI from "openai"
 import { promises as fs } from 'fs';
 import fsSync from 'fs';
 import { PrismaClient } from '@prisma/client';
@@ -8,8 +8,11 @@ import path from 'path';
 import multer from 'multer';
 import { pipeline, Readable } from "stream";
 import { promisify } from "util";
+import axios from 'axios';
 const streamPipeline = promisify(pipeline);
-
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
 // multer in-memory or direct-to-disk upload
 const upload = multer({ dest: path.join(__dirname, '../tmp_uploads') })
 const BATCH_SIZE = 2;
@@ -236,10 +239,10 @@ app.get('/tags', async (req, res) => {
     const tags = await prisma.tag.findMany({
       where: search
         ? {
-            title: {
-              contains: search,
-            },
-          }
+          title: {
+            contains: search,
+          },
+        }
         : undefined,
       orderBy: {
         title: 'asc',
@@ -294,50 +297,180 @@ app.post('/videos/by-tags', async (req, res) => {
   }
 });
 // Route to get all tags
-app.get('/ai', async (req, res) => {
+app.get("/ai", async (_req, res) => {
+  console.log("AI started")
 
-  const dir = './segments';
-  const files = await fs.readdir(dir);
-  const jpgFiles = files.filter((f) => f.endsWith('.jpg'));
+  try {
+    const dir = "./segments"
+    const outDir = "./filtered"
 
-  for (let i = 0; i < jpgFiles.length; i += BATCH_SIZE) {
-    const batch = jpgFiles.slice(i, i + BATCH_SIZE);
+    await fs.mkdir(outDir, { recursive: true })
 
-    await Promise.all(
-      batch.map(async (jpgFile) => {
-        const baseName = jpgFile.split('.')[0];
-        const jpgPath = path.join(dir, jpgFile);
-        const mp4Path = path.join(dir, `${baseName}.mp4`);
+    const files = await fs.readdir(dir)
 
-        try {
-          const imageBase64 = await fs.readFile(jpgPath, { encoding: 'base64' });
+    const groups = new Map<string, { first?: string; middle?: string }>()
 
-          const response = await ollama.generate({
-            model: 'llava',
-            prompt: "Are panties or underwear visible in this image and it covers ass? Reply with 'true' or 'false'.",
-            images: [imageBase64],
-          });
+    for (const file of files) {
+      const match = file.match(/^(\d+)_(first|middle)\.jpg$/)
+      if (!match) continue
 
-          const answer = response.response.trim().toLowerCase();
-          console.log(`${jpgFile}: model answer: ${answer}`);
-          const isVisible = answer.includes('true') && !answer.includes('false');
+      const [, id, type] = match
+      if (!groups.has(id)) groups.set(id, {})
+      groups.get(id)![type as "first" | "middle"] = file
+    }
 
-          if (!isVisible) {
-            await fs.unlink(jpgPath).catch(() => { });
-            await fs.unlink(mp4Path).catch(() => { });
-            console.log(`Deleted ${jpgFile} and ${baseName}.mp4`);
-          } else {
-            console.log(`Kept ${jpgFile} and ${baseName}.mp4`);
-          }
-        } catch (err) {
-          console.error(`Error processing ${jpgFile}:`, err);
+    let counter = 0
+    for (const [id, pair] of groups) {
+      // if (counter > 0) break
+      // counter++
+      const videoPath = path.join(dir, `${id}.mp4`)
+
+      // if missing images → delete everything
+      if (!pair.first || !pair.middle) {
+        await fs.rm(videoPath, { force: true })
+        if (pair.first) await fs.rm(path.join(dir, pair.first), { force: true })
+        if (pair.middle) await fs.rm(path.join(dir, pair.middle), { force: true })
+        continue
+      }
+
+      const buffer1 = await fs.readFile(path.join(dir, pair.first))
+      const buffer2 = await fs.readFile(path.join(dir, pair.middle))
+
+      const base64_1 = buffer1.toString("base64")
+      const base64_2 = buffer2.toString("base64")
+
+      console.log(`Processing ${id}`)
+
+      // const response = await openai.responses.create({
+      //   model: "gpt-5.4",
+      //   input: [
+      //     {
+      //       role: "user",
+      //       content: [
+      //         {
+      //           type: "input_text",
+      //           text: `Does the image show a female. Does the image show clearly visible ASS? Does the image show a panties on female ass?. If all 3 are yes then reply yes, otherwise no. Say yes only when you have 90% confidence`,
+      //         },
+      //         // {
+      //         //   type: "input_image",
+      //         //   image_url: `data:image/jpeg;base64,${base64_1}`,
+      //         //   detail: "auto",
+      //         // },
+      //         {
+      //           type: "input_image",
+      //           image_url: `data:image/jpeg;base64,${base64_2}`,
+      //           detail: "auto",
+      //         },
+      //       ],
+      //     },
+      //   ],
+      // })
+
+      // const answer = response.output_text.toLowerCase()
+      // console.log(id, answer)
+
+      // if (answer.includes("yes")) {
+      //   // copy video
+      //   await fs.copyFile(videoPath, path.join(outDir, `${id}.mp4`))
+
+      //   // remove images only
+      //   await fs.rm(path.join(dir, pair.first), { force: true })
+      //   await fs.rm(path.join(dir, pair.middle), { force: true })
+      // } else {
+      //   // remove everything
+      //   await fs.rm(videoPath, { force: true })
+      //   await fs.rm(path.join(dir, pair.first), { force: true })
+      //   await fs.rm(path.join(dir, pair.middle), { force: true })
+      // }
+      const hiveRes = await axios.post(
+        "https://api.thehive.ai/api/v3/chat/completions",
+        {
+          model: "hive/vision-language-model",
+          temperature: 0,
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `
+Analyze the images.
+
+Return ONLY valid JSON:
+
+{
+  "ass_visible": true | false,
+  "panties_visible": true | false
+}
+
+Rules:
+- "ass_visible": true ONLY if female buttocks are clearly visible (not just shape)
+- "panties_visible": true ONLY if underwear (panties) is clearly identifiable
+- If unsure about ANY → return false
+- Do NOT guess
+`
+                },
+                // {
+                //   type: "media_url",
+                //   media_url: {
+                //     url: `data:image/jpeg;base64,${base64_1}`,
+                //   },
+                // },
+                {
+                  type: "media_url",
+                  media_url: {
+                    url: `data:image/jpeg;base64,${base64_2}`,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          headers: {
+            authorization: `Bearer ${process.env.HIVE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
         }
-      })
-    );
-  }
+      )
 
-  res.json({ "ok": true });
-});
+      const raw = hiveRes.data.choices?.[0]?.message?.content
+
+      const text =
+        typeof raw === "string"
+          ? raw
+          : Array.isArray(raw)
+            ? raw.map((c: any) => c.text || "").join("")
+            : ""
+
+      let parsed: any = {}
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = { ass_visible: false, panties_visible: false }
+      }
+
+      const match = Boolean(parsed.ass_visible) && Boolean(parsed.panties_visible)
+      console.log(parsed)
+      console.log(match)
+
+      if (match) {
+        await fs.copyFile(videoPath, path.join(outDir, `${id}.mp4`))
+        await fs.rm(videoPath, { force: true })
+      } else {
+        await fs.rm(videoPath, { force: true })
+      }
+
+      await fs.rm(path.join(dir, pair.first), { force: true })
+      await fs.rm(path.join(dir, pair.middle), { force: true })
+    }
+
+    res.json("done")
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ ok: false })
+  }
+})
 app.get('/', async (req, res) => {
   res.json({ ok: true });
   // try {
