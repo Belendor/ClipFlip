@@ -432,7 +432,7 @@ class Players {
 
             const title = document.createElement("div");
             title.className = "tag-card-title";
-            title.textContent = tag.title;
+            title.textContent = tag.title + (tag.videoCount ? ` (${tag.videoCount})` : "");
             card.appendChild(title);
 
             card.addEventListener("click", async () => {

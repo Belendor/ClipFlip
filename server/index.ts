@@ -16,7 +16,7 @@ const openai = new OpenAI({
 // multer in-memory or direct-to-disk upload
 const upload = multer({ dest: path.join(__dirname, '../tmp_uploads') })
 const BATCH_SIZE = 2;
-
+import { OAuth2Client } from "google-auth-library";
 const prisma = new PrismaClient();
 
 const app = express();
@@ -24,6 +24,7 @@ const port = 3000;
 // Use CORS middleware
 app.use(cors()); // Enable all CORS requests, or customize as needed
 app.use(express.json()); // Add this line to enable JSON body parsing
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.post('/videos', async (req: Request, res: Response) => {
   try {
@@ -261,7 +262,8 @@ app.get('/tags', async (req, res) => {
       videoCount: tag._count.videos,
       _count: undefined,
     }));
-
+    console.log(result);
+    
     res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching tags:', error);
@@ -577,17 +579,19 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
   }
 });
 
-app.get("/download", async (req, res) => {
-  const FULL_SAMPLE_URL = "https://ev-h.phncdn.com/hls/videos/202407/06/454815001/1080P_4000K_454815001.mp4/seg-103-v1-a1.ts?validfrom=1769230174&validto=1769237374&ipa=1&hdl=-1&hash=mPHffV%2B2Hu9Dxr5%2BvifP1opQ0%2B0%3D";
-  // This Regex looks for "/seg-" followed by numbers and captures everything before and after it
-  const match = FULL_SAMPLE_URL.match(/^(.*\/seg-)\d+(-v1-a1\.ts)(\?.*)$/);
+app.get("/download", async (_req, res) => {
+  const FULL_SAMPLE_URL =
+    "https://iv-h.phncdn.com/2ZJ0UgzFupo30MUKohYP6PEPRiw=,1777535627/hls/videos/202202/05/402572481/1080P_8000K_402572481.mp4/seg-16-v1-a1.ts";
+
+  // make query optional
+  const match = FULL_SAMPLE_URL.match(/^(.*\/seg-)\d+(-v1-a1\.ts)(\?.*)?$/);
+
   if (!match) {
-    console.error("Invalid URL format. Could not find segment pattern.");
-    process.exit(1);
+    return res.status(400).json({ error: "Invalid URL format" });
   }
-  const urlStart = match[1]; // Everything up to "/seg-"
-  const urlEnd = match[2];   // The suffix "-v1-a1.ts"
-  const query = match[3];    // The "?hdnea=..." part
+
+  const [, urlStart, urlEnd, query = ""] = match;
+
   const outputDir = path.resolve("../downloads");
   fsSync.mkdirSync(outputDir, { recursive: true });
 
@@ -597,31 +601,52 @@ app.get("/download", async (req, res) => {
   while (true) {
     const url = `${urlStart}${seg}${urlEnd}${query}`;
     const filePath = path.join(outputDir, `${seg}.ts`);
-    console.log(`Downloading segment ${seg}...`);
+
+    console.log(`Downloading ${url}`);
 
     const response = await fetch(url);
-    if (!response.ok) {
-      console.log(`Stopped at seg-${seg}: ${response.status}`);
-      break; // no more segments
-    }
-
-    if (!response.body) {
-      console.log(`Segment ${seg} had no body, stopping.`);
+    if (!response.ok || !response.body) {
+      console.log(`Stop at seg-${seg} (${response.status})`);
       break;
     }
 
-    const nodeStream =
+    const stream =
       typeof (response.body as any).getReader === "function"
         ? Readable.fromWeb(response.body as any)
         : (response.body as unknown as NodeJS.ReadableStream);
 
-    await streamPipeline(nodeStream, fsSync.createWriteStream(filePath));
-    console.log(`Segment ${seg} saved.`);
+    await streamPipeline(stream, fsSync.createWriteStream(filePath));
+
     downloaded++;
     seg++;
   }
 
-  res.json({ message: `Downloaded ${downloaded} segments to ${outputDir}` });
+  res.json({ downloaded });
+});
+
+app.post("/auth/google", async (req, res) => {
+  const credential  = req.body;
+
+  const ticket = await googleClient.verifyIdToken({
+    idToken: credential,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+
+  const user = ticket.getPayload();
+
+  if (!user?.email) {
+    return res.status(401).json({ error: "Invalid Google token" });
+  }
+
+  // create/find user in DB
+  // create your own session/JWT here
+
+  res.json({
+    email: user.email,
+    name: user.name,
+    picture: user.picture,
+    googleId: user.sub,
+  });
 });
 
 app.listen(port, '0.0.0.0', () => {
