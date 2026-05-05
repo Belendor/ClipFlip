@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import OpenAI from "openai"
 import { promises as fs } from 'fs';
 import fsSync from 'fs';
 import { PrismaClient } from '@prisma/client';
@@ -10,9 +9,6 @@ import { pipeline, Readable } from "stream";
 import { promisify } from "util";
 import axios from 'axios';
 const streamPipeline = promisify(pipeline);
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 // multer in-memory or direct-to-disk upload
 const upload = multer({ dest: path.join(__dirname, '../tmp_uploads') })
 const BATCH_SIZE = 2;
@@ -270,7 +266,6 @@ app.get('/tags', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tags' });
   }
 });
-
 
 // Route to get all tags
 app.post('/videos/by-tags', async (req, res) => {
@@ -622,31 +617,6 @@ app.get("/download", async (_req, res) => {
   }
 
   res.json({ downloaded });
-});
-
-app.post("/auth/google", async (req, res) => {
-  const credential  = req.body;
-
-  const ticket = await googleClient.verifyIdToken({
-    idToken: credential,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
-
-  const user = ticket.getPayload();
-
-  if (!user?.email) {
-    return res.status(401).json({ error: "Invalid Google token" });
-  }
-
-  // create/find user in DB
-  // create your own session/JWT here
-
-  res.json({
-    email: user.email,
-    name: user.name,
-    picture: user.picture,
-    googleId: user.sub,
-  });
 });
 
 app.listen(port, '0.0.0.0', () => {
