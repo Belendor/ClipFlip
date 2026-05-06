@@ -197,11 +197,13 @@ class State {
             const videos = await this.api.fetchVideosByTags(tags, this.endIndex);
             console.log("Retrieved number of videos:", videos.length);
             this.taggedVideos = videos;
+            const shuffled = this.shuffleVideos(videos);
+            this.taggedVideos = shuffled;
             this.positions = {
-                1: videos[0]?.id ?? 0,
-                2: videos[1]?.id ?? videos[0]?.id ?? 0,
-                3: videos[2]?.id ?? videos[0]?.id ?? 0,
-                4: videos[3]?.id ?? videos[0]?.id ?? 0,
+                1: shuffled[0]?.id ?? 0,
+                2: shuffled[1]?.id ?? shuffled[0]?.id ?? 0,
+                3: shuffled[2]?.id ?? shuffled[0]?.id ?? 0,
+                4: shuffled[3]?.id ?? shuffled[0]?.id ?? 0,
             };
         } catch (error) {
             console.error(`Failed to fetch videos for section ${section} with tags`, tags, error);
@@ -214,7 +216,9 @@ class State {
             };
         }
     }
-
+    private shuffleVideos(videos: Video[]): Video[] {
+        return [...videos].sort(() => Math.random() - 0.5);
+    }
     async fetchAllTags() {
         try {
             const tags = await this.api.fetchTags();
