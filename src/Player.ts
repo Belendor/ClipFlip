@@ -607,7 +607,14 @@ class Players {
         }
         const metadataHeader = document.getElementById(`metadata-header-${section}`);
 
-        const favoriteBtn = metadataHeader?.querySelector<HTMLButtonElement>(".favorite-btn");
+        const oldFavoriteBtn = metadataHeader?.querySelector<HTMLButtonElement>(".favorite-btn");
+
+        if (!oldFavoriteBtn) {
+            throw new Error("Favorite button not found in metadata header");
+        }
+
+        const favoriteBtn = oldFavoriteBtn.cloneNode(true) as HTMLButtonElement;
+        oldFavoriteBtn.replaceWith(favoriteBtn);
         if (!favoriteBtn) {
             throw new Error("Favorite button not found in metadata header");
         }
