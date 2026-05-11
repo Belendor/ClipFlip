@@ -18,5 +18,7 @@ cutter.js
 *.ppk
 downloads
 /thumbnails
-/server/prisma
+*.db
+*db-journal
+/server/prisma/backup
 /tmp_uploads
