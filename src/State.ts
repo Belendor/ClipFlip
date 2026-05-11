@@ -47,6 +47,7 @@ class State {
     played: Set<number> = new Set();
     onEmptyPlays?: () => void;
     emptyPlays = false;
+    adminMode = false;
 
     constructor(private readonly api: VideoApi) {
         this.resetActiveTags();
@@ -106,7 +107,12 @@ class State {
     async queryTags(): Promise<void> {
         const params = new URLSearchParams(window.location.search);
         const queryTagsRaw = params.get("tags");
-
+        const queryAdmin = params.get("admin");
+        if (queryAdmin) {
+            this.adminMode = true;
+            console.log("admin");
+            return
+        }
         if (!queryTagsRaw) {
             this.resetActiveTags();
             this.taggedVideos = null;

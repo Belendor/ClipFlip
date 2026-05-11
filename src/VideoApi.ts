@@ -1,7 +1,7 @@
 import type { Tag, Video, VideoWithRelations, UpdateVideoPayload } from "./types";
 
 export default class VideoApi {
-    constructor(private readonly apiUrl: string) {}
+    constructor(private readonly apiUrl: string) { }
 
     private async request<T>(path: string, init?: RequestInit): Promise<T> {
         const response = await fetch(`${this.apiUrl}${path}`, init);
@@ -62,5 +62,21 @@ export default class VideoApi {
         if (!response.ok) {
             throw new Error(`Upload failed (${response.status})`);
         }
+    }
+    async react(videoId: number, type: "like" ) {
+        const res = await fetch(`${this.apiUrl}/videos/${videoId}/reaction`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({ type }),
+        });
+
+        if (!res.ok) {
+            throw new Error("Reaction failed");
+        }
+
+        return res.json();
     }
 }

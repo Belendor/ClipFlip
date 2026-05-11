@@ -14,19 +14,24 @@ const upload = multer({ dest: path.join(__dirname, '../tmp_uploads') })
 const BATCH_SIZE = 2;
 import { OAuth2Client } from "google-auth-library";
 const prisma = new PrismaClient();
+import cookieParser from "cookie-parser";
 
 const app = express();
 const port = 3000;
 // Use CORS middleware
-app.use(cors()); // Enable all CORS requests, or customize as needed
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: ["http://127.0.0.1", "http://127.0.0.1:80", "http://localhost"],
+    credentials: true,
+  })
+);
 app.use(express.json()); // Add this line to enable JSON body parsing
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.post('/videos', async (req: Request, res: Response) => {
   try {
     const { id, studio, title, models, tag } = req.body;
-
-    console.log(tag);
 
     const videoId = Number(id);
     if (!videoId || isNaN(videoId)) {
@@ -122,6 +127,13 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
       where: { id: videoId },
       include: {
         tags: true,
+        models: true,
+        reactions: {
+          select: {
+            userId: true,
+            type: true,
+          },
+        },
       },
     });
 
@@ -134,79 +146,80 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch video' });
   }
 });
-app.get("/video/:id", (req, res) => {
-  const id = req.params.id; // e.g., "50.mp4"
+// app.get("/video/:id", (req, res) => {
+//   const id = req.params.id; // e.g., "50.mp4"
 
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ClipFlip Video</title>
+//   const html = `
+// <!DOCTYPE html>
+// <html lang="en">
+// <head>
+//   <meta charset="UTF-8">
+//   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//   <title>ClipFlip Video</title>
 
-  <!-- Open Graph for Reddit and other platforms -->
-  <meta property="og:type" content="video.other">
-  <meta property="og:title" content="ClipFlip Video">
-  <meta property="og:description" content="Watch this video on ClipFlip">
-  <meta property="og:url" content="https://www.clipflip.online/api/video/${id}">
-  <meta property="og:image" content="https://www.clipflip.online/thumbnail.jpg">
-  <meta property="og:video" content="https://www.clipflip.online/video/${id}">
-  <meta property="og:video:secure_url" content="https://www.clipflip.online/video/${id}">
-  <meta property="og:video:type" content="video/mp4">
-  <meta property="og:video:width" content="1280">
-  <meta property="og:video:height" content="720">
+//   <!-- Open Graph for Reddit and other platforms -->
+//   <meta property="og:type" content="video.other">
+//   <meta property="og:title" content="ClipFlip Video">
+//   <meta property="og:description" content="Watch this video on ClipFlip">
+//   <meta property="og:url" content="https://www.clipflip.online/api/video/${id}">
+//   <meta property="og:image" content="https://www.clipflip.online/thumbnail.jpg">
+//   <meta property="og:video" content="https://www.clipflip.online/video/${id}">
+//   <meta property="og:video:secure_url" content="https://www.clipflip.online/video/${id}">
+//   <meta property="og:video:type" content="video/mp4">
+//   <meta property="og:video:width" content="1280">
+//   <meta property="og:video:height" content="720">
 
-  <!-- Twitter Card for Twitter/X -->
-  <meta name="twitter:card" content="player">
-  <meta name="twitter:title" content="ClipFlip Video">
-  <meta name="twitter:description" content="Watch this video on ClipFlip">
-  <meta name="twitter:image" content="https://www.clipflip.online/thumbnail.jpg">
-  <meta name="twitter:player" content="https://www.clipflip.online/api/video/${id}">
-  <meta name="twitter:player:width" content="1280">
-  <meta name="twitter:player:height" content="720">
+//   <!-- Twitter Card for Twitter/X -->
+//   <meta name="twitter:card" content="player">
+//   <meta name="twitter:title" content="ClipFlip Video">
+//   <meta name="twitter:description" content="Watch this video on ClipFlip">
+//   <meta name="twitter:image" content="https://www.clipflip.online/thumbnail.jpg">
+//   <meta name="twitter:player" content="https://www.clipflip.online/api/video/${id}">
+//   <meta name="twitter:player:width" content="1280">
+//   <meta name="twitter:player:height" content="720">
 
-  <style>
-    body { 
-        margin: 0; 
-        background: #000; 
-        position: relative; 
-        height: 100vh; 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-    }
-    video { 
-        max-width: 100%; 
-        max-height: 100%; 
-    }
-    .logo { 
-        position: absolute; 
-        top: 10px; 
-        left: 10px; 
-        width: 40px; /* Reduced from 80px to 40px (2x smaller) */
-        cursor: pointer; 
-        z-index: 2; 
-    }
-  </style>
-</head>
-<body>
-  <video controls autoplay loop muted playsinline>
-    <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-  <a href="https://www.clipflip.online">
-    <img src="https://www.clipflip.online/logo.jpg" class="logo" alt="ClipFlip Logo" />
-  </a>
-</body>
-</html>
-`;
+//   <style>
+//     body { 
+//         margin: 0; 
+//         background: #000; 
+//         position: relative; 
+//         height: 100vh; 
+//         display: flex; 
+//         justify-content: center; 
+//         align-items: center; 
+//     }
+//     video { 
+//         max-width: 100%; 
+//         max-height: 100%; 
+//     }
+//     .logo { 
+//         position: absolute; 
+//         top: 10px; 
+//         left: 10px; 
+//         width: 40px; /* Reduced from 80px to 40px (2x smaller) */
+//         cursor: pointer; 
+//         z-index: 2; 
+//     }
+//   </style>
+// </head>
+// <body>
+//   <video controls autoplay loop muted playsinline>
+//     <source src="https://www.clipflip.online/video/${id}" type="video/mp4">
+//     Your browser does not support the video tag.
+//   </video>
+//   <a href="https://www.clipflip.online">
+//     <img src="https://www.clipflip.online/logo.jpg" class="logo" alt="ClipFlip Logo" />
+//   </a>
+// </body>
+// </html>
+// `;
 
-  res.setHeader('Content-Type', 'text/html');
-  res.send(html);
-});
-app.get('/videos', async (req: Request, res: Response) => {
-  const search = req.query.search?.toString() || '';
+//   res.setHeader('Content-Type', 'text/html');
+//   res.send(html);
+// });
+app.get("/videos", async (req: Request, res: Response) => {
+  const search = req.query.search?.toString() || "";
+  const userId = Number(req.cookies.userId);
 
   const videos = await prisma.video.findMany({
     where: search
@@ -219,11 +232,38 @@ app.get('/videos', async (req: Request, res: Response) => {
         ],
       }
       : undefined,
-    include: { tags: true, models: true },
-    orderBy: { id: 'desc' },
+    include: {
+      tags: true,
+      models: true,
+      reactions: {
+        select: {
+          userId: true,
+          type: true,
+        },
+      },
+    },
+    orderBy: { id: "desc" },
   });
 
-  res.json(videos);
+  const mappedVideos = videos.map((video) => {
+    const likes = video.reactions.filter((r) => r.type === "like").length;
+    const dislikes = video.reactions.filter((r) => r.type === "dislike").length;
+    const myReaction = userId
+      ? video.reactions.find((r) => r.userId === userId)?.type ?? null
+      : null;
+
+
+
+    return {
+      ...video,
+      likes,
+      dislikes,
+      myReaction,
+      reactions: undefined,
+    };
+  });
+
+  res.json(mappedVideos);
 });
 
 app.get('/tags', async (req, res) => {
@@ -258,8 +298,7 @@ app.get('/tags', async (req, res) => {
       videoCount: tag._count.videos,
       _count: undefined,
     }));
-    console.log(result);
-    
+
     res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching tags:', error);
@@ -618,7 +657,148 @@ app.get("/download", async (_req, res) => {
 
   res.json({ downloaded });
 });
+app.post("/auth/google", async (req: Request, res: Response) => {
+  try {
+    const { credential } = req.body;
 
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload?.sub || !payload?.email) {
+      return res.status(401).json({ error: "Invalid Google token" });
+    }
+
+    const user = await prisma.user.upsert({
+      where: { googleId: payload.sub },
+      update: {
+        email: payload.email,
+        name: payload.name ?? null,
+        picture: payload.picture ?? null,
+      },
+      create: {
+        googleId: payload.sub,
+        email: payload.email,
+        name: payload.name ?? null,
+        picture: payload.picture ?? null,
+      },
+    });
+
+    res.cookie("userId", user.id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // true on https production
+      maxAge: 1000 * 60 * 60 * 24 * 30,
+    });
+
+    return res.json({ success: true, user });
+  } catch (err) {
+    return res.status(401).json({ success: false, error: "Login failed" });
+  }
+});
+app.get("/auth/me", async (req: Request, res: Response) => {
+  const userId = Number(req.cookies.userId);
+
+  if (!userId) {
+    return res.json({ loggedIn: false, user: null });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    return res.json({ loggedIn: false, user: null });
+  }
+
+  return res.json({ loggedIn: true, user });
+});
+app.post("/auth/logout", (req: Request, res: Response) => {
+  res.clearCookie("userId");
+  return res.json({ success: true });
+});
+app.post("/videos/:id/reaction", async (req: Request, res: Response) => {
+  const userId = Number(req.cookies.userId);
+  const videoId = Number(req.params.id);
+  const { type } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Not logged in" });
+  }
+
+  if (!["like", "dislike"].includes(type)) {
+    return res.status(400).json({ error: "Invalid reaction" });
+  }
+
+  const existing = await prisma.videoReaction.findUnique({
+    where: {
+      userId_videoId: {
+        userId,
+        videoId,
+      },
+    },
+  });
+
+  if (existing?.type === type) {
+    await prisma.videoReaction.delete({
+      where: {
+        userId_videoId: {
+          userId,
+          videoId,
+        },
+      },
+    });
+  } else {
+    await prisma.videoReaction.upsert({
+      where: {
+        userId_videoId: {
+          userId,
+          videoId,
+        },
+      },
+      update: {
+        type,
+      },
+      create: {
+        userId,
+        videoId,
+        type,
+      },
+    });
+  }
+
+  const likes = await prisma.videoReaction.count({
+    where: {
+      videoId,
+      type: "like",
+    },
+  });
+
+  const dislikes = await prisma.videoReaction.count({
+    where: {
+      videoId,
+      type: "dislike",
+    },
+  });
+
+  const reaction = await prisma.videoReaction.findUnique({
+    where: {
+      userId_videoId: {
+        userId,
+        videoId,
+      },
+    },
+  });
+
+  return res.json({
+    likes,
+    dislikes,
+    reaction: reaction?.type ?? null,
+  });
+});
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server is running at http://0.0.0.0:${port}`);
 });

@@ -1,3 +1,4 @@
+
 export interface Tag {
     id?: number;
     title: string;
@@ -9,10 +10,18 @@ export interface Model {
     name?: string;
 }
 
+export type ReactionType = "like" | "dislike";
+
 export interface Video {
     id: number;
     title?: string | null;
     studio?: string | null;
+    seriesNr?: number | null;
+    seriesTotal?: number | null;
+    reactions?: { userId: number; count: number }[];
+    likes?: number;
+    dislikes?: number;
+    myReaction?: ReactionType | null;
 }
 
 export interface VideoWithRelations extends Video {

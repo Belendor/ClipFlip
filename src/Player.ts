@@ -3,6 +3,7 @@ import HTML from "./HTML";
 import { config } from "./config";
 import VideoApi from "./VideoApi";
 import type { Tag, Video, VideoWithRelations, UpdateVideoPayload } from "./types";
+import User from "./User";
 
 type SectionSwapState = Record<SectionId, boolean>;
 
@@ -26,9 +27,10 @@ class Players {
             <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>`;
     private readonly doneIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>`;
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6" />
+        </svg>
+        `;
     private readonly addTagIcon = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke-linecap="round"></path>
@@ -41,8 +43,10 @@ class Players {
         private readonly state: State,
         private readonly html: HTML,
         private readonly api: VideoApi,
+        private readonly user: User,
     ) {
         this.state.onEmptyPlays = () => this.showNoVideosBox();
+        this.user.init();
     }
 
     async init() {
@@ -127,9 +131,19 @@ class Players {
             return false;
         }
 
-        const currentMetadata = await this.getVideoMetadata(currentVideoId);
+        const currentMetadata = await this.getVideoMetadata(currentVideoId, true);
         if (revision !== this.loadRevision) {
             return false;
+        }
+        if (this.state.adminMode && currentMetadata?.reactions?.length) {
+            console.log(currentMetadata?.reactions);
+
+            if (currentMetadata?.reactions?.length > 0) {
+                console.log(currentMetadata?.reactions);
+
+                this.loadSection(section, revision);
+                return false;
+            }
         }
         await this.populateMetadataForm(section, currentMetadata);
 
@@ -444,8 +458,8 @@ class Players {
         });
     }
 
-    private async getVideoMetadata(videoId: number): Promise<VideoWithRelations | null> {
-        if (!this.metadataCache.has(videoId)) {
+    private async getVideoMetadata(videoId: number, refresh: boolean = false): Promise<VideoWithRelations | null> {
+        if (!this.metadataCache.has(videoId) || refresh) {
             this.metadataCache.set(
                 videoId,
                 this.api.fetchVideoMetadata(videoId).catch((error) => {
@@ -579,32 +593,86 @@ class Players {
         await this.playPlayer(player, index);
     }
 
-    private async populateMetadataForm(section: SectionId, data: VideoWithRelations | null): Promise<void> {
-        if (!data) {
+    private async populateMetadataForm(section: SectionId, video: VideoWithRelations | null): Promise<void> {
+        if (!video) {
             return;
         }
 
-        const safeTags = Array.isArray(data.tags) ? data.tags : [];
-        const safeModels = Array.isArray(data.models) ? data.models : [];
+        const safeTags = Array.isArray(video.tags) ? video.tags : [];
+        const safeModels = Array.isArray(video.models) ? video.models : [];
 
         const form = document.getElementById(`metaForm${section}`) as HTMLDivElement | null;
         if (!form) {
             return;
         }
+        const metadataHeader = document.getElementById(`metadata-header-${section}`);
+
+        const favoriteBtn = metadataHeader?.querySelector<HTMLButtonElement>(".favorite-btn");
+        if (!favoriteBtn) {
+            throw new Error("Favorite button not found in metadata header");
+        }
+        const heart = favoriteBtn.querySelector(".favorite-heart") as HTMLSpanElement;
+        const count = favoriteBtn.querySelector(".favorite-count") as HTMLSpanElement;
+
+        const currentCount = video.reactions?.length ?? 0;
+        const userLiked = video.reactions?.some(
+            (r) => r.userId === this.user.currentUser?.id
+        ) ?? false;
+        // favoriteBtn.classList.toggle("active", userLiked);
+        // console.log(isActive);
+
+        if (!userLiked) {
+            heart.textContent = "♡";
+            count.textContent = String(currentCount);
+        } else {
+            heart.textContent = "♥";
+            count.textContent = String(currentCount);
+            favoriteBtn.classList.add("active");
+        }
+
+        favoriteBtn.addEventListener("click", async () => {
+            console.log("Clicked favorite button");
+            if (!this.user.currentUser) {
+                (
+                    document.querySelector("#google-login div[role='button']") as HTMLElement
+                )?.click();
+                return;
+            }
+
+            try {
+                const data = await this.api.react(Number(video.id), "like");
+                console.log(data);
+
+
+                let isActive = favoriteBtn.classList.contains("active");
+
+                if (isActive) {
+                    heart.textContent = "♡";
+                    count.textContent = String(data.likes);
+                    favoriteBtn.classList.remove("active");
+                } else {
+                    heart.textContent = "♥";
+                    count.textContent = String(data.likes);
+                    favoriteBtn.classList.add("active");
+                }
+            } catch (error) {
+                console.error("Favorite failed", error);
+            }
+        });
 
         form.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
             switch (input.placeholder) {
                 case "id":
-                    input.value = String(data.id);
+                    input.value = String(video.id);
                     break;
                 case "Title":
-                    input.value = data.title ?? "";
+                    input.value = video.title ?? "";
                     break;
                 case "Models":
                     input.value = safeModels.map((model) => model.name ?? "").filter(Boolean).join(", ");
                     break;
                 case "Studio":
-                    input.value = data.studio ?? "";
+                    input.value = video.studio ?? "";
                     break;
             }
         });
@@ -618,7 +686,7 @@ class Players {
             tagsWrapper,
             safeTags,
             section,
-            data.id,
+            video.id,
             this.toggleTag.bind(this),
             this.removeTag.bind(this),
         );
@@ -815,7 +883,56 @@ class Players {
         editToggleBtn.className = "edit-toggle metadata-edit-btn";
         editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
         editToggleBtn.title = "Edit metadata";
-        metadataHeader.append(metadataTitleGroup, editToggleBtn);
+        const favoriteBtn = document.createElement("button");
+        favoriteBtn.type = "button";
+        favoriteBtn.className = "reaction-btn favorite-btn";
+        favoriteBtn.innerHTML = `
+            <span class="favorite-heart">♡</span>
+            <span class="favorite-count">0</span>
+        `;
+        favoriteBtn.title = "Favorite";
+
+        const closeMetadataBtn = document.createElement("button");
+        closeMetadataBtn.type = "button";
+        closeMetadataBtn.className = "metadata-close-btn";
+        closeMetadataBtn.innerHTML = "&times;";
+        closeMetadataBtn.title = "Hide metadata";
+
+        const showMetadataBtn = document.createElement("button");
+        showMetadataBtn.type = "button";
+        showMetadataBtn.className = "metadata-show-btn hidden";
+        showMetadataBtn.textContent = "i";
+        showMetadataBtn.title = "Show metadata";
+
+        form.parentElement?.appendChild(showMetadataBtn);
+
+
+        closeMetadataBtn.addEventListener("click", () => {
+            this.state.advancedMode = false;
+
+            editorPanel.classList.add("hidden");
+            titleInput.classList.add("hidden");
+            modelInput.classList.add("hidden");
+            studioInput.classList.add("hidden");
+            idInput.classList.add("hidden");
+
+            this.setUploadFormVisibility(false);
+
+            document.querySelectorAll<HTMLElement>(".tag-delete").forEach((button) => {
+                button.classList.add("hidden");
+            });
+
+            editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
+            editToggleBtn.title = "Edit metadata";
+
+            this.html.setMetadataVisibility(false);
+        });
+        showMetadataBtn.addEventListener("click", () => {
+            form.classList.remove("metadata-hidden");
+            showMetadataBtn.classList.add("hidden");
+        });
+
+        metadataHeader.append(metadataTitleGroup, editToggleBtn, favoriteBtn, closeMetadataBtn);
 
         const videoTagsContainer = this.html.createDiv(`video-tags-${section}`, "metadata-tags-panel");
         const videoTagsWrapper = this.html.createDiv(`video-tags-wrapper-${section}`, "tag-container metadata-tag-list");
@@ -943,7 +1060,7 @@ class Players {
             });
 
             editToggleBtn.innerHTML = nextAdvancedMode
-                ? `${this.doneIcon}<span>Done</span>`
+                ? `${this.doneIcon}<span>Minimize</span>`
                 : `${this.editIcon}<span>Edit</span>`;
             editToggleBtn.title = nextAdvancedMode ? "Return to view mode" : "Edit metadata";
         };

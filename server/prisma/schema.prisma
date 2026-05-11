@@ -13,8 +13,22 @@ model Video {
   seriesNr    Int?
   seriesTotal Int?
   studio      String?
+
+  reactions    VideoReaction[]
+
   models      Model[] @relation("VideoModels")
   tags        Tag[]   @relation("VideoTags")
+}
+model VideoReaction {
+  userId    Int
+  videoId   Int
+  type      String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])
 }
 
 model Tag {
@@ -28,4 +42,17 @@ model Model {
   name   String  @unique
   alias  String?
   videos Video[] @relation("VideoModels")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  googleId String   @unique
+  email    String   @unique
+  name     String?
+  picture  String?
+
+  reactions     VideoReaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
