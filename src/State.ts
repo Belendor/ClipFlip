@@ -12,7 +12,7 @@ class State {
     readonly sectionIds: SectionId[] = [1, 2, 3, 4];
 
     multiSection = false;
-    randomized = true;
+    randomized = false;
     percentChance = config.defaultPercentChance;
     endIndex = config.defaultEndIndex;
     positions: PositionsMap = this.createInitialPositions();
