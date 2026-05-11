@@ -631,6 +631,7 @@ class Players {
         if (!userLiked) {
             heart.textContent = "♡";
             count.textContent = String(currentCount);
+            favoriteBtn.classList.remove("active");
         } else {
             heart.textContent = "♥";
             count.textContent = String(currentCount);
@@ -660,7 +661,9 @@ class Players {
                 } else {
                     heart.textContent = "♥";
                     count.textContent = String(data.likes);
+
                     favoriteBtn.classList.add("active");
+
                 }
             } catch (error) {
                 console.error("Favorite failed", error);
