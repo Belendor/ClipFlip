@@ -22,7 +22,7 @@ const port = 3000;
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["http://127.0.0.1", "http://127.0.0.1:80", "http://localhost"],
+    origin: ["http://127.0.0.1", "http://127.0.0.1:80", "http://localhost", "http://localhost:80", "https://clip-flip.com", "https://www.clip-flip.com"],
     credentials: true,
   })
 );
