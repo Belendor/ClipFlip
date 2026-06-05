@@ -9,7 +9,7 @@ type SectionSwapState = Record<SectionId, boolean>;
 
 class Players {
     private readonly folder = config.videoSourcePath;
-    private readonly folder1 = "https://clip-flip.com/video/";
+    private readonly folder1 = "https://clip-flip.com/video1/";
     private readonly thumbnailFolder = config.thumbnailSourcePath;
     private readonly metadataCache = new Map<number, Promise<VideoWithRelations | null>>();
     private readonly pendingSwap: SectionSwapState = {
@@ -175,8 +175,17 @@ class Players {
     }
 
     private buildVideoUrl(videoId: number): string {
-        const folder = videoId <= 11255 ? this.folder : this.folder1;
-        return `${folder}${videoId}.mp4`;
+        const folderMap = [
+            { max: 11255, folder: this.folder },
+            { max: Infinity, folder: this.folder1 }
+        ];
+        const match = folderMap.find(rule => videoId <= rule.max);
+
+        if (!match) {
+            throw new Error(`No folder mapping found for videoId: ${videoId}`);
+        }
+
+        return `${match.folder}${videoId}.mp4`;
     }
 
     private buildPosterUrl(videoId: number): string {
