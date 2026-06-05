@@ -9,6 +9,7 @@ type SectionSwapState = Record<SectionId, boolean>;
 
 class Players {
     private readonly folder = config.videoSourcePath;
+    private readonly folder1 = "https://clip-flip.com/video/";
     private readonly thumbnailFolder = config.thumbnailSourcePath;
     private readonly metadataCache = new Map<number, Promise<VideoWithRelations | null>>();
     private readonly pendingSwap: SectionSwapState = {
@@ -174,7 +175,8 @@ class Players {
     }
 
     private buildVideoUrl(videoId: number): string {
-        return `${this.folder}${videoId}.mp4`;
+        const folder = videoId <= 11255 ? this.folder : this.folder1;
+        return `${folder}${videoId}.mp4`;
     }
 
     private buildPosterUrl(videoId: number): string {
