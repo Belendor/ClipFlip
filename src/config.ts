@@ -5,7 +5,7 @@ console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 const local = false;
 const apiURL = local ? "https://clip-flip.com/api" : "https://clip-flip.com/api" ;
-const endIndex = local ? 3792 : 11255;
+const endIndex = local ? 3792 : 12293;
 const videoPath = local ? "./videos/" : "https://clip-flip.com/video/";
 const thumbnailPath = local ? "./thumbnails/" : "https://clip-flip.com/thumbnails/";
 
