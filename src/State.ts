@@ -57,7 +57,7 @@ class State {
 
     private createInitialPositions(): PositionsMap {
         return {
-            1: this.randomized ? this.randomInRange(1, this.endIndex * 0.25) : 1,
+            1: this.randomized ? this.randomInRange(1, this.endIndex ) : 1,
             2: this.randomized ? this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5) : 500,
             3: this.randomized ? this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75) : 1000,
             4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500,
