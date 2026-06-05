@@ -552,7 +552,7 @@ app.get('/', async (req, res) => {
 app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
   try {
     // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../videos');
+    const outputDir = path.join(__dirname, '../video1');
     const files = fsSync.readdirSync(outputDir);
 
     let maxId = 0;
@@ -615,32 +615,42 @@ app.post('/upload-video', upload.array('files'), async (req: Request, res: Respo
 
 app.get("/download", async (_req, res) => {
   const FULL_SAMPLE_URL =
-    "https://iv-h.phncdn.com/2ZJ0UgzFupo30MUKohYP6PEPRiw=,1777535627/hls/videos/202202/05/402572481/1080P_8000K_402572481.mp4/seg-16-v1-a1.ts";
+    "https://ev-h.phncdn.com/hls/videos/202408/06/456164611/1080P_4000K_456164611.mp4/seg-2-v1-a1.ts?validfrom=1780178723&validto=1780185923&ipa=1&hdl=-1&hash=qHHle%2BaybF2PdkmJucRjU2%2Bw5cI%3D";
 
-  // make query optional
-  const match = FULL_SAMPLE_URL.match(/^(.*\/seg-)\d+(-v1-a1\.ts)(\?.*)?$/);
+  const outputDir = path.join(__dirname, '../segments');
+  await fs.mkdir(outputDir, { recursive: true });
+
+  const urlObj = new URL(FULL_SAMPLE_URL);
+
+  // Find the last number before .ts
+  const match = urlObj.pathname.match(/^(.*?)(\d+)([^\/]*\.ts)$/);
 
   if (!match) {
-    return res.status(400).json({ error: "Invalid URL format" });
+    return res.status(400).json({
+      error: "Could not identify segment number in URL",
+    });
   }
 
-  const [, urlStart, urlEnd, query = ""] = match;
+  const [, prefix, currentSeg, suffix] = match;
 
-  const outputDir = path.resolve("../downloads");
-  fsSync.mkdirSync(outputDir, { recursive: true });
-
-  let seg = 1;
+  let seg = Number(currentSeg);
   let downloaded = 0;
 
   while (true) {
-    const url = `${urlStart}${seg}${urlEnd}${query}`;
+    const pathname = `${prefix}${seg}${suffix}`;
+
+    const url =
+      `${urlObj.origin}${pathname}` +
+      (urlObj.search ? urlObj.search : "");
+
     const filePath = path.join(outputDir, `${seg}.ts`);
 
     console.log(`Downloading ${url}`);
 
     const response = await fetch(url);
+
     if (!response.ok || !response.body) {
-      console.log(`Stop at seg-${seg} (${response.status})`);
+      console.log(`Stop at segment ${seg} (${response.status})`);
       break;
     }
 
