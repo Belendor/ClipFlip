@@ -217,6 +217,109 @@ app.get('/videos/:id', async (req: Request, res: Response) => {
 //   res.setHeader('Content-Type', 'text/html');
 //   res.send(html);
 // });
+app.get("/seo-tags/:tag", async (req: Request, res: Response) => {
+  try {
+    const tag = req.params.tag.toLowerCase().trim();
+
+    const allowedTags = ["anal", "amateur", "blowjob", "panties", "ass", "cfnm", "cum", "cowgirl", "gangbang", "doggy", "deepthroat", "handjob", "choking", "feet", "big boobs", "shemale", "pregnant"];
+
+    if (!allowedTags.includes(tag)) {
+      return res.status(404).json({ error: "Tag page not found" });
+    }
+
+    const allClips = await prisma.video.findMany({
+      where: {
+        tags: {
+          some: {
+            title: {
+              equals: tag,
+            },
+          },
+        },
+      },
+      include: {
+        tags: true,
+        models: true,
+      },
+      orderBy: {
+        id: "desc",
+      },
+    });
+
+    const groupedByTitle = new Map<string, typeof allClips>();
+
+    for (const clip of allClips) {
+      const title = clip.title?.trim();
+
+      if (!title) {
+        continue;
+      }
+
+      if (!groupedByTitle.has(title)) {
+        groupedByTitle.set(title, []);
+      }
+
+      groupedByTitle.get(title)!.push(clip);
+    }
+
+    const videos = Array.from(groupedByTitle.entries()).map(
+      ([title, videoClips], index) => {
+        const firstClip = videoClips[0];
+
+        return {
+          index: index + 1,
+          title,
+          slug: title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, ""),
+
+          models: firstClip.models.map((model) => model.name),
+
+          tags: Array.from(
+            new Set(firstClip.tags.map((tagItem) => tagItem.title))
+          ),
+
+          clipCount: videoClips.length,
+
+          clipIds: videoClips.map((clip) => clip.id),
+        };
+      }
+    );
+    const titleFromSlug = (slug: string): string => {
+      return slug
+        .split("-")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    };
+    const groupedClipCount = videos.reduce(
+      (sum, video) => sum + video.clipCount,
+      0
+    );
+
+    res.json({
+      tag,
+      title: `${titleFromSlug(tag)} Porn Clips - Free ${titleFromSlug(tag)} Videos | ClipFlip`,
+      description:
+        `Browse free ${titleFromSlug(tag)} porn clips on ClipFlip. Watch adult video previews and open clips in the endless random player.`,
+      heading: `${titleFromSlug(tag)} Porn Clips`,
+      intro:
+        `Browse ${titleFromSlug(tag)} porn clips grouped by video title. Hover previews to see available clips, then open the endless player.`,
+      canonicalUrl: `https://clip-flip.com/${tag}/`,
+      videoCount: videos.length,
+      clipCount: groupedClipCount,
+      videoBaseUrl: "http://127.0.0.1",
+      thumbnailBaseUrl: "https://clip-flip.com/video/thumbnails/",
+      videos,
+    });
+  } catch (error) {
+    console.error("Error building SEO tag page data:", error);
+
+    res.status(500).json({
+      error: "Failed to build SEO tag page data",
+    });
+  }
+});
 app.get("/videos", async (req: Request, res: Response) => {
   const search = req.query.search?.toString() || "";
   const userId = Number(req.cookies.userId);

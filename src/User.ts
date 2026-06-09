@@ -11,8 +11,6 @@ export default class User {
     currentUser: AuthUser | null = null;
 
     async init() {
-        console.log("User init");
-
         await this.checkAuth();
 
         if (!this.currentUser) {
@@ -63,7 +61,6 @@ export default class User {
             client_id: config.googleClientId,
             callback: this.handleGoogleLogin.bind(this),
         });
-        console.log("rendering")
 
         window.google.accounts.id.renderButton(
             document.getElementById("google-login"),

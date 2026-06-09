@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "node16",
+    "types": ["node"],
     "moduleResolution": "node16",
     "preserveConstEnums": true,
     "outDir": "./dist",

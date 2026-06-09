@@ -59,6 +59,7 @@ class Players {
 
     async loadVideos(): Promise<void> {
         const revision = ++this.loadRevision;
+        console.log("Loading videos, revision:", revision);
         this.state.clearEmptyState();
         this.html.hideNoVideosBox();
         this.resetPlaybackSurface();
@@ -112,6 +113,7 @@ class Players {
         const backPlayer = this.html.videoPlayers[backIndex];
 
         const currentVideoId = await this.state.takeNextVideoId(section);
+        console.log(`Section ${section} - Queued video ID:`, currentVideoId);
         if (currentVideoId === 0) {
             this.state.markEmpty();
             return false;
@@ -308,7 +310,7 @@ class Players {
             });
         });
         this.html.reloadToggle.addEventListener("click", () => {
-            window.location.reload();
+            window.location.replace("/");
         });
 
         this.html.hideFormsBtn.addEventListener("click", () => {
@@ -856,14 +858,20 @@ class Players {
     }
 
     private createMetadataFormContainers(): void {
+        let count = 0;
         this.state.sectionIds.forEach((section) => {
+            if (!this.state.multiSection && section !== 1) {
+                return;
+            }
             const sectionElement = document.getElementById(`section-${section}`);
             if (!sectionElement) {
                 return;
             }
 
             this.createMetadataForm(section);
+            count++;
         });
+        console.log(`Metadata form containers created: ${count}`);
     }
 
     private createMetadataForm(section: SectionId): void {

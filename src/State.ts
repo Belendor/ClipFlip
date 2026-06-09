@@ -12,7 +12,7 @@ class State {
     readonly sectionIds: SectionId[] = [1, 2, 3, 4];
 
     multiSection = false;
-    randomized = false;
+    randomized = true;
     percentChance = config.defaultPercentChance;
     endIndex = config.defaultEndIndex;
     positions: PositionsMap = this.createInitialPositions();
@@ -57,7 +57,7 @@ class State {
 
     private createInitialPositions(): PositionsMap {
         return {
-            1: this.randomized ? this.randomInRange(1, this.endIndex ) : 1,
+            1: this.randomized ? this.randomInRange(1, this.endIndex) : 1,
             2: this.randomized ? this.randomInRange(this.endIndex * 0.25, this.endIndex * 0.5) : 500,
             3: this.randomized ? this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75) : 1000,
             4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500,
@@ -108,14 +108,25 @@ class State {
         const params = new URLSearchParams(window.location.search);
         const queryTagsRaw = params.get("tags");
         const queryAdmin = params.get("admin");
+        const queryId = params.get("id");
+        if (queryId) {
+            const videoId = parseInt(queryId, 10);
+            if (!isNaN(videoId)) {
+                this.modifyPosition(1, false, videoId);
+                console.log("Starting with video ID from URL:", videoId);
+                this.randomized = false;
+                return;
+            }
+        }
         if (queryAdmin) {
             this.adminMode = true;
-            console.log("admin");
+            console.log("Admin mode enabled");
             return
         }
         if (!queryTagsRaw) {
             this.resetActiveTags();
             this.taggedVideos = null;
+            console.log("No URL tags found, showing all videos");
             return;
         }
 
@@ -135,9 +146,14 @@ class State {
         return currentVideoId;
     }
 
-    async modifyPosition(section: SectionId, random: boolean = false): Promise<void> {
+    async modifyPosition(section: SectionId, random: boolean = false, id: number = 0): Promise<void> {
         if (!(section in this.positions)) {
             throw new Error(`Invalid section: ${section}`);
+        }
+        if (id) {
+            this.positions[section] = id;
+            console.log("Position set to specific ID:", id);
+            return;
         }
 
         this.played = this.getPlayedVideos();
@@ -191,6 +207,8 @@ class State {
         console.log("Fetching videos for section", section, "with tags:", tags);
 
         this.played = this.getPlayedVideos();
+        console.log("Already played videos:", this.played.size);
+
         this.clearEmptyState();
 
         if (!tags || tags.length === 0) {
@@ -202,13 +220,18 @@ class State {
         try {
             const videos = await this.api.fetchVideosByTags(tags, this.endIndex);
             console.log("Retrieved number of videos:", videos.length);
-            this.taggedVideos = videos;
+            const unwatchedVideos = videos.filter((video) => !this.played.has(video.id));
+
+            console.log("Unwatched videos:", unwatchedVideos.length);
+
+            this.taggedVideos = unwatchedVideos;
             const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+            console.log("Random video selected:", randomVideo.id);
             this.positions = {
                 1: randomVideo.id,
-                2: randomVideo.id + 1,
-                3: randomVideo.id + 2,
-                4: randomVideo.id + 3,
+                2: randomVideo.id,
+                3: randomVideo.id,
+                4: randomVideo.id,
             };
         } catch (error) {
             console.error(`Failed to fetch videos for section ${section} with tags`, tags, error);
@@ -228,6 +251,7 @@ class State {
             this.allTags = [...tags].sort((a, b) =>
                 a.title.localeCompare(b.title, undefined, { sensitivity: "base" }),
             );
+            console.log("Fetched all tags:", this.allTags.length);
         } catch (error) {
             console.error("Failed to fetch tags:", error);
             this.tags = [];

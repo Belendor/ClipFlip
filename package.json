@@ -9,16 +9,18 @@
     "start": "live-server --port=80 --no-browser --ignore=server/prisma/**,tmp_uploads/**,videos/**,node_modules/**",
     "start:dev": "live-server ./ --port=5500 --no-browser",
     "npx": "tailwindcss init",
-    "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --minify"
+    "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --minify",
+    "generate-tags": "tsx src/generate-tag-pages.ts"
   },
   "devDependencies": {
-    "@types/node": "^20.14.8",
+    "@types/node": "^20.19.42",
     "autoprefixer": "^10.4.21",
     "live-server": "^1.2.2",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.1.1",
     "tailwindcss": "^4.1.11",
     "ts-loader": "^9.5.1",
+    "tsx": "^4.22.4",
     "typescript": "^4.9.5",
     "webpack": "^5.92.1",
     "webpack-cli": "^5.1.4"
