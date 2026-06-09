@@ -241,7 +241,7 @@ function getThumbnailUrl(tag: TagPage, clipId: number): string {
 }
 
 function getVideoUrl(tag: TagPage, clipId: number): string {
-    return `${tag.videoBaseUrl}?id=${clipId}`;
+    return `https://clip-flip.com?id=${clipId}`;
 }
 
 function renderPreviewCards(tag: TagPage): string {
