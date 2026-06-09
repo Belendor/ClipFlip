@@ -254,7 +254,7 @@ function renderPreviewCards(tag: TagPage): string {
 
     return tag.videos
         .map((video) => {
-            const previewClipIds = video.clipIds.slice(0, 3);
+            const previewClipIds = video.clipIds.slice(0, 7);
 
             const img1 = previewClipIds[0]
                 ? getThumbnailUrl(tag, previewClipIds[0])
@@ -267,6 +267,18 @@ function renderPreviewCards(tag: TagPage): string {
             const img3 = previewClipIds[2]
                 ? getThumbnailUrl(tag, previewClipIds[2])
                 : img2;
+            const img4 = previewClipIds[3]
+                ? getThumbnailUrl(tag, previewClipIds[3])
+                : img3;
+            const img5 = previewClipIds[4]
+                ? getThumbnailUrl(tag, previewClipIds[4])
+                : img4; 
+            const img6 = previewClipIds[5]
+                ? getThumbnailUrl(tag, previewClipIds[5])
+                : img5; 
+            const img7 = previewClipIds[6]
+                ? getThumbnailUrl(tag, previewClipIds[6])
+                : img6;
 
             const firstClipId = video.clipIds[video.clipIds.length - 1];
             const href = firstClipId
@@ -277,7 +289,7 @@ function renderPreviewCards(tag: TagPage): string {
             <a href="${href}" class="tag-video-card" aria-label="${escapeHtml(video.title)}">
                 <div class="tag-preview"
                     title="${escapeHtml(video.title)}"
-                    style="--img-1: url('${img1}'); --img-2: url('${img2}'); --img-3: url('${img3}');">
+                    style="--img-1: url('${img1}'); --img-2: url('${img2}'); --img-3: url('${img3}'); --img-4: url('${img4}'); --img-5: url('${img5}'); --img-6: url('${img6}'); --img-7: url('${img7}');">
                 </div>
             </a>`;
         })

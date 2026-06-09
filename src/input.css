@@ -157,7 +157,7 @@
 }
 
 .tag-video-card:hover .tag-preview {
-    animation: previewSwap 1.2s steps(1, end) infinite;
+    animation: previewSwap 3.0s steps(1, end) infinite;
     filter: brightness(1.08);
 }
 
@@ -170,7 +170,7 @@
     padding: 4px 7px;
     border-radius: 999px;
 
-    background: rgba(0, 0, 0, 0.58);
+    /* background: rgba(0, 0, 0, 0.58); */
     color: rgba(255, 255, 255, 0.9);
 
     font-size: 0.62rem;
@@ -186,12 +186,28 @@
         background-image: var(--img-1);
     }
 
-    33% {
+    14% {
         background-image: var(--img-2);
     }
 
-    66% {
+    28% {
         background-image: var(--img-3);
+    }
+
+    42% {
+        background-image: var(--img-4);
+    }
+
+    56% {
+        background-image: var(--img-5);
+    }
+
+    70% {
+        background-image: var(--img-6);
+    }
+
+    84% {
+        background-image: var(--img-7);
     }
 
     100% {
