@@ -14,7 +14,7 @@ export default class User {
         await this.checkAuth();
 
         if (!this.currentUser) {
-            this.renderGoogleButton();
+            await this.renderGoogleButton();
         } else {
             this.renderUser();
         }
@@ -40,7 +40,6 @@ export default class User {
         }
 
         this.currentUser = data.user;
-
         this.renderUser();
     }
 
@@ -56,24 +55,24 @@ export default class User {
         }
     }
 
-    renderGoogleButton() {
+    async renderGoogleButton() {
+        await window.loadGoogleSignIn();
+
+        const buttonDiv = document.getElementById("google-login");
+        if (!buttonDiv) return;
+
+        buttonDiv.innerHTML = "";
+
         window.google.accounts.id.initialize({
             client_id: config.googleClientId,
             callback: this.handleGoogleLogin.bind(this),
         });
 
-        window.google.accounts.id.renderButton(
-            document.getElementById("google-login"),
-            {
-                theme: "filled_black",      // outline | filled_blue | filled_black
-                type: "icon",       // standard | icon
-                size: "medium",         // small | medium | large
-                // "data-text": "signin",   // signin_with | signup_with | continue_with | signin
-                // shape: "rectangular",         // rectangular | pill | circle | square
-                // logo_alignment: "left", // left | center
-                // width: "40"
-            }
-        );
+        window.google.accounts.id.renderButton(buttonDiv, {
+            theme: "filled_black",
+            type: "icon",
+            size: "medium",
+        });
     }
 
     renderUser() {
@@ -93,15 +92,17 @@ export default class User {
                 "
             />
         `;
-        div.addEventListener("click", () => {
+
+        div.onclick = () => {
             this.logout();
-        });
+        };
     }
 
     async signInWithGoogle() {
-            // This function is now handled by the Google Sign-In button callback
-            window.google.accounts.id.prompt();
+        await window.loadGoogleSignIn();
+        window.google.accounts.id.prompt();
     }
+
     async logout() {
         await fetch(`${config.apiUrl}/auth/logout`, {
             method: "POST",
@@ -110,6 +111,6 @@ export default class User {
 
         this.currentUser = null;
 
-        this.renderGoogleButton();
+        await this.renderGoogleButton();
     }
 }
