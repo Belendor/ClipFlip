@@ -567,9 +567,9 @@ class Players {
                 console.warn("Queued player was not fully ready before swap, attempting playback anyway", nextVideoId);
             }
 
-            nextPlayer.currentTime = 0;
+            // nextPlayer.currentTime = 0;
             await this.playPlayer(nextPlayer, nextIndex);
-            await this.waitForPlaybackStart(nextPlayer);
+            // await this.waitForPlaybackStart(nextPlayer);
             this.setSectionActivePlayer(section, nextIndex);
             currentPlayer.pause();
 
