@@ -124,10 +124,10 @@ class Players {
             return false;
         }
 
-        await this.waitForVideoReady(frontPlayer);
-        if (revision !== this.loadRevision) {
-            return false;
-        }
+        // await this.waitForVideoReady(frontPlayer);
+        // if (revision !== this.loadRevision) {
+        //     return false;
+        // }
 
         await this.playPlayer(frontPlayer, frontIndex);
         if (revision !== this.loadRevision) {
@@ -528,9 +528,9 @@ class Players {
         }
 
         try {
-            await video.play();
-            video.pause();
-            video.currentTime = 0;
+            // await video.play();
+            // video.pause();
+            // video.currentTime = 0;
         } catch (error) {
             console.warn("Failed to prime queued video", error);
         }
