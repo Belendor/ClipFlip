@@ -573,9 +573,13 @@ class Players {
             // await this.waitForPlaybackStart(nextPlayer);
             this.setSectionActivePlayer(section, nextIndex);
             currentPlayer.pause();
-
-            const nextMetadata = await this.getVideoMetadata(nextVideoId);
-            await this.populateMetadataForm(section, nextMetadata);
+            this.getVideoMetadata(nextVideoId)
+                .then((nextMetadata) => {
+                    return this.populateMetadataForm(section, nextMetadata);
+                })
+                .catch((error) => {
+                    console.error("Failed to load next metadata:", error);
+                });
 
             const queuedVideoId = await this.state.takeNextVideoId(section);
             if (queuedVideoId === 0) {
