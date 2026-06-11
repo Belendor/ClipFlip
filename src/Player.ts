@@ -162,7 +162,7 @@ class Players {
     }
 
     private configurePlayer(player: HTMLVideoElement, videoId: number, preload: "metadata" | "auto") {
-        player.poster = this.buildPosterUrl(videoId);
+        // player.poster = this.buildPosterUrl(videoId);
         player.preload = preload;
         player.muted = this.muted;
         player.playsInline = true;
