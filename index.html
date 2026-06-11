@@ -17,8 +17,13 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <title>ClipFlip - Free Endless Porn Clips, Fetish Videos & Tags</title>
+    <!-- Lazy-load full CSS -->
+    <link rel="preload" href="/dist/output.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+
+    <noscript>
+        <link rel="stylesheet" href="/dist/output.css">
+    </noscript>
     <script src="/dist/bundle.js" defer></script>
-    <link rel="stylesheet" href="/dist/output.css" defer>
     <meta name="twitter:card" content="player">
     <meta name="twitter:title" content="ClipFlip - Free Endless Porn Clips">
     <meta name="twitter:player:width" content="1280">
@@ -42,6 +47,100 @@
     <meta property="og:video:width" content="1080">
     <meta property="og:video:height" content="1920">
     <meta property="og:video:iframe" content="https://clip-flip.com/index.html">
+    <style>
+        :root {
+            --surface-strong: rgba(12, 14, 18, 0.88);
+            --surface-soft: rgba(22, 24, 29, 0.64);
+            --surface-border: rgba(255, 255, 255, 0.14);
+            --surface-highlight: rgba(255, 255, 255, 0.22);
+            --text-primary: #f5f7fb;
+            --text-muted: rgba(245, 247, 251, 0.62);
+            --accent: #8fd3ff;
+            --accent-strong: #5ab8ff;
+            --success: #6ee7b7;
+            --danger: #ff7c7c;
+            --shadow-soft: 0 20px 60px rgba(0, 0, 0, 0.34);
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            min-height: 100dvh;
+            background:
+                radial-gradient(circle at top, rgba(65, 108, 157, 0.22), transparent 24%),
+                radial-gradient(circle at bottom, rgba(255, 255, 255, 0.05), transparent 20%),
+                linear-gradient(180deg, #040507 0%, #0a0c10 100%);
+            overflow: hidden;
+            color: var(--text-primary);
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        #app-root {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #000;
+        }
+
+        .video-section {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at center, rgba(255, 255, 255, 0.03), transparent 38%),
+                #000;
+        }
+
+        .video-grid.single-view {
+            grid-template-columns: 1fr;
+            grid-template-rows: 1fr;
+        }
+
+        .video-grid.single-view .video-section:not(#section-1) {
+            display: none;
+        }
+
+        .video-grid.single-view #section-1 {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        @media (max-width: 900px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
 </head>
 
 <body>
