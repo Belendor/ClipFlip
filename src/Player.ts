@@ -563,10 +563,10 @@ class Players {
                 return;
             }
 
-            const ready = await this.waitForVideoReady(nextPlayer);
-            if (!ready) {
-                console.warn("Queued player was not fully ready before swap, attempting playback anyway", nextVideoId);
-            }
+            // const ready = await this.waitForVideoReady(nextPlayer);
+            // if (!ready) {
+            //     console.warn("Queued player was not fully ready before swap, attempting playback anyway", nextVideoId);
+            // }
 
             // nextPlayer.currentTime = 0;
 
