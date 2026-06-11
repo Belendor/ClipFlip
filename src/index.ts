@@ -16,12 +16,27 @@ declare global {
     }
 }
 
-let googleScriptLoaded = false;
+let googleScriptLoadPromise: Promise<void> | null = null;
 
 function loadGoogleSignIn(): Promise<void> {
-    return new Promise((resolve, reject) => {
-        if (googleScriptLoaded || window.google) {
-            resolve();
+    if (window.google?.accounts?.id) {
+        return Promise.resolve();
+    }
+
+    if (googleScriptLoadPromise) {
+        return googleScriptLoadPromise;
+    }
+
+    googleScriptLoadPromise = new Promise((resolve, reject) => {
+        const existingScript = document.querySelector(
+            'script[src="https://accounts.google.com/gsi/client"]'
+        );
+
+        if (existingScript) {
+            existingScript.addEventListener("load", () => resolve());
+            existingScript.addEventListener("error", () =>
+                reject(new Error("Failed to load Google Sign-In"))
+            );
             return;
         }
 
@@ -30,17 +45,13 @@ function loadGoogleSignIn(): Promise<void> {
         script.async = true;
         script.defer = true;
 
-        script.onload = () => {
-            googleScriptLoaded = true;
-            resolve();
-        };
-
-        script.onerror = () => {
-            reject(new Error("Failed to load Google Sign-In"));
-        };
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("Failed to load Google Sign-In"));
 
         document.head.appendChild(script);
     });
+
+    return googleScriptLoadPromise;
 }
 
 window.loadGoogleSignIn = loadGoogleSignIn;
@@ -56,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.html = html;
     window.players = players;
     window.user = user;
-    
+
     await user.init();
     players.init();
 });
