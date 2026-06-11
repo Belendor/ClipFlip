@@ -124,10 +124,10 @@ class Players {
             return false;
         }
 
-        // await this.waitForVideoReady(frontPlayer);
-        // if (revision !== this.loadRevision) {
-        //     return false;
-        // }
+        await this.waitForVideoReady(frontPlayer);
+        if (revision !== this.loadRevision) {
+            return false;
+        }
 
         await this.playPlayer(frontPlayer, frontIndex);
         if (revision !== this.loadRevision) {
@@ -528,9 +528,9 @@ class Players {
         }
 
         try {
-            // await video.play();
-            // video.pause();
-            // video.currentTime = 0;
+            await video.play();
+            video.pause();
+            video.currentTime = 0;
         } catch (error) {
             console.warn("Failed to prime queued video", error);
         }
@@ -550,7 +550,6 @@ class Players {
             const nextIndex = currentIndex === frontIndex ? backIndex : frontIndex;
             const currentPlayer = this.html.videoPlayers[currentIndex];
             const nextPlayer = this.html.videoPlayers[nextIndex];
-            this.playPlayer(nextPlayer, nextIndex);
             const finishedVideoId = this.getPlayerVideoId(currentPlayer);
 
             if (finishedVideoId) {
@@ -563,23 +562,19 @@ class Players {
                 return;
             }
 
-            // const ready = await this.waitForVideoReady(nextPlayer);
-            // if (!ready) {
-            //     console.warn("Queued player was not fully ready before swap, attempting playback anyway", nextVideoId);
-            // }
+            const ready = await this.waitForVideoReady(nextPlayer);
+            if (!ready) {
+                console.warn("Queued player was not fully ready before swap, attempting playback anyway", nextVideoId);
+            }
 
-            // nextPlayer.currentTime = 0;
-
-            // await this.waitForPlaybackStart(nextPlayer);
+            nextPlayer.currentTime = 0;
+            await this.playPlayer(nextPlayer, nextIndex);
+            await this.waitForPlaybackStart(nextPlayer);
             this.setSectionActivePlayer(section, nextIndex);
             currentPlayer.pause();
-            this.getVideoMetadata(nextVideoId)
-                .then((nextMetadata) => {
-                    return this.populateMetadataForm(section, nextMetadata);
-                })
-                .catch((error) => {
-                    console.error("Failed to load next metadata:", error);
-                });
+
+            const nextMetadata = await this.getVideoMetadata(nextVideoId);
+            await this.populateMetadataForm(section, nextMetadata);
 
             const queuedVideoId = await this.state.takeNextVideoId(section);
             if (queuedVideoId === 0) {
