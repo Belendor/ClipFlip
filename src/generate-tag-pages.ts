@@ -48,7 +48,17 @@ const tagPageConfigs: TagPageConfig[] = [
         heading: "Anal Porn Clips",
         intro:
             "Browse anal porn clips grouped by video title. Hover previews to see available clips, then open the endless player.",
-        related: ["amateur", "hardcore", "pov", "milf"],
+        related: ["ass"],
+    },
+    {
+        slug: "ass",
+        title: "Ass Porn Clips - Free Ass Videos | ClipFlip",
+        description:
+            "Browse free ass porn clips on ClipFlip. Watch adult video previews and open clips in the endless random player.",
+        heading: "Ass Porn Clips",
+        intro:
+            "Browse ass porn clips grouped by video title. Hover previews to see available clips, then open the endless player.",
+        related: ["panties"],
     },
     {
         slug: "amateur",
@@ -78,16 +88,6 @@ const tagPageConfigs: TagPageConfig[] = [
         heading: "Panties Porn Clips",
         intro:
             "Browse panties porn clips grouped by video title. Hover previews to see available clips, then open the endless player.",
-        related: [],
-    },
-    {
-        slug: "ass",
-        title: "Ass Porn Clips - Free Ass Videos | ClipFlip",
-        description:
-            "Browse free ass porn clips on ClipFlip. Watch adult video previews and open clips in the endless random player.",
-        heading: "Ass Porn Clips",
-        intro:
-            "Browse ass porn clips grouped by video title. Hover previews to see available clips, then open the endless player.",
         related: [],
     },
     {
