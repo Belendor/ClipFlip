@@ -550,6 +550,7 @@ class Players {
             const nextIndex = currentIndex === frontIndex ? backIndex : frontIndex;
             const currentPlayer = this.html.videoPlayers[currentIndex];
             const nextPlayer = this.html.videoPlayers[nextIndex];
+            this.playPlayer(nextPlayer, nextIndex);
             const finishedVideoId = this.getPlayerVideoId(currentPlayer);
 
             if (finishedVideoId) {
@@ -568,7 +569,7 @@ class Players {
             }
 
             // nextPlayer.currentTime = 0;
-            await this.playPlayer(nextPlayer, nextIndex);
+
             // await this.waitForPlaybackStart(nextPlayer);
             this.setSectionActivePlayer(section, nextIndex);
             currentPlayer.pause();
