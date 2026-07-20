@@ -39,3 +39,16 @@ export interface UpdateVideoPayload {
         title: string | string[];
     };
 }
+
+
+export interface NewVideo {
+    id: number;
+    title?: string | null;
+    studio?: string | null;
+    seriesNr?: number | null;
+    seriesTotal?: number | null;
+    tag?: {
+        id?: number;
+        title: string | string[];
+    };
+}

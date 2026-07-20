@@ -1,9 +1,11 @@
 import { config } from "./config";
 import VideoApi from "./VideoApi";
-import type { Tag, Video } from "./types";
+import type { NewVideo, Tag, Video } from "./types";
 
 export type SectionId = 1 | 2 | 3 | 4;
 export type PlayerIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type PlayerState = "random" | "favorite" | "new";
+
 
 type PositionsMap = Record<SectionId, number>;
 
@@ -11,6 +13,7 @@ class State {
     readonly PLAYED_KEY = "playedVideoIds";
     readonly sectionIds: SectionId[] = [1, 2, 3, 4];
 
+    state: PlayerState = "random"
     multiSection = false;
     randomized = true;
     percentChance = config.defaultPercentChance;
@@ -29,6 +32,8 @@ class State {
     };
     apiUrl = config.apiUrl;
     taggedVideos: Video[] | null = null;
+    newVideos: NewVideo[] | null = null;
+    likedVideos: Video[] | null = null;
     taggedVideosPromise: Promise<void> | undefined;
     advancedMode = false;
     active = {
@@ -50,7 +55,12 @@ class State {
     adminMode = false;
 
     constructor(private readonly api: VideoApi) {
-        this.resetActiveTags();
+
+        if (this.state === "new") {
+            this.fetchNewVideos();
+        } else {
+            this.resetActiveTags();
+        }
         this.tagsPromise = this.fetchAllTags();
         this.taggedVideosPromise = this.queryTags();
     }
@@ -140,7 +150,7 @@ class State {
         await this.fetchVideosByTags(1);
     }
 
-    async takeNextVideoId(section: SectionId, random: boolean = false): Promise<number> {
+    async takeNextVideoId(section: SectionId, random: boolean = false, skip: boolean = false): Promise<number> {
         const currentVideoId = this.positions[section];
         await this.modifyPosition(section, random);
         return currentVideoId;
@@ -157,6 +167,35 @@ class State {
         }
 
         this.played = this.getPlayedVideos();
+        if (this.state === "favorite" && this.likedVideos != null) {
+            if (this.likedVideos.length === 0) {
+                this.positions[section] = 0;
+                return;
+            }
+
+            const availableVideos = this.likedVideos.filter(video => !this.played.has(video.id));
+            if (availableVideos.length === 0) {
+                this.positions[section] = 0;
+                return;
+            }
+
+            const videoIds = availableVideos.map(video => video.id);
+            const currentIndex = videoIds.indexOf(this.positions[section]);
+
+            if (this.randomized) {
+                const roll = Math.random() * 100;
+                if (roll < this.percentChance || random) {
+                    const randomVideo =
+                        availableVideos[Math.floor(Math.random() * availableVideos.length)];
+
+                    this.positions[section] = randomVideo.id;
+                    return;
+                }
+            }
+
+            this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
+            return;
+        }
 
         if (this.taggedVideos != null) {
             if (this.taggedVideos.length === 0) {
@@ -244,6 +283,61 @@ class State {
             };
         }
     }
+    async fetchNewVideos(): Promise<void> {
+        console.log("Fetching new videos");;
+
+        this.clearEmptyState();
+
+        try {
+            if (!this.newVideos || this.newVideos.length === 0) {
+                this.newVideos = await this.api.fetchNewVideos();
+            }
+
+            console.log(this.newVideos);
+
+
+            this.randomized = false;
+            console.log("Retrieved number of new videos:", this.newVideos.length);
+            console.log(this.newVideos[0]?.id);
+
+            this.positions = {
+                1: this.newVideos[0]?.id || 0,
+                2: 0,
+                3: 0,
+                4: 0,
+            };
+        } catch (error) {
+            console.error("Failed to fetch new videos:", error);
+        }
+    }
+    async fetchLikedVideos(userId: number): Promise<void> {
+        console.log("Fetching liked videos");;
+
+        this.clearEmptyState();
+
+        try {
+            if (!this.likedVideos || this.likedVideos.length === 0) {
+                this.likedVideos = await this.api.fetchLikedVideos(userId);
+                console.log("Retrieved liked videos:", this.likedVideos.length);
+                
+            }
+
+            console.log(this.likedVideos);
+
+
+            this.randomized = true;
+            console.log(this.likedVideos[0]?.id);
+
+            this.positions = {
+                1: this.likedVideos[0]?.id || 0,
+                2: 0,
+                3: 0,
+                4: 0,
+            };
+        } catch (error) {
+            console.error("Failed to fetch liked videos:", error);
+        }
+    }
     async fetchAllTags() {
         try {
             const tags = await this.api.fetchTags();
@@ -259,7 +353,7 @@ class State {
         }
     }
 
-    private randomInRange(min: number, max: number) {
+    randomInRange(min: number, max: number) {
         const minInt = Math.floor(min);
         const maxInt = Math.floor(max);
         return Math.floor(Math.random() * (maxInt - minInt + 1)) + minInt;

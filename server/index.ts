@@ -15,6 +15,7 @@ const BATCH_SIZE = 2;
 import { OAuth2Client } from "google-auth-library";
 const prisma = new PrismaClient();
 import cookieParser from "cookie-parser";
+import { execSync } from 'child_process';
 
 const app = express();
 const port = 3000;
@@ -28,7 +29,14 @@ app.use(
 );
 app.use(express.json()); // Add this line to enable JSON body parsing
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
+function getVideoDuration(file: string): number {
+  return Number(
+    execSync(
+      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${file}"`,
+      { encoding: "utf8" }
+    ).trim()
+  );
+}
 app.post('/videos', async (req: Request, res: Response) => {
   try {
     const { id, studio, title, models, tag } = req.body;
@@ -368,6 +376,24 @@ app.get("/videos", async (req: Request, res: Response) => {
 
   res.json(mappedVideos);
 });
+app.get("/new", async (req: Request, res: Response) => {
+  try {
+    const videos = await prisma.newVideo.findMany({
+      orderBy: { id: "asc" },
+      include: {
+        tags: true,
+      }
+    });
+
+    res.json(videos);
+  } catch (error) {
+    console.error("Failed to fetch new videos:", error);
+
+    res.status(500).json({
+      error: "Failed to fetch new videos",
+    });
+  }
+});
 
 app.get('/tags', async (req, res) => {
   try {
@@ -652,70 +678,316 @@ app.get('/', async (req, res) => {
   //   res.status(500).json({ error: 'Seeding failed' })
   // }
 })
-app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
+// app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
+//   try {
+//     // find highest existing ID in ../output
+//     const outputDir = path.join(__dirname, '../video1');
+//     const outputDirThumbnails = path.join(__dirname, '../video1/thumbnails');
+//     const files = fsSync.readdirSync(outputDir);
+
+//     // let maxId = 0;
+//     // files.forEach(file => {
+//     //   const match = file.match(/^(\d+)\.mp4$/);
+//     //   if (match) {
+//     //     const num = parseInt(match[1], 10);
+//     //     if (num > maxId) maxId = num;
+//     //   }
+//     // });
+
+
+//     // console.log(`Last video ID in DB: ${lastVideo?.id || 0}, max ID in output folder: ${maxId}`);
+
+
+//     let nextId = 1;
+//     let nextVideo = nextId;
+//     const segmentLength = 3;
+//     let segmentId = 1;
+
+//     // save each uploaded file into the new folder
+//     for (const file of req.files as Express.Multer.File[]) {
+//       const duration = getVideoDuration(file.path);
+//       for (let start = 0; start < duration; start += segmentLength) {
+//         const videoOut = path.join(outputDir, `${segmentId}.mp4`);
+//         const firstOut = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
+//         const middleOut = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
+//         execSync(
+//           `ffmpeg -y -ss ${start} -i "${videoPath}" -t ${segmentLength} -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k "${videoOut}"`,
+//           { stdio: "inherit" }
+//         );
+
+//         execSync(
+//           `ffmpeg -y -ss ${start} -i "${videoPath}" -frames:v 1 "${firstOut}"`,
+//           { stdio: "inherit" }
+//         );
+
+//         const mid = (start + segmentLength / 2).toFixed(2);
+
+//         execSync(
+//           `ffmpeg -y -ss ${mid} -i "${videoPath}" -frames:v 1 "${middleOut}"`,
+//           { stdio: "inherit" }
+//         );
+
+//         segmentId++;
+//       }
+//       console.log(`Video ${file.originalname} duration: ${duration} seconds`);
+//       const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
+//       fsSync.renameSync(file.path, targetPath);
+//       nextVideo++;
+//     }
+
+//     // // add to DB — you can tweak fields to match your schema
+//     // const { title, tagId } = req.body;
+
+//     // const createdVideos = [];
+
+//     // for (const file of req.files as Express.Multer.File[]) {
+//     //   const video = await prisma.video.create({
+//     //     data: {
+//     //       id: nextId, // or let DB auto-generate if you don't set ID manually
+//     //       title: title || "",
+//     //       tags: tagId
+//     //         ? { connect: [{ id: Number(tagId) }] }
+//     //         : undefined,
+//     //     },
+//     //     include: { tags: true }
+//     //   });
+//     //   nextId++;
+//     //   createdVideos.push(video);
+//     // }
+
+//     res.json({ success: true });
+
+//   } catch (error) {
+//     console.error('Error handling upload:', error);
+//     res.status(500).json({
+//       error: 'Failed to upload video',
+//       details: error instanceof Error ? error.message : 'Unknown error'
+//     });
+//   }
+// });
+app.post("/upload-video", upload.array("files"), async (req: Request, res: Response) => {
   try {
-    // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../video1');
-    const files = fsSync.readdirSync(outputDir);
+    const outputDir = path.join(__dirname, "../video1/new");
+    const outputDirThumbnails = path.join(__dirname, "../video1/new/thumbnails");
+    function getHighestNumericId(dir: string): number {
+      let maxId = 0;
 
-    let maxId = 0;
-    files.forEach(file => {
-      const match = file.match(/^(\d+)\.mp4$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxId) maxId = num;
+      for (const file of fsSync.readdirSync(dir)) {
+        const match = file.match(/^(\d+)\.mp4$/);
+
+        if (!match) continue;
+
+        const id = Number(match[1]);
+
+        if (id > maxId) {
+          maxId = id;
+        }
       }
-    });
 
-    // get the highest current ID in DB
-    const lastVideo = await prisma.video.findFirst({
-      orderBy: { id: 'desc' },
-      select: { id: true }
-    });
-    console.log(`Last video ID in DB: ${lastVideo?.id || 0}, max ID in output folder: ${maxId}`);
-
-
-    let nextId = (lastVideo?.id || 0) + 1;
-    let nextVideo = nextId;
-
-    // save each uploaded file into the new folder
-    for (const file of req.files as Express.Multer.File[]) {
-      const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
-      fsSync.renameSync(file.path, targetPath);
-      nextVideo++;
+      return maxId;
     }
 
-    // add to DB — you can tweak fields to match your schema
-    const { title, tagId } = req.body;
+    let nextVideo = getHighestNumericId(outputDir) + 1;
+    let segmentId = getHighestNumericId(outputDir) + 1;
+    const { tagId } = req.body;
 
-    const createdVideos = [];
+    const segmentLength = 3;
 
     for (const file of req.files as Express.Multer.File[]) {
-      const video = await prisma.video.create({
-        data: {
-          id: nextId, // or let DB auto-generate if you don't set ID manually
-          title: title || "",
-          tags: tagId
-            ? { connect: [{ id: Number(tagId) }] }
-            : undefined,
-        },
-        include: { tags: true }
-      });
-      nextId++;
-      createdVideos.push(video);
+      const duration = getVideoDuration(file.path);
+
+      console.log(`Video ${file.originalname} duration: ${duration} seconds`);
+
+      for (let start = 0; start + segmentLength <= duration; start += segmentLength) {
+
+        const end = start + segmentLength;
+
+
+        const newVideo = await prisma.newVideo.create({
+          data: {
+            title: file.originalname,
+            startTime: start,
+            endTime: end,
+            tags: tagId
+              ? { connect: [{ id: Number(tagId) }] }
+              : undefined,
+          },
+          include: {
+            tags: true,
+          },
+        });
+
+        const segmentId = newVideo.id;
+
+        const videoOut = path.join(outputDir, `${segmentId}.mp4`);
+        const firstOut = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
+        const middleOut = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
+
+        execSync(
+          `ffmpeg -y -ss ${start} -i "${file.path}" -t ${segmentLength} -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k "${videoOut}"`,
+          { stdio: "inherit" }
+        );
+
+        execSync(
+          `ffmpeg -y -ss ${start} -i "${file.path}" -frames:v 1 "${firstOut}"`,
+          { stdio: "inherit" }
+        );
+
+        const mid = ((start + end) / 2).toFixed(2);
+
+        execSync(
+          `ffmpeg -y -ss ${mid} -i "${file.path}" -frames:v 1 "${middleOut}"`,
+          { stdio: "inherit" }
+        );
+
+        console.log(`Created segment ${segmentId}`);
+      }
+
+      fsSync.unlinkSync(file.path);
     }
 
-    res.json({ success: true, videos: createdVideos });
-
+    res.json({ success: true });
   } catch (error) {
-    console.error('Error handling upload:', error);
+    console.error("Error handling upload:", error);
+
     res.status(500).json({
-      error: 'Failed to upload video',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: "Failed to upload video",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
 
+app.delete("/video/:id", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    console.log(id);
+
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+
+    const outputDir = path.join(__dirname, "../video1/new");
+    const thumbnailsDir = path.join(outputDir, "thumbnails");
+
+    const videoFile = path.join(outputDir, `${id}.mp4`);
+    console.log(videoFile);
+
+    const firstImage = path.join(thumbnailsDir, `${id}_first.jpg`);
+    const middleImage = path.join(thumbnailsDir, `${id}_middle.jpg`);
+
+    const result = await prisma.newVideo.delete({
+      where: { id },
+    });
+    console.log(result);
+
+
+    const deleteIfExists = (file: string) => {
+      console.log("Deleting:", file);
+
+      if (!fsSync.existsSync(file)) {
+        console.log("Doesn't exist");
+        return;
+      }
+
+      try {
+        fsSync.unlinkSync(file);
+        console.log("Deleted");
+      } catch (e) {
+        console.error("Failed:", e);
+      }
+    };
+
+    deleteIfExists(videoFile);
+    deleteIfExists(firstImage);
+    deleteIfExists(middleImage);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to delete video",
+    });
+  }
+});
+app.post("/video/:id/approve", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+
+    const approvedDir = path.join(__dirname, "../video");
+    const pendingDir = path.join(__dirname, "../video1/new");
+
+    const approvedThumbDir = path.join(approvedDir, "thumbnails");
+    const pendingThumbDir = path.join(pendingDir, "thumbnails");
+
+    const sourceVideo = path.join(pendingDir, `${id}.mp4`);
+    const destVideo = path.join(approvedDir, `${id}.mp4`);
+
+    const sourceFirstThumb = path.join(pendingThumbDir, `${id}_first.jpg`);
+    const sourceMiddleThumb = path.join(pendingThumbDir, `${id}_middle.jpg`);
+
+    const destFirstThumb = path.join(approvedThumbDir, `${id}.jpg`);
+    const destMiddleThumb = path.join(approvedThumbDir, `${id}_mid.jpg`);
+
+    // Get metadata
+    const newVideo = await prisma.newVideo.findUnique({
+      where: { id },
+      include: {
+        tags: true,
+      },
+    });
+    console.log(newVideo);
+
+
+    if (!newVideo) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    // Copy metadata to main table
+    await prisma.video.create({
+      data: {
+        title: newVideo.title,
+        tags: {
+          connect: newVideo.tags.map((tag) => ({ id: tag.id })),
+        },
+        // copy any other fields you have
+      },
+    });
+
+    // Copy files
+    fsSync.copyFileSync(sourceVideo, destVideo);
+    fsSync.copyFileSync(sourceFirstThumb, destFirstThumb);
+    fsSync.copyFileSync(sourceMiddleThumb, destMiddleThumb);
+
+    // Delete originals
+    const deleteIfExists = (file: string) => {
+      if (fsSync.existsSync(file)) {
+        fsSync.unlinkSync(file);
+      }
+    };
+
+    deleteIfExists(sourceVideo);
+    deleteIfExists(sourceFirstThumb);
+    deleteIfExists(sourceMiddleThumb);
+
+    // Remove from newVideo table
+    await prisma.newVideo.delete({
+      where: { id },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to approve video",
+    });
+  }
+});
 app.get("/download", async (_req, res) => {
   const FULL_SAMPLE_URL =
     "https://ev-h.phncdn.com/hls/videos/202408/06/456164611/1080P_4000K_456164611.mp4/seg-2-v1-a1.ts?validfrom=1780178723&validto=1780185923&ipa=1&hdl=-1&hash=qHHle%2BaybF2PdkmJucRjU2%2Bw5cI%3D";
@@ -806,14 +1078,19 @@ app.post("/auth/google", async (req: Request, res: Response) => {
       secure: false, // true on https production
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
+    console.log(user);
 
     return res.json({ success: true, user });
   } catch (err) {
     return res.status(401).json({ success: false, error: "Login failed" });
   }
 });
-app.get("/auth/me", async (req: Request, res: Response) => {
+// app.get("/auth/me", async (req: Request, res: Response) => {
+app.get("/auth/me", async (req, res) => {
+  console.log("cookies:", req.cookies);
+
   const userId = Number(req.cookies.userId);
+  console.log("userId:", userId);
 
   if (!userId) {
     return res.json({ loggedIn: false, user: null });
@@ -823,11 +1100,63 @@ app.get("/auth/me", async (req: Request, res: Response) => {
     where: { id: userId },
   });
 
-  if (!user) {
-    return res.json({ loggedIn: false, user: null });
-  }
+  console.log(user);
 
-  return res.json({ loggedIn: true, user });
+  res.json({
+    loggedIn: !!user,
+    user,
+  });
+});
+//   const userId = Number(req.cookies.userId);
+
+//   if (!userId) {
+//     return res.json({ loggedIn: false, user: null });
+//   }
+
+//   const user = await prisma.user.findUnique({
+//     where: { id: userId },
+//   });
+//   console.log(user);
+//   console.log("?????");
+
+//   if (!user) {
+//     return res.json({ loggedIn: false, user: null });
+//   }
+
+//   return res.json({ loggedIn: true, user });
+// });
+app.get("/videos/favorites/:userId", async (req: Request, res: Response) => {
+  try {
+    const userId = Number(req.params.userId);
+
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const videos = await prisma.video.findMany({
+      where: {
+        reactions: {
+          some: {
+            userId,
+            // type: "favorite",
+          },
+        },
+      },
+      include: {
+        tags: true,
+      },
+      orderBy: {
+        id: "desc",
+      },
+    });
+
+    res.json(videos);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Failed to fetch favorite videos",
+    });
+  }
 });
 app.post("/auth/logout", (req: Request, res: Response) => {
   res.clearCookie("userId");

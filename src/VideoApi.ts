@@ -1,4 +1,4 @@
-import type { Tag, Video, VideoWithRelations, UpdateVideoPayload } from "./types";
+import type { Tag, Video, VideoWithRelations, UpdateVideoPayload, NewVideo } from "./types";
 
 export default class VideoApi {
     constructor(private readonly apiUrl: string) { }
@@ -20,6 +20,18 @@ export default class VideoApi {
         });
     }
 
+    async fetchNewVideos(): Promise<NewVideo[]> {
+        return this.request<NewVideo[]>(`/new`,{
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+    }
+    async fetchLikedVideos(userId: number): Promise<NewVideo[]> {
+        return this.request<NewVideo[]>(`/videos/favorites/${userId}`,{
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        });
+    }
     async fetchVideosByTags(tags: string[], limit: number): Promise<Video[]> {
         return this.request<Video[]>("/videos/by-tags", {
             method: "POST",
@@ -52,7 +64,18 @@ export default class VideoApi {
             body: JSON.stringify({ tagTitle, videoId }),
         });
     }
-
+    async removeVideo(videoId: number): Promise<void> {
+        await this.request(`/video/${videoId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+        });
+    }
+    async saveVideo(videoId: number): Promise<void> {
+        await this.request(`/video/${videoId}/approve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+        });
+    }
     async uploadVideo(formData: FormData): Promise<void> {
         const response = await fetch(`${this.apiUrl}/upload-video`, {
             method: "POST",

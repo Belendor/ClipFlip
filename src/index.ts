@@ -68,6 +68,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.players = players;
     window.user = user;
 
-    await user.init();
     players.init();
 });

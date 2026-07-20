@@ -19,6 +19,19 @@ model Video {
   models      Model[] @relation("VideoModels")
   tags        Tag[]   @relation("VideoTags")
 }
+model NewVideo {
+  id          Int     @id @default(autoincrement())
+  title       String?
+  seriesNr    Int?
+  seriesTotal Int?
+  studio      String?
+
+  startTime   Float
+  endTime     Float
+
+  models      Model[] @relation("NewVideoModels")
+  tags        Tag[]   @relation("NewVideoTags")
+}
 model VideoReaction {
   userId    Int
   videoId   Int
@@ -32,16 +45,18 @@ model VideoReaction {
 }
 
 model Tag {
-  id     Int     @id @default(autoincrement())
-  title  String? @unique
-  videos Video[] @relation("VideoTags")
+  id        Int        @id @default(autoincrement())
+  title     String?    @unique
+  videos    Video[]    @relation("VideoTags")
+  newVideos NewVideo[] @relation("NewVideoTags")
 }
 
 model Model {
-  id     Int     @id @default(autoincrement())
-  name   String  @unique
-  alias  String?
-  videos Video[] @relation("VideoModels")
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  alias     String?
+  videos    Video[]    @relation("VideoModels")
+  newVideos NewVideo[] @relation("NewVideoModels")
 }
 
 model User {

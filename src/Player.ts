@@ -2,16 +2,17 @@ import State, { type SectionId, PlayerIndex } from "./State";
 import HTML from "./HTML";
 import { config } from "./config";
 import VideoApi from "./VideoApi";
-import type { Tag, Video, VideoWithRelations, UpdateVideoPayload } from "./types";
+import type { Tag, Video, VideoWithRelations, UpdateVideoPayload, NewVideo } from "./types";
 import User from "./User";
 
 type SectionSwapState = Record<SectionId, boolean>;
 
 class Players {
-    private readonly folder = config.videoSourcePath;
     private readonly folder1 = "https://clip-flip.com/video1/";
+    private readonly newFolder = "https://clip-flip.com/video1/new/";
+    private readonly folder = config.videoSourcePath;
     private readonly thumbnailFolder = config.thumbnailSourcePath;
-    private readonly metadataCache = new Map<number, Promise<VideoWithRelations | null>>();
+    private readonly metadataCache = new Map<number, Promise<VideoWithRelations | NewVideo | null>>();
     private readonly pendingSwap: SectionSwapState = {
         1: false,
         2: false,
@@ -177,21 +178,31 @@ class Players {
     }
 
     private buildVideoUrl(videoId: number): string {
+
         const folderMap = [
             { max: 11255, folder: this.folder },
             { max: Infinity, folder: this.folder1 }
         ];
         const match = folderMap.find(rule => videoId <= rule.max);
+        const folder = this.state.state === "new" ? this.newFolder : match?.folder;
 
         if (!match) {
             throw new Error(`No folder mapping found for videoId: ${videoId}`);
         }
 
-        return `${match.folder}${videoId}.mp4`;
+        return `${folder}${videoId}.mp4`;
     }
 
     private buildPosterUrl(videoId: number): string {
-        return `${this.folder}thumbnails/${videoId}.jpg`;
+        const folder =
+            this.state.state === "new"
+                ? this.newFolder
+                : config.videoSourcePath;
+        if (this.state.state === "new") {
+            return `${folder}thumbnails/${videoId}_first.jpg`;
+        }
+
+        return `${folder}thumbnails/${videoId}.jpg`;
     }
 
     private getPlayerVideoId(player: HTMLVideoElement): number {
@@ -473,13 +484,24 @@ class Players {
 
     private async getVideoMetadata(videoId: number, refresh: boolean = false): Promise<VideoWithRelations | null> {
         if (!this.metadataCache.has(videoId) || refresh) {
-            this.metadataCache.set(
-                videoId,
-                this.api.fetchVideoMetadata(videoId).catch((error) => {
-                    console.error(`Error fetching metadata for videoId ${videoId}:`, error);
-                    return null;
-                }),
-            );
+            if (this.state.state == "new") {
+                const newVideo = this.state?.newVideos?.find((video) => video.id === videoId) || null;
+                if (!newVideo) {
+                    throw new Error(`New video with ID ${videoId} not found in state`);
+                }
+                this.metadataCache.set(
+                    videoId,
+                    Promise.resolve(newVideo)
+                );
+            } else {
+                this.metadataCache.set(
+                    videoId,
+                    this.api.fetchVideoMetadata(videoId).catch((error) => {
+                        console.error(`Error fetching metadata for videoId ${videoId}:`, error);
+                        return null;
+                    }),
+                );
+            }
         }
 
         return this.metadataCache.get(videoId) ?? null;
@@ -624,70 +646,72 @@ class Players {
             return;
         }
         const metadataHeader = document.getElementById(`metadata-header-${section}`);
+        if (this.state.state !== "new") {
 
-        const oldFavoriteBtn = metadataHeader?.querySelector<HTMLButtonElement>(".favorite-btn");
 
-        if (!oldFavoriteBtn) {
-            throw new Error("Favorite button not found in metadata header");
-        }
+            const oldFavoriteBtn = metadataHeader?.querySelector<HTMLButtonElement>(".favorite-btn");
 
-        const favoriteBtn = oldFavoriteBtn.cloneNode(true) as HTMLButtonElement;
-        oldFavoriteBtn.replaceWith(favoriteBtn);
-        if (!favoriteBtn) {
-            throw new Error("Favorite button not found in metadata header");
-        }
-        const heart = favoriteBtn.querySelector(".favorite-heart") as HTMLSpanElement;
-        const count = favoriteBtn.querySelector(".favorite-count") as HTMLSpanElement;
-
-        const currentCount = video.reactions?.length ?? 0;
-        const userLiked = video.reactions?.some(
-            (r) => r.userId === this.user.currentUser?.id
-        ) ?? false;
-        // favoriteBtn.classList.toggle("active", userLiked);
-        // console.log(isActive);
-
-        if (!userLiked) {
-            heart.textContent = "♡";
-            count.textContent = String(currentCount);
-            favoriteBtn.classList.remove("active");
-        } else {
-            heart.textContent = "♥";
-            count.textContent = String(currentCount);
-            favoriteBtn.classList.add("active");
-        }
-
-        favoriteBtn.addEventListener("click", async () => {
-            console.log("Clicked favorite button");
-            if (!this.user.currentUser) {
-                (
-                    document.querySelector("#google-login div[role='button']") as HTMLElement
-                )?.click();
-                return;
+            if (!oldFavoriteBtn) {
+                throw new Error("Favorite button not found in metadata header");
             }
 
-            try {
-                const data = await this.api.react(Number(video.id), "like");
-                console.log(data);
+            const favoriteBtn = oldFavoriteBtn.cloneNode(true) as HTMLButtonElement;
+            oldFavoriteBtn.replaceWith(favoriteBtn);
+            if (!favoriteBtn) {
+                throw new Error("Favorite button not found in metadata header");
+            }
+            const heart = favoriteBtn.querySelector(".favorite-heart") as HTMLSpanElement;
+            const count = favoriteBtn.querySelector(".favorite-count") as HTMLSpanElement;
 
+            const currentCount = video.reactions?.length ?? 0;
+            const userLiked = video.reactions?.some(
+                (r) => r.userId === this.user.currentUser?.id
+            ) ?? false;
+            // favoriteBtn.classList.toggle("active", userLiked);
+            // console.log(isActive);
 
-                let isActive = favoriteBtn.classList.contains("active");
+            if (!userLiked) {
+                heart.textContent = "♡";
+                count.textContent = String(currentCount);
+                favoriteBtn.classList.remove("active");
+            } else {
+                heart.textContent = "♥";
+                count.textContent = String(currentCount);
+                favoriteBtn.classList.add("active");
+            }
 
-                if (isActive) {
-                    heart.textContent = "♡";
-                    count.textContent = String(data.likes);
-                    favoriteBtn.classList.remove("active");
-                } else {
-                    heart.textContent = "♥";
-                    count.textContent = String(data.likes);
-
-                    favoriteBtn.classList.add("active");
-
+            favoriteBtn.addEventListener("click", async () => {
+                console.log("Clicked favorite button");
+                if (!this.user.currentUser) {
+                    (
+                        document.querySelector("#google-login div[role='button']") as HTMLElement
+                    )?.click();
+                    return;
                 }
-            } catch (error) {
-                console.error("Favorite failed", error);
-            }
-        });
 
+                try {
+                    const data = await this.api.react(Number(video.id), "like");
+                    console.log(data);
+
+
+                    let isActive = favoriteBtn.classList.contains("active");
+
+                    if (isActive) {
+                        heart.textContent = "♡";
+                        count.textContent = String(data.likes);
+                        favoriteBtn.classList.remove("active");
+                    } else {
+                        heart.textContent = "♥";
+                        count.textContent = String(data.likes);
+
+                        favoriteBtn.classList.add("active");
+
+                    }
+                } catch (error) {
+                    console.error("Favorite failed", error);
+                }
+            });
+        }
         form.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
             switch (input.placeholder) {
                 case "id":
@@ -704,6 +728,47 @@ class Players {
                     break;
             }
         });
+
+        const removeBtn = form.querySelector(".remove-clip-btn") as HTMLButtonElement | null;
+
+        if (removeBtn) {
+            removeBtn.onclick = async () => {
+                if (!confirm("Delete this clip?")) return;
+
+                try {
+                    await this.api.removeVideo(video.id);
+                    this.state.newVideos = this.state.newVideos?.filter((v) => v.id !== video.id) ?? null;
+                    if (this.state.active[0]) {
+                        this.handlePlayerEnded(0 as PlayerIndex);
+                    } else if (this.state.active[1]) {
+                        this.handlePlayerEnded(1 as PlayerIndex);
+
+                    }
+                } catch (error) {
+                    alert("Failed to delete clip");
+                    console.error("Delete failed", error);
+                }
+            };
+        }
+        const saveBtn = form.querySelector(".add-clip-btn") as HTMLButtonElement | null;
+        if (saveBtn) {
+            saveBtn.onclick = async () => {
+                console.log("clicked")
+                try {
+                    await this.api.saveVideo(video.id);
+                    this.state.newVideos = this.state.newVideos?.filter((v) => v.id !== video.id) ?? null;
+                    if (this.state.active[0]) {
+                        this.handlePlayerEnded(0 as PlayerIndex);
+                    } else if (this.state.active[1]) {
+                        this.handlePlayerEnded(1 as PlayerIndex);
+
+                    }
+                } catch (error) {
+                    alert("Failed to delete clip");
+                    console.error("Delete failed", error);
+                }
+            };
+        }
 
         const tagsWrapper = this.html.videoTagsContainers[section - 1];
         if (!tagsWrapper) {
@@ -862,7 +927,7 @@ class Players {
         return this.api.fetchVideos(query);
     }
 
-    private createMetadataFormContainers(): void {
+    private createMetadataFormContainers(newVideo: boolean = true): void {
         let count = 0;
         this.state.sectionIds.forEach((section) => {
             if (!this.state.multiSection && section !== 1) {
@@ -884,6 +949,23 @@ class Players {
         if (!form) {
             throw new Error("Metadata form not found");
         }
+        // === CLEAN TABS (Minimal impact on layout) ===
+        form.replaceChildren()
+        const tabsContainer = document.createElement("div");
+        tabsContainer.className = "metadata-tabs";
+
+        const createTab = (text: "random" | "new" | "favorite") => {
+            const tab = document.createElement("button");
+            tab.className = `metadata-tab${this.state.state === text ? " active" : ""}`;
+            tab.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+            return tab;
+        };
+
+        const tabRandom = createTab("random");
+        const tabNew = createTab("new");
+        const tabFavorite = createTab("favorite");
+
+        tabsContainer.append(tabRandom, tabNew, tabFavorite);
 
         const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
             const input = document.createElement("input");
@@ -966,7 +1048,32 @@ class Players {
             showMetadataBtn.classList.add("hidden");
         });
 
-        metadataHeader.append(metadataTitleGroup, editToggleBtn, favoriteBtn, closeMetadataBtn);
+        if (this.state.state === "new") {
+            console.log(this.state.state)
+            const clipActions = document.createElement("div");
+            clipActions.className = "clip-actions";
+
+            const addClipBtn = document.createElement("button");
+            addClipBtn.type = "button";
+            addClipBtn.className = "clip-action-btn add-clip-btn";
+            addClipBtn.innerHTML = `
+                                    <span>Add</span>
+                                `;
+            addClipBtn.title = "Add clip";
+
+            const removeClipBtn = document.createElement("button");
+            removeClipBtn.type = "button";
+            removeClipBtn.className = "clip-action-btn remove-clip-btn";
+            removeClipBtn.innerHTML = `
+                <span>Remove</span>
+            `;
+            removeClipBtn.title = "Remove clip";
+
+            clipActions.append(addClipBtn, removeClipBtn);
+            metadataHeader.append(editToggleBtn, closeMetadataBtn, clipActions);
+        } else {
+            metadataHeader.append(metadataTitleGroup, editToggleBtn, favoriteBtn, closeMetadataBtn);
+        }
 
         const videoTagsContainer = this.html.createDiv(`video-tags-${section}`, "metadata-tags-panel");
         const videoTagsWrapper = this.html.createDiv(`video-tags-wrapper-${section}`, "tag-container metadata-tag-list");
@@ -1100,7 +1207,38 @@ class Players {
         };
 
         editToggleBtn.addEventListener("click", toggleEditMode);
+        form.prepend(tabsContainer)
         form.append(videoTagsContainer, editorPanel);
+        // Tab switching
+        // Insert tabs at the top
+        // form.append(tabsContainer);   // or form.insertBefore(tabsContainer, videoTagsContainer);
+
+        // Tab switching
+        tabsContainer.addEventListener("click", async (e) => {
+            const target = e.target as HTMLButtonElement;
+            if (!target.textContent) return;
+
+            if (target === tabRandom) {
+                await this.switchMode("random");
+            }
+            else if (target === tabNew) {
+                await this.switchMode("new");
+            }
+            else if (target === tabFavorite) {
+                await this.switchMode("favorite");
+            }
+
+            tabRandom.style.background = target === tabRandom ? "#4ade80" : "transparent";
+            tabRandom.style.color = target === tabRandom ? "black" : "#ccc";
+
+            tabNew.style.background = target === tabNew ? "#4ade80" : "transparent";
+            tabNew.style.color = target === tabNew ? "black" : "#ccc";
+
+            tabFavorite.style.background = target === tabFavorite ? "#4ade80" : "transparent";
+            tabFavorite.style.color = target === tabFavorite ? "black" : "#ccc";
+
+            console.log("Tab:", target.textContent);
+        });
     }
 
     private getActiveIndexForSection(section: number): PlayerIndex {
@@ -1142,6 +1280,43 @@ class Players {
             console.error(`Failed to update metadata for video ${activeIndex}:`, error);
             return null;
         }
+    }
+    private async switchMode(mode: "random" | "new" | "favorite") {
+        if (this.state.state === mode)
+            return;
+
+        this.state.state = mode;
+
+        this.metadataCache.clear();
+
+        this.resetPlaybackSurface();
+
+        switch (mode) {
+            case "random":
+                this.state.randomized = true;
+                this.state.endIndex = config.defaultEndIndex
+                await this.state.modifyPosition(1, true, this.state.randomInRange(1, this.state.endIndex));
+                await this.state.modifyPosition(1,);
+
+                break;
+
+            case "new":
+                this.state.randomized = false;
+                await this.state.fetchNewVideos();
+                break;
+
+            case "favorite":
+                const id = this.user?.getId()
+                console.log(id, "<<<<<<<<<");
+                
+                if(!id) return
+                await this.state.fetchLikedVideos(id);
+                this.state.modifyPosition(1, false, 0);
+                break;
+        }
+
+        this.createMetadataForm(1);      // only recreate the form if needed
+        await this.loadVideos();         // <-- THIS loads the first video
     }
 }
 

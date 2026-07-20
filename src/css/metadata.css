@@ -1,4 +1,4 @@
-.metadata-form {
+/* .metadata-form {
     z-index: 3;
     position: absolute;
     left: 14px;
@@ -11,7 +11,7 @@
     border: 0.5px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
     padding: 10px;
-}
+} */
 
 .metadata-header {
     display: flex;

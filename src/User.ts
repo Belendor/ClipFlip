@@ -14,7 +14,7 @@ export default class User {
         await this.checkAuth();
 
         if (!this.currentUser) {
-            await this.renderGoogleButton();
+            await this.renderGoogleButton();    
         } else {
             this.renderUser();
         }
@@ -44,15 +44,22 @@ export default class User {
     }
 
     async checkAuth() {
+        console.log("Checking autgh");
+        
         const res = await fetch(`${config.apiUrl}/auth/me`, {
             credentials: "include",
         });
 
         const data = await res.json();
+        console.log(data, "Auth data");
+        
 
         if (data.loggedIn) {
             this.currentUser = data.user;
         }
+    }
+    getId () {
+        return this.currentUser?.id;
     }
 
     async renderGoogleButton() {

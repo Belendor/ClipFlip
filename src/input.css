@@ -6,6 +6,58 @@
 /* @import './css/metadata.css'; */
 
 
+.clip-actions {
+    display: flex;
+    gap: 10px;
+    /* margin-top: 12px;
+    padding: 10px 0; */
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.clip-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* gap: 7px; */
+
+    padding: 4px 8px; 
+    border-radius: 10px;
+    max-width: 84px;
+    min-width: 84px;
+    /* font-size: 13px;
+    font-weight: 500; */
+
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+}
+
+.clip-icon {
+    font-size: 15px;
+}
+
+/* Add clip */
+.add-clip-btn {
+    border: 1px solid rgba(60, 200, 120, 0.5);
+}
+
+.add-clip-btn:hover {
+    background: rgba(60, 200, 120, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Remove clip */
+.remove-clip-btn {
+    border: 1px solid rgba(240, 70, 70, 0.5);
+}
+
+.remove-clip-btn:hover {
+    background: rgba(240, 70, 70, 0.2);
+    transform: translateY(-1px);
+}
+
 .tag-page {
     overflow-y: auto;
     overflow-x: hidden;
@@ -253,35 +305,6 @@
     display: none !important;
 }
 
-.tabs {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    display: flex;
-    gap: 8px;
-}
-
-.tab {
-    border: none;
-    background: transparent;
-    color: #888;
-    padding: 8px 14px;
-    border-radius: 999px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s ease;
-    z-index: 20;
-}
-
-.tab.active {
-    background: #111;
-    color: white;
-}
-
-.tab:hover:not(.active) {
-    background: #f2f2f2;
-}
-
 .metadata-header {
     position: relative;
     display: flex;
@@ -294,7 +317,52 @@
     flex: 1;
     min-width: 0;
 }
+.metadata-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    background: #2b2b2b;
+    border-radius: 8px;
+    width: fit-content;
+    margin-bottom: 5px;
+}
 
+.metadata-tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #bbb;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    width: min-content;
+    cursor: pointer;
+    transition:
+        background-color 0.2s,
+        color 0.2s,
+        transform 0.15s;
+}
+
+.metadata-tab:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.metadata-tab.active {
+    background: #4ade80;
+    color: #111;
+}
+
+.metadata-tab:active {
+    transform: scale(0.97);
+}
+
+.metadata-tab:focus-visible {
+    outline: 2px solid #4ade80;
+    outline-offset: 2px;
+}
 .favorite-btn {
     position: relative;
     display: inline-flex;
@@ -339,8 +407,8 @@
 
 .metadata-close-btn {
     position: absolute;
-    top: -25px;
-    right: -10px;
+    top: -55px;
+    right: -7px;
     z-index: 20;
 
     background: transparent;

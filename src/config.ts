@@ -4,13 +4,13 @@ const isProduction = isBrowser && (window.location.hostname === 'clip-flip.com' 
 console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 const local = false;
-const apiURL = local ? "https://clip-flip.com/api" : "https://clip-flip.com/api" ;
-const endIndex = local ? 3792 : 12293;
+const apiURL = true ? "https://clip-flip.com/api" : "http://127.0.0.1:3000" ;
+const endIndex = local ? 3792 : 13062;
 const videoPath = local ? "./videos/" : "https://clip-flip.com/video/";
 const thumbnailPath = local ? "./thumbnails/" : "https://clip-flip.com/thumbnails/";
 
 export const config = {
-    baseUrl: isProduction ? 'https://clip-flip.com' : 'http://localhost:3000',
+    baseUrl: isProduction ? 'https://clip-flip.com' : 'http://127.0.0.1:3000',
     videoSourcePath: videoPath,
     thumbnailSourcePath: thumbnailPath,
     defaultPercentChance: 25,
