@@ -678,184 +678,161 @@ app.get('/', async (req, res) => {
   //   res.status(500).json({ error: 'Seeding failed' })
   // }
 })
-// app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
-//   try {
-//     // find highest existing ID in ../output
-//     const outputDir = path.join(__dirname, '../video1');
-//     const outputDirThumbnails = path.join(__dirname, '../video1/thumbnails');
-//     const files = fsSync.readdirSync(outputDir);
-
-//     // let maxId = 0;
-//     // files.forEach(file => {
-//     //   const match = file.match(/^(\d+)\.mp4$/);
-//     //   if (match) {
-//     //     const num = parseInt(match[1], 10);
-//     //     if (num > maxId) maxId = num;
-//     //   }
-//     // });
-
-
-//     // console.log(`Last video ID in DB: ${lastVideo?.id || 0}, max ID in output folder: ${maxId}`);
-
-
-//     let nextId = 1;
-//     let nextVideo = nextId;
-//     const segmentLength = 3;
-//     let segmentId = 1;
-
-//     // save each uploaded file into the new folder
-//     for (const file of req.files as Express.Multer.File[]) {
-//       const duration = getVideoDuration(file.path);
-//       for (let start = 0; start < duration; start += segmentLength) {
-//         const videoOut = path.join(outputDir, `${segmentId}.mp4`);
-//         const firstOut = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
-//         const middleOut = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
-//         execSync(
-//           `ffmpeg -y -ss ${start} -i "${videoPath}" -t ${segmentLength} -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k "${videoOut}"`,
-//           { stdio: "inherit" }
-//         );
-
-//         execSync(
-//           `ffmpeg -y -ss ${start} -i "${videoPath}" -frames:v 1 "${firstOut}"`,
-//           { stdio: "inherit" }
-//         );
-
-//         const mid = (start + segmentLength / 2).toFixed(2);
-
-//         execSync(
-//           `ffmpeg -y -ss ${mid} -i "${videoPath}" -frames:v 1 "${middleOut}"`,
-//           { stdio: "inherit" }
-//         );
-
-//         segmentId++;
-//       }
-//       console.log(`Video ${file.originalname} duration: ${duration} seconds`);
-//       const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
-//       fsSync.renameSync(file.path, targetPath);
-//       nextVideo++;
-//     }
-
-//     // // add to DB — you can tweak fields to match your schema
-//     // const { title, tagId } = req.body;
-
-//     // const createdVideos = [];
-
-//     // for (const file of req.files as Express.Multer.File[]) {
-//     //   const video = await prisma.video.create({
-//     //     data: {
-//     //       id: nextId, // or let DB auto-generate if you don't set ID manually
-//     //       title: title || "",
-//     //       tags: tagId
-//     //         ? { connect: [{ id: Number(tagId) }] }
-//     //         : undefined,
-//     //     },
-//     //     include: { tags: true }
-//     //   });
-//     //   nextId++;
-//     //   createdVideos.push(video);
-//     // }
-
-//     res.json({ success: true });
-
-//   } catch (error) {
-//     console.error('Error handling upload:', error);
-//     res.status(500).json({
-//       error: 'Failed to upload video',
-//       details: error instanceof Error ? error.message : 'Unknown error'
-//     });
-//   }
-// });
-app.post("/upload-video", upload.array("files"), async (req: Request, res: Response) => {
+app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
   try {
-    const outputDir = path.join(__dirname, "../video1/new");
-    const outputDirThumbnails = path.join(__dirname, "../video1/new/thumbnails");
-    function getHighestNumericId(dir: string): number {
-      let maxId = 0;
+    // find highest existing ID in ../output
+    const outputDir = path.join(__dirname, '../videos');
+    const files = fsSync.readdirSync(outputDir);
 
-      for (const file of fsSync.readdirSync(dir)) {
-        const match = file.match(/^(\d+)\.mp4$/);
-
-        if (!match) continue;
-
-        const id = Number(match[1]);
-
-        if (id > maxId) {
-          maxId = id;
-        }
+    let maxId = 0;
+    files.forEach(file => {
+      const match = file.match(/^(\d+)\.mp4$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxId) maxId = num;
       }
+    });
 
-      return maxId;
+    // get the highest current ID in DB
+    const lastVideo = await prisma.video.findFirst({
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    });
+    console.log(`Last video ID in DB: ${lastVideo?.id || 0}, max ID in output folder: ${maxId}`);
+
+
+    let nextId = (lastVideo?.id || 0) + 1;
+    let nextVideo = nextId;
+
+    // save each uploaded file into the new folder
+    for (const file of req.files as Express.Multer.File[]) {
+      const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
+      fsSync.renameSync(file.path, targetPath);
+      nextVideo++;
     }
 
-    let nextVideo = getHighestNumericId(outputDir) + 1;
-    let segmentId = getHighestNumericId(outputDir) + 1;
-    const { tagId } = req.body;
+    // add to DB — you can tweak fields to match your schema
+    const { title, tagId } = req.body;
 
-    const segmentLength = 3;
+    const createdVideos = [];
 
     for (const file of req.files as Express.Multer.File[]) {
-      const duration = getVideoDuration(file.path);
-
-      console.log(`Video ${file.originalname} duration: ${duration} seconds`);
-
-      for (let start = 0; start + segmentLength <= duration; start += segmentLength) {
-
-        const end = start + segmentLength;
-
-
-        const newVideo = await prisma.newVideo.create({
-          data: {
-            title: file.originalname,
-            startTime: start,
-            endTime: end,
-            tags: tagId
-              ? { connect: [{ id: Number(tagId) }] }
-              : undefined,
-          },
-          include: {
-            tags: true,
-          },
-        });
-
-        const segmentId = newVideo.id;
-
-        const videoOut = path.join(outputDir, `${segmentId}.mp4`);
-        const firstOut = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
-        const middleOut = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
-
-        execSync(
-          `ffmpeg -y -ss ${start} -i "${file.path}" -t ${segmentLength} -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k "${videoOut}"`,
-          { stdio: "inherit" }
-        );
-
-        execSync(
-          `ffmpeg -y -ss ${start} -i "${file.path}" -frames:v 1 "${firstOut}"`,
-          { stdio: "inherit" }
-        );
-
-        const mid = ((start + end) / 2).toFixed(2);
-
-        execSync(
-          `ffmpeg -y -ss ${mid} -i "${file.path}" -frames:v 1 "${middleOut}"`,
-          { stdio: "inherit" }
-        );
-
-        console.log(`Created segment ${segmentId}`);
-      }
-
-      fsSync.unlinkSync(file.path);
+      const video = await prisma.video.create({
+        data: {
+          id: nextId, // or let DB auto-generate if you don't set ID manually
+          title: title || "",
+          tags: tagId
+            ? { connect: [{ id: Number(tagId) }] }
+            : undefined,
+        },
+        include: { tags: true }
+      });
+      nextId++;
+      createdVideos.push(video);
     }
 
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error handling upload:", error);
+    res.json({ success: true, videos: createdVideos });
 
+  } catch (error) {
+    console.error('Error handling upload:', error);
     res.status(500).json({
-      error: "Failed to upload video",
-      details: error instanceof Error ? error.message : "Unknown error",
+      error: 'Failed to upload video',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
+
+// app.post("/upload-video", upload.array("files"), async (req: Request, res: Response) => {
+//   try {
+//     const outputDir = path.join(__dirname, "../video1/new");
+//     const outputDirThumbnails = path.join(__dirname, "../video1/new/thumbnails");
+//     function getHighestNumericId(dir: string): number {
+//       let maxId = 0;
+
+//       for (const file of fsSync.readdirSync(dir)) {
+//         const match = file.match(/^(\d+)\.mp4$/);
+
+//         if (!match) continue;
+
+//         const id = Number(match[1]);
+
+//         if (id > maxId) {
+//           maxId = id;
+//         }
+//       }
+
+//       return maxId;
+//     }
+
+//     let nextVideo = getHighestNumericId(outputDir) + 1;
+//     let segmentId = getHighestNumericId(outputDir) + 1;
+//     const { tagId } = req.body;
+
+//     const segmentLength = 3;
+
+//     for (const file of req.files as Express.Multer.File[]) {
+//       const duration = getVideoDuration(file.path);
+
+//       console.log(`Video ${file.originalname} duration: ${duration} seconds`);
+
+//       for (let start = 0; start + segmentLength <= duration; start += segmentLength) {
+
+//         const end = start + segmentLength;
+
+
+//         const newVideo = await prisma.newVideo.create({
+//           data: {
+//             title: file.originalname,
+//             startTime: start,
+//             endTime: end,
+//             tags: tagId
+//               ? { connect: [{ id: Number(tagId) }] }
+//               : undefined,
+//           },
+//           include: {
+//             tags: true,
+//           },
+//         });
+
+//         const segmentId = newVideo.id;
+
+//         const videoOut = path.join(outputDir, `${segmentId}.mp4`);
+//         const firstOut = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
+//         const middleOut = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
+
+//         execSync(
+//           `ffmpeg -y -ss ${start} -i "${file.path}" -t ${segmentLength} -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k "${videoOut}"`,
+//           { stdio: "inherit" }
+//         );
+
+//         execSync(
+//           `ffmpeg -y -ss ${start} -i "${file.path}" -frames:v 1 "${firstOut}"`,
+//           { stdio: "inherit" }
+//         );
+
+//         const mid = ((start + end) / 2).toFixed(2);
+
+//         execSync(
+//           `ffmpeg -y -ss ${mid} -i "${file.path}" -frames:v 1 "${middleOut}"`,
+//           { stdio: "inherit" }
+//         );
+
+//         console.log(`Created segment ${segmentId}`);
+//       }
+
+//       fsSync.unlinkSync(file.path);
+//     }
+
+//     res.json({ success: true });
+//   } catch (error) {
+//     console.error("Error handling upload:", error);
+
+//     res.status(500).json({
+//       error: "Failed to upload video",
+//       details: error instanceof Error ? error.message : "Unknown error",
+//     });
+//   }
+// });
 
 app.delete("/video/:id", async (req: Request, res: Response) => {
   try {
