@@ -349,6 +349,7 @@
     <main id="app-root" class="app-root">
         <div class="video-grid single-view" id="video-grid">
             <div class="video-section" id="section-1">
+                <!-- Video slots remain unchanged -->
                 <div class="video-slot slot-a onscreen" id="slot-1-front">
                     <video class="player" id="v1-front" playsinline muted preload="auto"></video>
                 </div>
@@ -356,6 +357,46 @@
                 <div class="video-slot slot-b offscreen-right" id="slot-1-back">
                     <video class="player" id="v1-back" playsinline muted preload="auto"></video>
                 </div>
+
+                <!-- NEW: Invisible navigation overlay -->
+                <div class="navigation-overlay" id="nav-overlay-1">
+                    <!-- Left area: Back / Previous -->
+                    <div class="nav-zone nav-left" id="nav-left">
+                        <div class="nav-indicator">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M15 18l-6-6 6-6" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Center area: Pause/Play -->
+                    <div class="nav-zone nav-center" id="nav-center">
+                        <!-- <div class="nav-indicator pause-indicator" id="center-pause">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 4h4v16H6zM14 4h4v16h-4z" />
+                            </svg>
+                        </div> -->
+                        <!-- <div class="nav-indicator play-indicator hidden" id="center-play">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 3l14 9-14 9V3z" />
+                            </svg> -->
+                        <!-- </div> -->
+                    </div>
+
+                    <!-- Right area: Forward / Next -->
+                    <div class="nav-zone nav-right" id="nav-right">
+                        <div class="nav-indicator">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 18l6-6-6-6" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="metaForm1" class="metadata-form hidden"></div>
             </div>
 
@@ -412,7 +453,7 @@
                         </svg>
                     </span>
                 </div>
-                <button class="control-btn-square" id="uploadVideoBtn" title="Upload Video">
+                <!-- <button class="control-btn-square" id="uploadVideoBtn" title="Upload Video">
                     <span class="icon-upload">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
                             <path d="M12 16V4" stroke-linecap="round" />
@@ -420,7 +461,7 @@
                             <path d="M5 20h14" stroke-linecap="round" />
                         </svg>
                     </span>
-                </button>
+                </button> -->
                 <button class="control-btn-square" id="fullScreenBtn" title="Fill Screen">
                     <span class="icon-enter">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">

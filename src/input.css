@@ -6,6 +6,92 @@
 /* @import './css/metadata.css'; */
 
 
+/* Navigation Overlay for Section 1 */
+.navigation-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 2;
+    pointer-events: none; /* Allows clicks to pass through to video by default */
+    /* opacity: 0;
+    transition: opacity 0.25s ease;
+    background: rgba(0, 0, 0, 0.02);  */
+}
+
+.video-section#section-1:hover .navigation-overlay {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Three zones */
+.nav-zone {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-left  { width: 25%; }
+.nav-center { width: 50%; }
+.nav-right { width: 25%; }
+
+/* Hover emphasis */
+/* .nav-left:hover,
+.nav-right:hover {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.nav-center:hover {
+    background: rgba(0, 0, 0, 0.1);
+} */
+
+/* Indicators */
+.nav-indicator {
+    color: rgba(255, 255, 255, 0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 30px;
+    border-radius: 12px;
+    transition: all 0.25s ease;
+    opacity: 0.6;
+}
+
+.nav-zone:hover .nav-indicator {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* Labels */
+.nav-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+/* Center pause/play is larger */
+.pause-indicator,
+.play-indicator {
+    opacity: 0.65;
+}
+
+.nav-center:hover .pause-indicator,
+.nav-center:hover .play-indicator {
+    opacity: 1;
+}
+
+/* Subtle glow on hover */
+.nav-indicator svg {
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.3));
+}
+
 .clip-actions {
     display: flex;
     gap: 10px;

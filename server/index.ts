@@ -681,7 +681,7 @@ app.get('/', async (req, res) => {
 app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
   try {
     // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../videos');
+    const outputDir = path.join(__dirname, '../video1');
     const files = fsSync.readdirSync(outputDir);
 
     let maxId = 0;

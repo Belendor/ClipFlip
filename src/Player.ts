@@ -290,6 +290,89 @@ class Players {
     }
 
     private attachEventListeners() {
+        // Get elements
+        const navLeft = document.getElementById('nav-left');
+        const navCenter = document.getElementById('nav-center');
+        const navRight = document.getElementById('nav-right');
+
+        const videoFront = document.getElementById('v1-front') as HTMLVideoElement | null;
+        const videoBack = document.getElementById('v1-back') as HTMLVideoElement | null;
+
+
+        // ==================== LEFT: Previous / Back ====================
+        if (navLeft) {
+            navLeft.addEventListener('click', async () => {
+                console.log('← Previous clicked');
+                this.state.isGoingBack = true;
+                navLeft.style.transition = 'transform 0.1s';
+                navLeft.style.transform = 'scale(0.85)';
+                setTimeout(() => navLeft.style.transform = 'scale(1)', 150);
+                await this.state.modifyPosition(1);
+                this.resetPlaybackSurface();
+                await this.loadVideos();
+            });
+        }
+
+        // ==================== CENTER: Play / Pause ====================
+        if (navCenter && videoFront && videoBack) {
+            navCenter.addEventListener('click', () => {
+                navCenter.style.transition = 'transform 0.1s';
+                navCenter.style.transform = 'scale(0.85)';
+                setTimeout(() => navCenter.style.transform = 'scale(1)', 150);
+                this.html.playPauseBtn.click();
+
+            });
+        }
+
+        // ==================== RIGHT: Next / Forward ====================
+        if (navRight) {
+            navRight.addEventListener('click', () => {
+                console.log('→ Next clicked');
+                // Add your logic here (e.g. load next video, switch slots, etc.)
+                // Example:
+                // switchToNextVideo();
+                // Visual feedback
+                navRight.style.transition = 'transform 0.1s';
+                navRight.style.transform = 'scale(0.85)';
+                setTimeout(() => navRight.style.transform = 'scale(1)', 150);
+                if (this.state.active[0]) {
+                    // this.resetPlaybackSurface();
+                    this.handlePlayerEnded(0 as PlayerIndex);
+                } else if (this.state.active[1]) {
+                    // this.resetPlaybackSurface();
+                    this.handlePlayerEnded(1 as PlayerIndex);
+
+                }
+            });
+        }
+        // const handleKeyDown = (event: {
+        //     [x: string]: any; key: string;
+        // }) => {
+        //     if (event.key === "ArrowRight") {
+        //         event.preventDefault();
+        //         if (this.state.active[0]) {
+        //             this.handlePlayerEnded(0 as PlayerIndex);
+        //         } else if (this.state.active[1]) {
+        //             this.handlePlayerEnded(1 as PlayerIndex);
+
+        //         }
+        //     }
+        // }
+
+        // document.addEventListener("keydown", handleKeyDown);
+
+        // Optional: Keyboard support (Left / Space / Right)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                navLeft?.click();
+            } else if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+                navCenter?.click();
+            } else if (e.key === 'ArrowRight') {
+                navRight?.click();
+            }
+        });
+
         this.html.playPauseBtn.addEventListener("click", async () => {
             const activeIndexes = Object.keys(this.state.active)
                 .map(Number)
@@ -298,10 +381,10 @@ class Players {
             if (activeIndexes.length === 0) {
                 return;
             }
-
+            
             const anyPlaying = activeIndexes.some((index) => this.state.playing[index]);
-            await Promise.all(activeIndexes.map((index) => this.togglePlayPause(index, true)));
             this.updatePlayPauseIcon(!anyPlaying);
+            await Promise.all(activeIndexes.map((index) => this.togglePlayPause(index, true)));
         });
 
         this.html.fullscreenButton.addEventListener("click", () => {
@@ -344,6 +427,8 @@ class Players {
             }
             void this.toggleFullscreen();
         });
+
+
 
         this.attachSearchListeners();
         this.attachPlayerListeners();
@@ -962,10 +1047,10 @@ class Players {
         };
 
         const tabRandom = createTab("random");
-        const tabNew = createTab("new");
+        // const tabNew = createTab("new");
         const tabFavorite = createTab("favorite");
 
-        tabsContainer.append(tabRandom, tabNew, tabFavorite);
+        tabsContainer.append(tabRandom, tabFavorite); //tabNew
 
         const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
             const input = document.createElement("input");
@@ -1221,9 +1306,9 @@ class Players {
             if (target === tabRandom) {
                 await this.switchMode("random");
             }
-            else if (target === tabNew) {
-                await this.switchMode("new");
-            }
+            // else if (target === tabNew) {
+            //     await this.switchMode("new");
+            // }
             else if (target === tabFavorite) {
                 await this.switchMode("favorite");
             }
@@ -1231,8 +1316,8 @@ class Players {
             tabRandom.style.background = target === tabRandom ? "#4ade80" : "transparent";
             tabRandom.style.color = target === tabRandom ? "black" : "#ccc";
 
-            tabNew.style.background = target === tabNew ? "#4ade80" : "transparent";
-            tabNew.style.color = target === tabNew ? "black" : "#ccc";
+            // tabNew.style.background = target === tabNew ? "#4ade80" : "transparent";
+            // tabNew.style.color = target === tabNew ? "black" : "#ccc";
 
             tabFavorite.style.background = target === tabFavorite ? "#4ade80" : "transparent";
             tabFavorite.style.color = target === tabFavorite ? "black" : "#ccc";
@@ -1308,8 +1393,8 @@ class Players {
             case "favorite":
                 const id = this.user?.getId()
                 console.log(id, "<<<<<<<<<");
-                
-                if(!id) return
+
+                if (!id) return
                 await this.state.fetchLikedVideos(id);
                 this.state.modifyPosition(1, false, 0);
                 break;

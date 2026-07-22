@@ -13,6 +13,12 @@ class State {
     readonly PLAYED_KEY = "playedVideoIds";
     readonly sectionIds: SectionId[] = [1, 2, 3, 4];
 
+    private history: number[] = [];           // Stack of previously played video IDs
+    private isInHistoryMode: boolean = false; // Are we currently going backwards?
+    private playHistory: number[] = [];
+    private readonly HISTORY_KEY = 'video_play_history';
+
+    isGoingBack: boolean = false;          // Are we currently going backwards?
     state: PlayerState = "random"
     multiSection = false;
     randomized = true;
@@ -63,6 +69,7 @@ class State {
         }
         this.tagsPromise = this.fetchAllTags();
         this.taggedVideosPromise = this.queryTags();
+        this.loadHistory();
     }
 
     private createInitialPositions(): PositionsMap {
@@ -72,6 +79,27 @@ class State {
             3: this.randomized ? this.randomInRange(this.endIndex * 0.5, this.endIndex * 0.75) : 1000,
             4: this.randomized ? this.randomInRange(this.endIndex * 0.75, this.endIndex) : 1500,
         };
+    }
+    private loadHistory(): void {
+        try {
+            const raw = localStorage.getItem(this.HISTORY_KEY);
+            this.playHistory = raw ? JSON.parse(raw) : [];
+        } catch (e) {
+            console.warn("Failed to load play history", e);
+            this.playHistory = [];
+        }
+    }
+
+    private saveHistory(): void {
+        try {
+            // Optional: Limit history size to prevent it from growing too big
+            if (this.playHistory.length > 100) {
+                this.playHistory = this.playHistory.slice(-100); // keep last 100
+            }
+            localStorage.setItem(this.HISTORY_KEY, JSON.stringify(this.playHistory));
+        } catch (e) {
+            console.warn("Failed to save play history", e);
+        }
     }
 
     resetActiveTags(tags: string[] = []) {
@@ -160,6 +188,7 @@ class State {
         if (!(section in this.positions)) {
             throw new Error(`Invalid section: ${section}`);
         }
+
         if (id) {
             this.positions[section] = id;
             console.log("Position set to specific ID:", id);
@@ -167,6 +196,39 @@ class State {
         }
 
         this.played = this.getPlayedVideos();
+
+        // ==================== BACK LOGIC ====================
+        if (this.isGoingBack) {
+            if (this.playHistory.length > 1) {
+                this.playHistory.pop(); // remove current
+                const previousId = this.playHistory[this.playHistory.length - 1];
+
+                this.positions[section] = previousId;
+                console.log(`↩ Back to video: ${previousId}`);
+
+                if (this.playHistory.length <= 1) {
+                    this.isGoingBack = false;
+                }
+                this.saveHistory();
+                return;
+            } else {
+                this.isGoingBack = false;
+            }
+        }
+
+        // ==================== FORWARD LOGIC ====================
+        const currentPos = this.positions[section];
+
+        // Save to history before moving forward
+        if (currentPos !== 0) {
+            // Avoid duplicates at the end
+            if (this.playHistory.length === 0 || this.playHistory[this.playHistory.length - 1] !== currentPos) {
+                this.playHistory.push(currentPos);
+            }
+            this.saveHistory();
+        }
+
+        // === Your original logic (favorites / tagged / random) ===
         if (this.state === "favorite" && this.likedVideos != null) {
             if (this.likedVideos.length === 0) {
                 this.positions[section] = 0;
@@ -179,20 +241,17 @@ class State {
                 return;
             }
 
-            const videoIds = availableVideos.map(video => video.id);
-            const currentIndex = videoIds.indexOf(this.positions[section]);
-
             if (this.randomized) {
                 const roll = Math.random() * 100;
                 if (roll < this.percentChance || random) {
-                    const randomVideo =
-                        availableVideos[Math.floor(Math.random() * availableVideos.length)];
-
+                    const randomVideo = availableVideos[Math.floor(Math.random() * availableVideos.length)];
                     this.positions[section] = randomVideo.id;
                     return;
                 }
             }
 
+            const videoIds = availableVideos.map(video => video.id);
+            const currentIndex = videoIds.indexOf(this.positions[section]);
             this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
             return;
         }
@@ -211,9 +270,6 @@ class State {
                 return;
             }
 
-            const videoIds = availableTagged.map((video) => video.id);
-            const currentIndex = videoIds.indexOf(this.positions[section]);
-
             if (this.randomized) {
                 const roll = Math.random() * 100;
                 if (roll < this.percentChance || random) {
@@ -224,10 +280,13 @@ class State {
                 }
             }
 
+            const videoIds = availableTagged.map((video) => video.id);
+            const currentIndex = videoIds.indexOf(this.positions[section]);
             this.positions[section] = videoIds[currentIndex + 1] ?? videoIds[0];
             return;
         }
 
+        // Default untagged behavior
         if (this.randomized) {
             const roll = Math.random() * 100;
             if (roll < this.percentChance) {
@@ -319,7 +378,7 @@ class State {
             if (!this.likedVideos || this.likedVideos.length === 0) {
                 this.likedVideos = await this.api.fetchLikedVideos(userId);
                 console.log("Retrieved liked videos:", this.likedVideos.length);
-                
+
             }
 
             console.log(this.likedVideos);
