@@ -15,7 +15,6 @@ const BATCH_SIZE = 2;
 import { OAuth2Client } from "google-auth-library";
 const prisma = new PrismaClient();
 import cookieParser from "cookie-parser";
-import { execSync } from 'child_process';
 
 const app = express();
 const port = 3000;
@@ -29,14 +28,7 @@ app.use(
 );
 app.use(express.json()); // Add this line to enable JSON body parsing
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-function getVideoDuration(file: string): number {
-  return Number(
-    execSync(
-      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${file}"`,
-      { encoding: "utf8" }
-    ).trim()
-  );
-}
+
 app.post('/videos', async (req: Request, res: Response) => {
   try {
     const { id, studio, title, models, tag } = req.body;
@@ -678,69 +670,96 @@ app.get('/', async (req, res) => {
   //   res.status(500).json({ error: 'Seeding failed' })
   // }
 })
-app.post('/upload-video', upload.array('files'), async (req: Request, res: Response) => {
-  try {
-    // find highest existing ID in ../output
-    const outputDir = path.join(__dirname, '../video1');
-    const files = fsSync.readdirSync(outputDir);
 
-    let maxId = 0;
-    files.forEach(file => {
-      const match = file.match(/^(\d+)\.mp4$/);
-      if (match) {
-        const num = parseInt(match[1], 10);
-        if (num > maxId) maxId = num;
-      }
-    });
+app.post(
+  "/upload-video",
 
-    // get the highest current ID in DB
-    const lastVideo = await prisma.video.findFirst({
-      orderBy: { id: 'desc' },
-      select: { id: true }
-    });
-    console.log(`Last video ID in DB: ${lastVideo?.id || 0}, max ID in output folder: ${maxId}`);
+  (req: Request, res: Response, next) => {
+    console.log("=== HTTP REQUEST ARRIVED ===");
+    next();
+  },
 
+  upload.array("files"),
 
-    let nextId = (lastVideo?.id || 0) + 1;
-    let nextVideo = nextId;
+  async (req: Request, res: Response) => {
+    console.log("=== MULTER FINISHED ===");
 
-    // save each uploaded file into the new folder
-    for (const file of req.files as Express.Multer.File[]) {
-      const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
-      fsSync.renameSync(file.path, targetPath);
-      nextVideo++;
-    }
+    try {
+      const outputDir = path.join(__dirname, "../video1");
+      const files = fsSync.readdirSync(outputDir);
 
-    // add to DB — you can tweak fields to match your schema
-    const { title, tagId } = req.body;
+      console.log("Files uploaded:", (req.files as Express.Multer.File[]).length);
 
-    const createdVideos = [];
+      let maxId = 0;
 
-    for (const file of req.files as Express.Multer.File[]) {
-      const video = await prisma.video.create({
-        data: {
-          id: nextId, // or let DB auto-generate if you don't set ID manually
-          title: title || "",
-          tags: tagId
-            ? { connect: [{ id: Number(tagId) }] }
-            : undefined,
-        },
-        include: { tags: true }
+      files.forEach((file) => {
+        const match = file.match(/^(\d+)\.mp4$/);
+
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxId) maxId = num;
+        }
       });
-      nextId++;
-      createdVideos.push(video);
+
+      const lastVideo = await prisma.video.findFirst({
+        orderBy: { id: "desc" },
+        select: { id: true },
+      });
+
+      console.log(
+        `Last video ID in DB: ${lastVideo?.id || 0}, max ID in folder: ${maxId}`
+      );
+
+      let nextId = (lastVideo?.id || 0) + 1;
+      let nextVideo = nextId;
+
+      for (const file of req.files as Express.Multer.File[]) {
+        console.log(`Copying ${file.originalname}`);
+
+        const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
+
+        fsSync.copyFileSync(file.path, targetPath);
+        fsSync.unlinkSync(file.path);
+
+        nextVideo++;
+      }
+
+      const { title, tagId } = req.body;
+
+      const createdVideos = [];
+
+      for (const _file of req.files as Express.Multer.File[]) {
+        const video = await prisma.video.create({
+          data: {
+            id: nextId,
+            title: title || "",
+            tags: tagId
+              ? { connect: [{ id: Number(tagId) }] }
+              : undefined,
+          },
+          include: { tags: true },
+        });
+
+        createdVideos.push(video);
+        nextId++;
+      }
+
+      console.log("=== RESPONSE SENT ===");
+
+      res.json({
+        success: true,
+        videos: createdVideos,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        error: "Failed to upload video",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-
-    res.json({ success: true, videos: createdVideos });
-
-  } catch (error) {
-    console.error('Error handling upload:', error);
-    res.status(500).json({
-      error: 'Failed to upload video',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
   }
-});
+);
 
 // app.post("/upload-video", upload.array("files"), async (req: Request, res: Response) => {
 //   try {
