@@ -1,18 +1,12 @@
 {
-  "compilerOptions": {
-    "target": "es2020",
-    "module": "node16",
-    "types": ["node"],
-    "moduleResolution": "node16",
-    "preserveConstEnums": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "lib": ["es2020", "dom"]
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tmp_uploads", "videos", "server"]
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "commonjs",
+        "outDir": "./dist",
+        "rootDir": "./",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true
+    }
 }
