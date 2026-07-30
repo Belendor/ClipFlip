@@ -8,10 +8,6 @@ import User from "./User";
 type SectionSwapState = Record<SectionId, boolean>;
 
 class Players {
-    private readonly folder1 = "https://clip-flip.com/video1/";
-    private readonly newFolder = "https://clip-flip.com/video1/new/";
-    private readonly folder = config.videoSourcePath;
-    private readonly thumbnailFolder = config.thumbnailSourcePath;
     private readonly metadataCache = new Map<number, Promise<VideoWithRelations | NewVideo | null>>();
     private readonly pendingSwap: SectionSwapState = {
         1: false,
@@ -23,20 +19,7 @@ class Players {
     private loadRevision = 0;
     private muted = true;
     private searchAbortController: AbortController | null = null;
-    private readonly editIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path d="M12 20h9" stroke-linecap="round" stroke-linejoin="round"></path>
-            <path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>`;
-    private readonly doneIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M6 9l6 6 6-6" />
-        </svg>
-        `;
-    private readonly addTagIcon = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" stroke-linecap="round"></path>
-        </svg>`;
+
     private uploadFormWrapper: HTMLDivElement | null = null;
     private uploadToolbarButton: HTMLButtonElement | null = null;
     private uploadTagSelect: HTMLSelectElement | null = null;
@@ -52,10 +35,11 @@ class Players {
     }
 
     async init() {
-        this.createMetadataFormContainers();
+        // this.createMetadataFormContainers();
         this.attachEventListeners();
         await Promise.all([this.state.tagsPromise, this.state.taggedVideosPromise]);
         await this.loadVideos();
+        // await this.auth.loadGoogleSignIn();
     }
 
     async loadVideos(): Promise<void> {
@@ -180,11 +164,11 @@ class Players {
     private buildVideoUrl(videoId: number): string {
 
         const folderMap = [
-            { max: 11255, folder: this.folder },
-            { max: Infinity, folder: this.folder1 }
+            { max: 11255, folder: config.videoSourcePath },
+            { max: Infinity, folder: config.videoSourcePath2 }
         ];
         const match = folderMap.find(rule => videoId <= rule.max);
-        const folder = this.state.state === "new" ? this.newFolder : match?.folder;
+        const folder = this.state.state === "new" ? config.videoSourcePathNew : match?.folder;
 
         if (!match) {
             throw new Error(`No folder mapping found for videoId: ${videoId}`);
@@ -196,7 +180,7 @@ class Players {
     private buildPosterUrl(videoId: number): string {
         const folder =
             this.state.state === "new"
-                ? this.newFolder
+                ? config.videoSourcePathNew
                 : config.videoSourcePath;
         if (this.state.state === "new") {
             return `${folder}thumbnails/${videoId}_first.jpg`;
@@ -381,7 +365,7 @@ class Players {
             if (activeIndexes.length === 0) {
                 return;
             }
-            
+
             const anyPlaying = activeIndexes.some((index) => this.state.playing[index]);
             this.updatePlayPauseIcon(!anyPlaying);
             await Promise.all(activeIndexes.map((index) => this.togglePlayPause(index, true)));
@@ -407,9 +391,6 @@ class Players {
             window.location.replace("/");
         });
 
-        this.html.hideFormsBtn.addEventListener("click", () => {
-            this.html.setMetadataVisibility(!this.html.metadataVisible);
-        });
 
         this.uploadToolbarButton = document.getElementById("uploadVideoBtn") as HTMLButtonElement | null;
         this.uploadToolbarButton?.addEventListener("click", async () => {
@@ -428,7 +409,14 @@ class Players {
             void this.toggleFullscreen();
         });
 
+        this.html.multiscreenButton.addEventListener("click", () => {
 
+            this.state.multiSection = !this.state.multiSection
+            this.html.init()
+            this.html.metadata.init()
+            // this.resetPlaybackSurface();
+            this.loadVideos
+        });
 
         this.attachSearchListeners();
         this.attachPlayerListeners();
@@ -542,8 +530,8 @@ class Players {
                 card.classList.add("active-tag");
             }
 
-            const defaultImg = `${this.thumbnailFolder}thumbnail.jpg`;
-            const imgPath = `${this.thumbnailFolder}${encodeURIComponent(tag.title)}.jpg`;
+            const defaultImg = `${config.thumbnailSourcePath}thumbnail.jpg`;
+            const imgPath = `${config.thumbnailSourcePath}${encodeURIComponent(tag.title)}.jpg`;
             const img = new Image();
             img.onload = () => {
                 card.style.backgroundImage = `url(${imgPath})`;
@@ -730,6 +718,7 @@ class Players {
         if (!form) {
             return;
         }
+
         const metadataHeader = document.getElementById(`metadata-header-${section}`);
         if (this.state.state !== "new") {
 
@@ -867,6 +856,10 @@ class Players {
             video.id,
             this.toggleTag.bind(this),
             this.removeTag.bind(this),
+            async (tagTitle: string, tagId?: number) => {
+                const updated = await this.updateMeta(section, "tag", tagTitle, tagId);
+                await this.populateMetadataForm(section, updated);
+            },
         );
     }
 
@@ -1012,319 +1005,7 @@ class Players {
         return this.api.fetchVideos(query);
     }
 
-    private createMetadataFormContainers(newVideo: boolean = true): void {
-        let count = 0;
-        this.state.sectionIds.forEach((section) => {
-            if (!this.state.multiSection && section !== 1) {
-                return;
-            }
-            const sectionElement = document.getElementById(`section-${section}`);
-            if (!sectionElement) {
-                return;
-            }
 
-            this.createMetadataForm(section);
-            count++;
-        });
-        console.log(`Metadata form containers created: ${count}`);
-    }
-
-    private createMetadataForm(section: SectionId): void {
-        const form = this.html.videoForms[section - 1];
-        if (!form) {
-            throw new Error("Metadata form not found");
-        }
-        // === CLEAN TABS (Minimal impact on layout) ===
-        form.replaceChildren()
-        const tabsContainer = document.createElement("div");
-        tabsContainer.className = "metadata-tabs";
-
-        const createTab = (text: "random" | "new" | "favorite") => {
-            const tab = document.createElement("button");
-            tab.className = `metadata-tab${this.state.state === text ? " active" : ""}`;
-            tab.textContent = text.charAt(0).toUpperCase() + text.slice(1);
-            return tab;
-        };
-
-        const tabRandom = createTab("random");
-        // const tabNew = createTab("new");
-        const tabFavorite = createTab("favorite");
-
-        tabsContainer.append(tabRandom, tabFavorite); //tabNew
-
-        const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
-            const input = document.createElement("input");
-            input.type = "text";
-            input.placeholder = placeholder;
-            input.className = "input-fields";
-            input.addEventListener("input", async (event) => {
-                event.preventDefault();
-                await this.updateMeta(section, key, input.value);
-            });
-            return input;
-        };
-
-        const titleInput = makeInput("Title", "title");
-        const modelInput = makeInput("Models", "models");
-        const studioInput = makeInput("Studio", "studio");
-        const idInput = makeInput("id", "id");
-
-        const metadataHeader = this.html.createDiv(`metadata-header-${section}`, "metadata-header");
-        const metadataTitleGroup = this.html.createDiv(`metadata-title-group-${section}`, "metadata-title-group");
-        const videoTagsLabel = document.createElement("div");
-        videoTagsLabel.textContent = "Video tags";
-        videoTagsLabel.className = "tag-section-label";
-        const metadataHint = document.createElement("div");
-        metadataHint.textContent = "Tap tags to filter instantly";
-        metadataHint.className = "metadata-subtitle";
-        metadataTitleGroup.append(videoTagsLabel, metadataHint);
-
-        const editToggleBtn = document.createElement("button");
-        editToggleBtn.type = "button";
-        editToggleBtn.className = "edit-toggle metadata-edit-btn";
-        editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
-        editToggleBtn.title = "Edit metadata";
-        const favoriteBtn = document.createElement("button");
-        favoriteBtn.type = "button";
-        favoriteBtn.className = "reaction-btn favorite-btn";
-        favoriteBtn.innerHTML = `
-            <span class="favorite-heart">♡</span>
-            <span class="favorite-count">0</span>
-        `;
-        favoriteBtn.title = "Favorite";
-
-        const closeMetadataBtn = document.createElement("button");
-        closeMetadataBtn.type = "button";
-        closeMetadataBtn.className = "metadata-close-btn";
-        closeMetadataBtn.innerHTML = "&times;";
-        closeMetadataBtn.title = "Hide metadata";
-
-        const showMetadataBtn = document.createElement("button");
-        showMetadataBtn.type = "button";
-        showMetadataBtn.className = "metadata-show-btn hidden";
-        showMetadataBtn.textContent = "i";
-        showMetadataBtn.title = "Show metadata";
-
-        form.parentElement?.appendChild(showMetadataBtn);
-
-
-        closeMetadataBtn.addEventListener("click", () => {
-            this.state.advancedMode = false;
-
-            editorPanel.classList.add("hidden");
-            titleInput.classList.add("hidden");
-            modelInput.classList.add("hidden");
-            studioInput.classList.add("hidden");
-            idInput.classList.add("hidden");
-
-            this.setUploadFormVisibility(false);
-
-            document.querySelectorAll<HTMLElement>(".tag-delete").forEach((button) => {
-                button.classList.add("hidden");
-            });
-
-            editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
-            editToggleBtn.title = "Edit metadata";
-
-            this.html.setMetadataVisibility(false);
-        });
-        showMetadataBtn.addEventListener("click", () => {
-            form.classList.remove("metadata-hidden");
-            showMetadataBtn.classList.add("hidden");
-        });
-
-        if (this.state.state === "new") {
-            console.log(this.state.state)
-            const clipActions = document.createElement("div");
-            clipActions.className = "clip-actions";
-
-            const addClipBtn = document.createElement("button");
-            addClipBtn.type = "button";
-            addClipBtn.className = "clip-action-btn add-clip-btn";
-            addClipBtn.innerHTML = `
-                                    <span>Add</span>
-                                `;
-            addClipBtn.title = "Add clip";
-
-            const removeClipBtn = document.createElement("button");
-            removeClipBtn.type = "button";
-            removeClipBtn.className = "clip-action-btn remove-clip-btn";
-            removeClipBtn.innerHTML = `
-                <span>Remove</span>
-            `;
-            removeClipBtn.title = "Remove clip";
-
-            clipActions.append(addClipBtn, removeClipBtn);
-            metadataHeader.append(editToggleBtn, closeMetadataBtn, clipActions);
-        } else {
-            metadataHeader.append(metadataTitleGroup, editToggleBtn, favoriteBtn, closeMetadataBtn);
-        }
-
-        const videoTagsContainer = this.html.createDiv(`video-tags-${section}`, "metadata-tags-panel");
-        const videoTagsWrapper = this.html.createDiv(`video-tags-wrapper-${section}`, "tag-container metadata-tag-list");
-        videoTagsContainer.append(metadataHeader, videoTagsWrapper);
-        this.html.videoTagsContainers.push(videoTagsWrapper);
-
-        const editorPanel = this.html.createDiv(`metadata-editor-${section}`, "metadata-editor hidden");
-        const editorActions = this.html.createDiv(`metadata-actions-${section}`, "metadata-actions");
-        const tagButtonWrapper = this.html.createDiv(`tag-button-wrapper-${section}`, "relative inline-block");
-        const addTagBtn = document.createElement("button");
-        addTagBtn.type = "button";
-        addTagBtn.innerHTML = `${this.addTagIcon}<span>Add tag</span>`;
-        addTagBtn.className = "plus-button metadata-action-btn";
-        addTagBtn.title = "Add tag";
-
-        const tagListDropdown = document.createElement("div");
-        tagListDropdown.className = "tag-list hidden";
-        const populateTagDropdown = async () => {
-            await this.state.tagsPromise;
-            tagListDropdown.innerHTML = "";
-
-            this.state.allTags.forEach((tag) => {
-                const tagItem = document.createElement("div");
-                tagItem.textContent = tag.title;
-                tagItem.className = "px-3 py-2 hover:bg-gray-200 cursor-pointer";
-                tagItem.addEventListener("click", async () => {
-                    if (!tag.title) {
-                        return;
-                    }
-                    const updated = await this.updateMeta(section, "tag", tag.title, tag.id);
-                    await this.populateMetadataForm(section, updated);
-                    tagListDropdown.classList.add("hidden");
-                });
-                tagListDropdown.appendChild(tagItem);
-            });
-        };
-
-        addTagBtn.addEventListener("click", async () => {
-            if (tagListDropdown.classList.contains("hidden")) {
-                await populateTagDropdown();
-            }
-            tagListDropdown.classList.toggle("hidden");
-        });
-
-        const uploadFormWrapper = document.createElement("div");
-        uploadFormWrapper.className = "upload-form hidden";
-        uploadFormWrapper.style.minWidth = "14rem";
-        if (section === 1) {
-            this.uploadFormWrapper = uploadFormWrapper;
-            this.html.appRoot.appendChild(uploadFormWrapper);
-        }
-
-        const closeUploadBtn = document.createElement("button");
-        closeUploadBtn.type = "button";
-        closeUploadBtn.className = "upload-close-btn";
-        closeUploadBtn.setAttribute("aria-label", "Close upload window");
-        closeUploadBtn.innerHTML = "&times;";
-        closeUploadBtn.addEventListener("click", () => {
-            this.setUploadFormVisibility(false);
-        });
-
-        const fileInput = document.createElement("input");
-        fileInput.type = "file";
-        fileInput.multiple = true;
-        fileInput.className = "block w-full mb-2";
-
-        const uploadTitleInput = document.createElement("input");
-        uploadTitleInput.type = "text";
-        uploadTitleInput.placeholder = "Title";
-        uploadTitleInput.className = "block w-full mb-2 border border-gray-400 px-2 py-1 rounded";
-
-        const uploadTagSelect = document.createElement("select");
-        uploadTagSelect.className = "block w-full mb-2 border border-gray-400 px-2 py-1 rounded";
-        if (section === 1) {
-            this.uploadTagSelect = uploadTagSelect;
-        }
-
-        const submitUploadBtn = document.createElement("button");
-        submitUploadBtn.type = "button";
-        submitUploadBtn.textContent = "Upload";
-        submitUploadBtn.className = "upload-submit-btn";
-        submitUploadBtn.addEventListener("click", async () => {
-            if (!fileInput.files?.length) {
-                alert("Please select a file.");
-                return;
-            }
-
-            const formData = new FormData();
-            Array.from(fileInput.files).forEach((file) => formData.append("files", file));
-            formData.append("title", uploadTitleInput.value);
-            formData.append("tagId", uploadTagSelect.value);
-
-            try {
-                await this.api.uploadVideo(formData);
-                alert("Upload successful");
-                this.setUploadFormVisibility(false);
-            } catch (error) {
-                console.error("Upload failed", error);
-                alert("Upload failed");
-            }
-        });
-
-        uploadFormWrapper.append(closeUploadBtn, fileInput, uploadTitleInput, uploadTagSelect, submitUploadBtn);
-        tagButtonWrapper.append(addTagBtn, tagListDropdown);
-        editorActions.append(tagButtonWrapper);
-
-        [titleInput, modelInput, studioInput, idInput].forEach((input) => input.classList.add("hidden"));
-        const fieldsWrapper = this.html.createDiv(`metadata-fields-${section}`, "metadata-fields");
-        fieldsWrapper.append(titleInput, modelInput, studioInput, idInput);
-        editorPanel.append(editorActions, fieldsWrapper);
-
-        const toggleEditMode = () => {
-            const nextAdvancedMode = !this.state.advancedMode;
-            this.state.advancedMode = nextAdvancedMode;
-
-            editorPanel.classList.toggle("hidden", !nextAdvancedMode);
-            titleInput.classList.toggle("hidden", !nextAdvancedMode);
-            modelInput.classList.toggle("hidden", !nextAdvancedMode);
-            studioInput.classList.toggle("hidden", !nextAdvancedMode);
-            idInput.classList.toggle("hidden", !nextAdvancedMode);
-            this.setUploadFormVisibility(false);
-
-            document.querySelectorAll<HTMLElement>(".tag-delete").forEach((button) => {
-                button.classList.toggle("hidden", !nextAdvancedMode);
-            });
-
-            editToggleBtn.innerHTML = nextAdvancedMode
-                ? `${this.doneIcon}<span>Minimize</span>`
-                : `${this.editIcon}<span>Edit</span>`;
-            editToggleBtn.title = nextAdvancedMode ? "Return to view mode" : "Edit metadata";
-        };
-
-        editToggleBtn.addEventListener("click", toggleEditMode);
-        form.prepend(tabsContainer)
-        form.append(videoTagsContainer, editorPanel);
-        // Tab switching
-        // Insert tabs at the top
-        // form.append(tabsContainer);   // or form.insertBefore(tabsContainer, videoTagsContainer);
-
-        // Tab switching
-        tabsContainer.addEventListener("click", async (e) => {
-            const target = e.target as HTMLButtonElement;
-            if (!target.textContent) return;
-
-            if (target === tabRandom) {
-                await this.switchMode("random");
-            }
-            // else if (target === tabNew) {
-            //     await this.switchMode("new");
-            // }
-            else if (target === tabFavorite) {
-                await this.switchMode("favorite");
-            }
-
-            tabRandom.style.background = target === tabRandom ? "#4ade80" : "transparent";
-            tabRandom.style.color = target === tabRandom ? "black" : "#ccc";
-
-            // tabNew.style.background = target === tabNew ? "#4ade80" : "transparent";
-            // tabNew.style.color = target === tabNew ? "black" : "#ccc";
-
-            tabFavorite.style.background = target === tabFavorite ? "#4ade80" : "transparent";
-            tabFavorite.style.color = target === tabFavorite ? "black" : "#ccc";
-
-            console.log("Tab:", target.textContent);
-        });
-    }
 
     private getActiveIndexForSection(section: number): PlayerIndex {
         const [frontIndex, backIndex] = this.getSectionPlayerIndexes(section as SectionId);
@@ -1366,43 +1047,7 @@ class Players {
             return null;
         }
     }
-    private async switchMode(mode: "random" | "new" | "favorite") {
-        if (this.state.state === mode)
-            return;
 
-        this.state.state = mode;
-
-        this.metadataCache.clear();
-
-        this.resetPlaybackSurface();
-
-        switch (mode) {
-            case "random":
-                this.state.randomized = true;
-                this.state.endIndex = config.defaultEndIndex
-                await this.state.modifyPosition(1, true, this.state.randomInRange(1, this.state.endIndex));
-                await this.state.modifyPosition(1,);
-
-                break;
-
-            case "new":
-                this.state.randomized = false;
-                await this.state.fetchNewVideos();
-                break;
-
-            case "favorite":
-                const id = this.user?.getId()
-                console.log(id, "<<<<<<<<<");
-
-                if (!id) return
-                await this.state.fetchLikedVideos(id);
-                this.state.modifyPosition(1, false, 0);
-                break;
-        }
-
-        this.createMetadataForm(1);      // only recreate the form if needed
-        await this.loadVideos();         // <-- THIS loads the first video
-    }
 }
 
 export default Players;

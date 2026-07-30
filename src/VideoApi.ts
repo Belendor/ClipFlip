@@ -1,10 +1,11 @@
 import type { Tag, Video, VideoWithRelations, UpdateVideoPayload, NewVideo } from "./types";
+import { config } from './config';
 
 export default class VideoApi {
-    constructor(private readonly apiUrl: string) { }
+    constructor( ) { }
 
     private async request<T>(path: string, init?: RequestInit): Promise<T> {
-        const response = await fetch(`${this.apiUrl}${path}`, init);
+        const response = await fetch(`${config.apiUrl}${path}`, init);
         if (!response.ok) {
             throw new Error(`Request failed (${response.status}) for ${path}`);
         }
@@ -77,7 +78,7 @@ export default class VideoApi {
         });
     }
     async uploadVideo(formData: FormData): Promise<void> {
-        const response = await fetch(`${this.apiUrl}/upload-video`, {
+        const response = await fetch(`${config.apiUrl}/upload-video`, {
             method: "POST",
             body: formData,
         });
@@ -87,7 +88,7 @@ export default class VideoApi {
         }
     }
     async react(videoId: number, type: "like" ) {
-        const res = await fetch(`${this.apiUrl}/videos/${videoId}/reaction`, {
+        const res = await fetch(`${config.apiUrl}/videos/${videoId}/reaction`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

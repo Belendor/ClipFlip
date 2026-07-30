@@ -5,13 +5,15 @@ console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 const local = false;
 const apiURL = true ? "https://clip-flip.com/api" : "http://127.0.0.1:3000" ;
-const endIndex = local ? 3792 : 13062;
+const endIndex = local ? 3792 : 13642;
 const videoPath = local ? "./videos/" : "https://clip-flip.com/video/";
 const thumbnailPath = local ? "./thumbnails/" : "https://clip-flip.com/thumbnails/";
 
 export const config = {
     baseUrl: isProduction ? 'https://clip-flip.com' : 'http://127.0.0.1:3000',
     videoSourcePath: videoPath,
+    videoSourcePath2: "https://clip-flip.com/video1/",
+    videoSourcePathNew: "https://clip-flip.com/video1/new/",
     thumbnailSourcePath: thumbnailPath,
     defaultPercentChance: 25,
     defaultEndIndex: endIndex,

@@ -1,5 +1,9 @@
 import { config } from "./config";
-
+declare global {
+    interface Window {
+        google: any;
+    }
+}
 export interface AuthUser {
     id: number;
     email: string;
@@ -9,15 +13,96 @@ export interface AuthUser {
 
 export default class User {
     currentUser: AuthUser | null = null;
-
+    private scriptLoadPromise: Promise<void> | null = null;
+    constructor() {
+        this.loadGoogleSignIn.bind(this);
+    }
     async init() {
         await this.checkAuth();
-
         if (!this.currentUser) {
-            await this.renderGoogleButton();    
+            await this.renderGoogleButton();
         } else {
             this.renderUser();
         }
+    }
+
+    getId() {
+        return this.currentUser?.id;
+    }
+    async checkAuth() {
+        console.log("Checking auth");
+        try {
+            const res = await fetch(`${config.apiUrl}/auth/me`, {
+                credentials: "include",
+            });
+
+            if (!res.ok) {
+                return;
+            }
+
+            const data = await res.json();
+            console.log(data, "Auth data");
+
+            if (data.loggedIn) {
+                this.currentUser = data.user;
+            }
+        } catch (error) {
+            console.warn("Failed to check auth status:", error);
+        }
+    }
+    public loadGoogleSignIn(): Promise<void> {
+        if (window.google?.accounts?.id) {
+            return Promise.resolve();
+        }
+
+        if (this.scriptLoadPromise) {
+            return this.scriptLoadPromise;
+        }
+
+        this.scriptLoadPromise = new Promise((resolve, reject) => {
+            const existingScript = document.querySelector(
+                'script[src="https://accounts.google.com/gsi/client"]'
+            );
+
+            if (existingScript) {
+                existingScript.addEventListener("load", () => resolve());
+                existingScript.addEventListener("error", () =>
+                    reject(new Error("Failed to load Google Sign-In"))
+                );
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = "https://accounts.google.com/gsi/client";
+            script.async = true;
+            script.defer = true;
+
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error("Failed to load Google Sign-In"));
+
+            document.head.appendChild(script);
+        });
+
+        return this.scriptLoadPromise;
+    }
+    async renderGoogleButton() {
+        await this.loadGoogleSignIn();
+
+        const buttonDiv = document.getElementById("google-login");
+        if (!buttonDiv) return;
+
+        buttonDiv.innerHTML = "";
+
+        window.google.accounts.id.initialize({
+            client_id: config.googleClientId,
+            callback: this.handleGoogleLogin.bind(this),
+        });
+
+        window.google.accounts.id.renderButton(buttonDiv, {
+            theme: "filled_black",
+            type: "icon",
+            size: "medium",
+        });
     }
 
     async handleGoogleLogin(response: { credential: string }) {
@@ -40,46 +125,9 @@ export default class User {
         }
 
         this.currentUser = data.user;
+        console.log(this.currentUser);
+
         this.renderUser();
-    }
-
-    async checkAuth() {
-        console.log("Checking autgh");
-        
-        const res = await fetch(`${config.apiUrl}/auth/me`, {
-            credentials: "include",
-        });
-
-        const data = await res.json();
-        console.log(data, "Auth data");
-        
-
-        if (data.loggedIn) {
-            this.currentUser = data.user;
-        }
-    }
-    getId () {
-        return this.currentUser?.id;
-    }
-
-    async renderGoogleButton() {
-        await window.loadGoogleSignIn();
-
-        const buttonDiv = document.getElementById("google-login");
-        if (!buttonDiv) return;
-
-        buttonDiv.innerHTML = "";
-
-        window.google.accounts.id.initialize({
-            client_id: config.googleClientId,
-            callback: this.handleGoogleLogin.bind(this),
-        });
-
-        window.google.accounts.id.renderButton(buttonDiv, {
-            theme: "filled_black",
-            type: "icon",
-            size: "medium",
-        });
     }
 
     renderUser() {
@@ -103,11 +151,6 @@ export default class User {
         div.onclick = () => {
             this.logout();
         };
-    }
-
-    async signInWithGoogle() {
-        await window.loadGoogleSignIn();
-        window.google.accounts.id.prompt();
     }
 
     async logout() {

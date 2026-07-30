@@ -46,11 +46,11 @@
     flex-direction: column;
 }
 
-.metadata-tag-list {
+/* .metadata-tag-list {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-}
+} */
 
 .metadata-editor {
     margin-top: 8px;
