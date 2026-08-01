@@ -1113,24 +1113,19 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
 
     const PROJECT_ROOT = path.resolve(__dirname, "..");
 
-    // Source Paths (Pending)
+    // Source Paths (Pending - using temp ID)
     const pendingDir = path.join(PROJECT_ROOT, "video1/new");
     const pendingThumbDir = path.join(PROJECT_ROOT, "video1/new/thumbnails");
 
-    // Destination Paths (Approved)
+    // Destination Paths (Approved - using final DB ID)
     const approvedDir = path.join(PROJECT_ROOT, "video1");
     const approvedThumbDir = path.join(PROJECT_ROOT, "video/thumbnails");
 
-    // Files
+    // Temp source files (using incoming param ID)
     const sourceVideo = path.join(pendingDir, `${id}.mp4`);
-    const sourceFirstThumb = path.join(pendingThumbDir, `${id}.jpg`);
-    // const sourceMiddleThumb = path.join(pendingThumbDir, `${id}_middle.jpg`);
+    const sourceFirstThumb = path.join(pendingThumbDir, `${id}_first.jpg`);
 
-    const destVideo = path.join(approvedDir, `${id}.mp4`);
-    const destFirstThumb = path.join(approvedThumbDir, `${id}.jpg`);
-    const destMiddleThumb = path.join(approvedThumbDir, `${id}_mid.jpg`);
-
-    // 1. Check if video exists in DB
+    // 1. Check if pending video exists in DB
     const newVideo = await prisma.newVideo.findUnique({
       where: { id },
       include: {
@@ -1149,7 +1144,7 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
       });
     }
 
-    // 3. Ensure destination directories exist (Prevents EPERM error)
+    // 3. Ensure destination directories exist
     if (!fsSync.existsSync(approvedDir)) {
       fsSync.mkdirSync(approvedDir, { recursive: true });
     }
@@ -1157,9 +1152,9 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
       fsSync.mkdirSync(approvedThumbDir, { recursive: true });
     }
 
-    // 4. Update Database (Transfer from newVideo -> video)
-    await prisma.$transaction(async (tx) => {
-      await tx.video.create({
+    // 4. Update Database (Transfer from newVideo -> video & capture new ID)
+    const createdVideo = await prisma.$transaction(async (tx) => {
+      const video = await tx.video.create({
         data: {
           title: newVideo.title,
           tags: {
@@ -1171,21 +1166,26 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
       await tx.newVideo.delete({
         where: { id },
       });
+
+      return video;
     });
 
-    // 5. Move files safely (cross-device fallback)
+    // 5. Build destination filenames using the LATEST generated DB ID
+    const newId = createdVideo.id;
+    const destVideo = path.join(approvedDir, `${newId}.mp4`);
+    const destFirstThumb = path.join(approvedThumbDir, `${newId}.jpg`);
+
+    // 6. Move files safely using the new ID
     moveFileCrossDevice(sourceVideo, destVideo);
 
     if (fsSync.existsSync(sourceFirstThumb)) {
       moveFileCrossDevice(sourceFirstThumb, destFirstThumb);
     }
-    // if (fsSync.existsSync(sourceMiddleThumb)) {
-    //   moveFileCrossDevice(sourceMiddleThumb, destMiddleThumb);
-    // }
 
     return res.json({
       success: true,
-      message: `Video ${id} approved successfully`,
+      message: `Video ${id} approved successfully and saved as ID ${newId}`,
+      video: createdVideo,
     });
   } catch (error) {
     console.error("Error approving video:", error);
