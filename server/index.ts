@@ -36,7 +36,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // ✅ ALWAYS use absolute paths for server directories
 const tempBaseDir = path.resolve(__dirname, "../storage/temp/videos");
 const tempThumbDir = path.resolve(__dirname, "../storage/temp/thumbnails");
-const outputDir = path.resolve(__dirname, "../storage/final/videos");
+const outputDir = path.resolve(__dirname, "../video1/new");
 const outputDirThumbnails = path.resolve(__dirname, "../storage/final/thumbnails");
 
 // Interface matching your segment payload
