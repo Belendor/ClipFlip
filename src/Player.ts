@@ -765,72 +765,68 @@ class Players {
         }
 
         const metadataHeader = document.getElementById(`metadata-header-${section}`);
+
+        // =========================================================================
+        // 1. FAVORITE BUTTON (Clear listeners & rebind)
+        // =========================================================================
         if (this.state.state !== "new") {
-
-
             const oldFavoriteBtn = metadataHeader?.querySelector<HTMLButtonElement>(".favorite-btn");
 
-            if (!oldFavoriteBtn) {
-                throw new Error("Favorite button not found in metadata header");
-            }
+            if (oldFavoriteBtn) {
+                // Wipe previous click listeners by replacing with clean clone
+                const favoriteBtn = oldFavoriteBtn.cloneNode(true) as HTMLButtonElement;
+                oldFavoriteBtn.replaceWith(favoriteBtn);
 
-            const favoriteBtn = oldFavoriteBtn.cloneNode(true) as HTMLButtonElement;
-            oldFavoriteBtn.replaceWith(favoriteBtn);
-            if (!favoriteBtn) {
-                throw new Error("Favorite button not found in metadata header");
-            }
-            const heart = favoriteBtn.querySelector(".favorite-heart") as HTMLSpanElement;
-            const count = favoriteBtn.querySelector(".favorite-count") as HTMLSpanElement;
+                const heart = favoriteBtn.querySelector(".favorite-heart") as HTMLSpanElement;
+                const count = favoriteBtn.querySelector(".favorite-count") as HTMLSpanElement;
 
-            const currentCount = video.reactions?.length ?? 0;
-            const userLiked = video.reactions?.some(
-                (r) => r.userId === this.user.currentUser?.id
-            ) ?? false;
-            // favoriteBtn.classList.toggle("active", userLiked);
-            // console.log(isActive);
+                const currentCount = video.reactions?.length ?? 0;
+                const userLiked = video.reactions?.some(
+                    (r) => r.userId === this.user.currentUser?.id
+                ) ?? false;
 
-            if (!userLiked) {
-                heart.textContent = "♡";
-                count.textContent = String(currentCount);
-                favoriteBtn.classList.remove("active");
-            } else {
-                heart.textContent = "♥";
-                count.textContent = String(currentCount);
-                favoriteBtn.classList.add("active");
-            }
-
-            favoriteBtn.addEventListener("click", async () => {
-                console.log("Clicked favorite button");
-                if (!this.user.currentUser) {
-                    (
-                        document.querySelector("#google-login div[role='button']") as HTMLElement
-                    )?.click();
-                    return;
+                if (!userLiked) {
+                    heart.textContent = "♡";
+                    count.textContent = String(currentCount);
+                    favoriteBtn.classList.remove("active");
+                } else {
+                    heart.textContent = "♥";
+                    count.textContent = String(currentCount);
+                    favoriteBtn.classList.add("active");
                 }
 
-                try {
-                    const data = await this.api.react(Number(video.id), "like");
-                    console.log(data);
-
-
-                    let isActive = favoriteBtn.classList.contains("active");
-
-                    if (isActive) {
-                        heart.textContent = "♡";
-                        count.textContent = String(data.likes);
-                        favoriteBtn.classList.remove("active");
-                    } else {
-                        heart.textContent = "♥";
-                        count.textContent = String(data.likes);
-
-                        favoriteBtn.classList.add("active");
-
+                favoriteBtn.addEventListener("click", async () => {
+                    console.log("Clicked favorite button");
+                    if (!this.user.currentUser) {
+                        (
+                            document.querySelector("#google-login div[role='button']") as HTMLElement
+                        )?.click();
+                        return;
                     }
-                } catch (error) {
-                    console.error("Favorite failed", error);
-                }
-            });
+
+                    try {
+                        const data = await this.api.react(Number(video.id), "like");
+                        const isActive = favoriteBtn.classList.contains("active");
+
+                        if (isActive) {
+                            heart.textContent = "♡";
+                            count.textContent = String(data.likes);
+                            favoriteBtn.classList.remove("active");
+                        } else {
+                            heart.textContent = "♥";
+                            count.textContent = String(data.likes);
+                            favoriteBtn.classList.add("active");
+                        }
+                    } catch (error) {
+                        console.error("Favorite failed", error);
+                    }
+                });
+            }
         }
+
+        // =========================================================================
+        // 2. INPUT FIELDS POPULATION
+        // =========================================================================
         form.querySelectorAll<HTMLInputElement>("input").forEach((input) => {
             switch (input.placeholder) {
                 case "id":
@@ -848,50 +844,62 @@ class Players {
             }
         });
 
-        const removeBtn = form.querySelector(".remove-clip-btn") as HTMLButtonElement | null;
+        // Helper for advancing player on clip delete/approve
+        const handleNextClip = () => {
+            if (this.state.active[0]) {
+                this.handlePlayerEnded(0 as PlayerIndex);
+            } else if (this.state.active[1]) {
+                this.handlePlayerEnded(1 as PlayerIndex);
+            }
+        };
 
-        if (removeBtn) {
+        // =========================================================================
+        // 3. REMOVE CLIP BUTTON (Clone to clear old listeners)
+        // =========================================================================
+        const oldRemoveBtn = form.querySelector(".remove-clip-btn") as HTMLButtonElement | null;
+        if (oldRemoveBtn) {
+            const removeBtn = oldRemoveBtn.cloneNode(true) as HTMLButtonElement;
+            oldRemoveBtn.replaceWith(removeBtn);
+
             removeBtn.onclick = async () => {
                 if (!confirm("Delete this clip?")) return;
 
                 try {
                     await this.api.removeVideo(video.id);
                     this.state.newVideos = this.state.newVideos?.filter((v) => v.id !== video.id) ?? null;
-                    if (this.state.active[0]) {
-                        this.handlePlayerEnded(0 as PlayerIndex);
-                    } else if (this.state.active[1]) {
-                        this.handlePlayerEnded(1 as PlayerIndex);
-
-                    }
+                    handleNextClip();
                 } catch (error) {
                     alert("Failed to delete clip");
                     console.error("Delete failed", error);
                 }
             };
         }
-        const saveBtn = form.querySelector(".add-clip-btn") as HTMLButtonElement | null;
-        if (saveBtn) {
+
+        // =========================================================================
+        // 4. SAVE / APPROVE CLIP BUTTON (Clone to clear old listeners)
+        // =========================================================================
+        const oldSaveBtn = form.querySelector(".add-clip-btn") as HTMLButtonElement | null;
+        if (oldSaveBtn) {
+            const saveBtn = oldSaveBtn.cloneNode(true) as HTMLButtonElement;
+            oldSaveBtn.replaceWith(saveBtn);
+
             saveBtn.onclick = async () => {
-                console.log("clicked")
+                console.log("Saving/Approving clip:", video.id);
                 try {
                     await this.api.saveVideo(video.id);
                     this.state.newVideos = this.state.newVideos?.filter((v) => v.id !== video.id) ?? null;
-                    if (this.state.active[0]) {
-                        this.handlePlayerEnded(0 as PlayerIndex);
-                    } else if (this.state.active[1]) {
-                        this.handlePlayerEnded(1 as PlayerIndex);
-
-                    }
+                    handleNextClip();
                 } catch (error) {
-                    alert("Failed to delete clip");
-                    console.error("Delete failed", error);
+                    alert("Failed to save clip");
+                    console.error("Save failed", error);
                 }
             };
         }
 
+        // =========================================================================
+        // 5. RENDER TAGS
+        // =========================================================================
         const tagsWrapper = this.html.videoTagsContainers[section];
-        console.log(  this.html.videoTagsContainers[section]);
-        
         if (!tagsWrapper) {
             return;
         }
@@ -906,7 +914,7 @@ class Players {
             async (tagTitle: string, tagId?: number) => {
                 const updated = await this.updateMeta(section, "tag", tagTitle, tagId);
                 await this.populateMetadataForm(section, updated);
-            },
+            }
         );
     }
 
