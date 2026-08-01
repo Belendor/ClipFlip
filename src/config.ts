@@ -4,7 +4,11 @@ const isProduction = isBrowser && (window.location.hostname === 'clip-flip.com' 
 console.log(`Running in ${isProduction ? 'production' : 'development'} mode`);
 
 const local = false;
+<<<<<<< HEAD
 const apiURL = false ? "https://clip-flip.com/api" : "http://127.0.0.1:3000" ;
+=======
+const apiURL = true ? "https://clip-flip.com/api" : "http://127.0.0.1:3000" ;
+>>>>>>> 1b0b837 (Describe your changes)
 const endIndex = local ? 3792 : 13642;
 const videoPath = local ? "./videos/" : "https://clip-flip.com/video/";
 const thumbnailPath = local ? "./thumbnails/" : "https://clip-flip.com/thumbnails/";
