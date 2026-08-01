@@ -24,21 +24,14 @@ Emitted 'error' event on ReadStream instance at:
 }
 
 Node.js v20.19.3
-Server is running at http://0.0.0.0:3000
-{
-  id: 1,
-  googleId: '112905671068495748138',
-  email: 'belendorrr@gmail.com',
-  name: 'man tau',
-  picture: 'https://lh3.googleusercontent.com/a/ACg8ocIHrTiGdcSju9MTNwfHnHVuuBxcoyUwTrOXav_sAqaU5hAYog=s96-c',
-  createdAt: 2026-05-11T02:32:19.841Z,
-  updatedAt: 2026-07-30T12:43:51.774Z
+Error: listen EADDRINUSE: address already in use 0.0.0.0:3000
+    at Server.setupListenHandle [as _listen2] (node:net:1908:16)
+    at listenInCluster (node:net:1965:12)
+    at doListen (node:net:2139:7)
+    at processTicksAndRejections (node:internal/process/task_queues:83:21) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3000
 }
-Error confirming segments: Error: Temp video file missing: 5801644a-303a-4f64-b4c6-06f8e5b03b42.mp4
-    at /home/ubuntu/ClipFlip/server/index.ts:857:17
-    at Generator.next (<anonymous>)
-    at /home/ubuntu/ClipFlip/server/index.ts:8:71
-    at new Promise (<anonymous>)
-    at __awaiter (/home/ubuntu/ClipFlip/server/index.ts:4:12)
-    at /home/ubuntu/ClipFlip/server/index.ts:846:67
-    at Proxy._transactionWithCallback (/home/ubuntu/ClipFlip/server/node_modules/@prisma/client/runtime/library.js:130:8006)
