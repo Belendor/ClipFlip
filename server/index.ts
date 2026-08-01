@@ -111,18 +111,28 @@ async function processSegmentBatch(segments: SegmentItem[], tagId?: number | str
   }
 });
 
-// Utility function to get video duration via ffprobe
-function getVideoDuration(filePath: string): number {
+function moveFileCrossDevice(src: string, dest: string) {
   try {
-    const output = execSync(
-      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
-      { encoding: "utf-8" }
-    );
-    return parseFloat(output.trim());
-  } catch (error) {
-    console.error(`Failed to get duration for ${filePath}:`, error);
-    return 0;
+    fsSync.renameSync(src, dest);
+  } catch (err: any) {
+    if (err.code === "EXDEV") {
+      fsSync.copyFileSync(src, dest);
+      fsSync.unlinkSync(src);
+    } else {
+      throw err;
+    }
   }
+}
+
+// Helper to extract duration (replace with your existing implementation if different)
+function getVideoDuration(filePath: string): number {
+  const output = execFileSync("ffprobe", [
+    "-v", "error",
+    "-show_entries", "format=duration",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    filePath,
+  ]).toString();
+  return parseFloat(output);
 }
 
 // Interface for segment payload passed between routes
@@ -954,6 +964,9 @@ app.post(
 // Configure Multer storage for incoming confirmation files
 const confirmUpload = multer({ dest: tempBaseDir });
 
+// ============================================================================
+// ROUTE 2: Receives multipart binaries + metadata, saves DB, moves files
+// ============================================================================
 app.post(
   "/confirm-segments",
   confirmUpload.fields([
@@ -966,7 +979,6 @@ app.post(
       const uploadedVideos = files["videos"] || [];
       const uploadedThumbs = files["thumbs"] || [];
 
-      // Parse metadata sent from Route 1
       const { segments, tagId } = JSON.parse(req.body.metadata) as {
         segments: SegmentItem[];
         tagId?: number | string;
@@ -976,7 +988,7 @@ app.post(
         return res.status(400).json({ error: "No segment metadata provided" });
       }
 
-      // Map incoming files by original filename for instant lookup
+      // Map incoming files by original filename for lookup
       const videoFileMap = new Map(uploadedVideos.map((f) => [f.originalname, f.path]));
       const thumbFileMap = new Map(uploadedThumbs.map((f) => [f.originalname, f.path]));
 
@@ -989,7 +1001,7 @@ app.post(
           const tempMidThumbPath = thumbFileMap.get(seg.tempMiddleThumbName);
 
           if (!tempVideoPath || !fsSync.existsSync(tempVideoPath)) {
-            throw new Error(`Binary file missing for segment: ${seg.tempVideoName}`);
+            throw new Error(`Temp video binary missing for file: ${seg.tempVideoName}`);
           }
 
           // Create DB record
@@ -1003,20 +1015,23 @@ app.post(
             include: { tags: true },
           });
 
-          // Move files from Multer temp path to final destination
-          const destVideo = path.join(outputDir, `${newVideo.id}.mp4`);
-          const destFirstThumb = path.join(outputDirThumbnails, `${newVideo.id}_first.jpg`);
-          const destMidThumb = path.join(outputDirThumbnails, `${newVideo.id}_middle.jpg`);
+          const segmentId = newVideo.id;
+          const destVideo = path.join(outputDir, `${segmentId}.mp4`);
+          const destFirstThumb = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
+          const destMidThumb = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
 
+          // Ensure output directories exist
           if (!fsSync.existsSync(outputDir)) fsSync.mkdirSync(outputDir, { recursive: true });
           if (!fsSync.existsSync(outputDirThumbnails)) fsSync.mkdirSync(outputDirThumbnails, { recursive: true });
 
-          fsSync.renameSync(tempVideoPath, destVideo);
+          // Cross-device safe move for videos & thumbs
+          moveFileCrossDevice(tempVideoPath, destVideo);
+
           if (tempFirstThumbPath && fsSync.existsSync(tempFirstThumbPath)) {
-            fsSync.renameSync(tempFirstThumbPath, destFirstThumb);
+            moveFileCrossDevice(tempFirstThumbPath, destFirstThumb);
           }
           if (tempMidThumbPath && fsSync.existsSync(tempMidThumbPath)) {
-            fsSync.renameSync(tempMidThumbPath, destMidThumb);
+            moveFileCrossDevice(tempMidThumbPath, destMidThumb);
           }
 
           results.push(newVideo);
@@ -1027,7 +1042,7 @@ app.post(
 
       return res.json({
         success: true,
-        message: "Segments and binary files confirmed successfully",
+        message: "Segments confirmed and saved successfully",
         videos: createdRecords,
       });
     } catch (error) {
