@@ -1,10 +1,13 @@
+import { config } from "../config";
 import HTML from "../HTML";
 import State, { SectionId } from "../State";
 import { VideoWithRelations } from "../types";
+import VideoApi from "../VideoApi";
 
 export default class Metadata {
     state: State
     html: HTML
+    api: VideoApi
     metaDataEdit: { [key: number]: HTMLDivElement | null } = {
         1: null,
         2: null,
@@ -23,6 +26,21 @@ export default class Metadata {
         3: null,
         4: null
     }
+    metaDataTabs: { [key: number]: HTMLDivElement | null } = {
+        1: null,
+        2: null,
+        3: null,
+        4: null
+    }
+    metaDataInputs: { [key: number]: HTMLDivElement[] | null } = {
+        1: [],
+        2: [],
+        3: [],
+        4: []
+    }
+    uploadFormWrapper: HTMLDivElement | null = null;
+    uploadTagSelect: HTMLSelectElement | null = null;
+    private uploadToolbarButton: HTMLButtonElement | null = null;
     private readonly editIcon = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M12 20h9" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -37,9 +55,10 @@ export default class Metadata {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true">
             <path d="M12 5v14M5 12h14" stroke-linecap="round"></path>
         </svg>`;
-    constructor(html: HTML, state: State) {
+    constructor(html: HTML, state: State, api: VideoApi) {
         this.html = html
         this.state = state
+        this.api = api
         this.init()
     }
     async init() {
@@ -73,61 +92,24 @@ export default class Metadata {
         }
         this.setMetadataVisibility(form, Boolean(this.metaVisible[section]))
 
-        const metaDataTabs = this.createMetadaTabs()
+        const metaDataTabs = this.createMetadaTabs(section)
         const metaDataBody = this.createMetadaBody(section, form)
         const metaDataEdit = this.createMetadaEdit(section)
         form.append(metaDataTabs, metaDataBody, metaDataEdit);
 
 
-        // if (this.state.state === "new") {
-        //     console.log(this.state.state)
-        //     const clipActions = document.createElement("div");
-        //     clipActions.className = "clip-actions";
-
-        //     const addClipBtn = document.createElement("button");
-        //     addClipBtn.type = "button";
-        //     addClipBtn.className = "clip-action-btn add-clip-btn";
-        //     addClipBtn.innerHTML = `
-        //                             <span>Add</span>
-        //                         `;
-        //     addClipBtn.title = "Add clip";
-
-        //     const removeClipBtn = document.createElement("button");
-        //     removeClipBtn.type = "button";
-        //     removeClipBtn.className = "clip-action-btn remove-clip-btn";
-        //     removeClipBtn.innerHTML = `
-        //         <span>Remove</span>
-        //     `;
-        //     removeClipBtn.title = "Remove clip";
-
-        //     clipActions.append(addClipBtn, removeClipBtn);
-        //     metadataHeader.append(editToggleBtn, closeMetadataBtn, clipActions);
-        // } else {
-
-        // }
-
-
-
-
-
-
-
         const uploadFormWrapper = document.createElement("div");
         uploadFormWrapper.className = "upload-form hidden";
         uploadFormWrapper.style.minWidth = "14rem";
-        if (section === 1) {
-            // this.uploadFormWrapper = uploadFormWrapper;
-            // this.html.appRoot.appendChild(uploadFormWrapper);
-        }
 
         const closeUploadBtn = document.createElement("button");
         closeUploadBtn.type = "button";
         closeUploadBtn.className = "upload-close-btn";
         closeUploadBtn.setAttribute("aria-label", "Close upload window");
         closeUploadBtn.innerHTML = "&times;";
-        // closeUploadBtn.addEventListener("click", () => {
-        //     this.setUploadFormVisibility(false);
-        // });
+        closeUploadBtn.addEventListener("click", () => {
+            this.setUploadFormVisibility(false);
+        });
 
         const fileInput = document.createElement("input");
         fileInput.type = "file";
@@ -142,7 +124,7 @@ export default class Metadata {
         const uploadTagSelect = document.createElement("select");
         uploadTagSelect.className = "block w-full mb-2 border border-gray-400 px-2 py-1 rounded";
         if (section === 1) {
-            // this.uploadTagSelect = uploadTagSelect;
+            this.uploadTagSelect = uploadTagSelect;
         }
 
         const submitUploadBtn = document.createElement("button");
@@ -160,21 +142,33 @@ export default class Metadata {
             formData.append("title", uploadTitleInput.value);
             formData.append("tagId", uploadTagSelect.value);
 
-            // try {
-            //     await this.api.uploadVideo(formData);
-            //     alert("Upload successful");
-            //     this.setUploadFormVisibility(false);
-            // } catch (error) {
-            //     console.error("Upload failed", error);
-            //     alert("Upload failed");
-            // }
+            try {
+                await this.api.uploadVideo(formData);
+                alert("Upload successful");
+                this.setUploadFormVisibility(false);
+            } catch (error) {
+                console.error("Upload failed", error);
+                alert("Upload failed");
+            }
         });
 
         uploadFormWrapper.append(closeUploadBtn, fileInput, uploadTitleInput, uploadTagSelect, submitUploadBtn);
-
+        this.uploadFormWrapper = uploadFormWrapper;
+        if (section === 1) {
+            this.html.appRoot.appendChild(this.uploadFormWrapper);
+        }
 
     }
-    createMetadaTabs() {
+    setUploadFormVisibility(visible: boolean) {
+        if (!this.uploadFormWrapper) {
+            return;
+        }
+        console.log(`Setting upload form visibility to ${visible}`);
+        console.log("Upload form wrapper:", this.uploadFormWrapper);
+        this.uploadFormWrapper.classList.toggle("hidden", !visible);
+        this.uploadToolbarButton?.classList.toggle("is-active", visible);
+    }
+    createMetadaTabs(section: SectionId) {
         const tabsContainer = document.createElement("div");
         tabsContainer.className = "metadata-tabs";
 
@@ -186,87 +180,24 @@ export default class Metadata {
         };
 
         const tabRandom = createTab("random");
-        // const tabNew = createTab("new");
+        const tabNew = createTab("new");
         const tabFavorite = createTab("favorite");
 
-        tabsContainer.append(tabRandom, tabFavorite); //tabNew
+        tabsContainer.append(tabRandom, tabNew, tabFavorite);
 
+        this.metaDataTabs[section] = tabsContainer
 
-        tabsContainer.addEventListener("click", async (e) => {
-            const target = e.target as HTMLButtonElement;
-            if (!target.textContent) return;
-
-            if (target === tabRandom) {
-                await this.switchMode("random");
-            }
-            // else if (target === tabNew) {
-            //     await this.switchMode("new");
-            // }
-            else if (target === tabFavorite) {
-                await this.switchMode("favorite");
-            }
-
-            tabRandom.style.background = target === tabRandom ? "#4ade80" : "transparent";
-            tabRandom.style.color = target === tabRandom ? "black" : "#ccc";
-
-            // tabNew.style.background = target === tabNew ? "#4ade80" : "transparent";
-            // tabNew.style.color = target === tabNew ? "black" : "#ccc";
-
-            tabFavorite.style.background = target === tabFavorite ? "#4ade80" : "transparent";
-            tabFavorite.style.color = target === tabFavorite ? "black" : "#ccc";
-
-            console.log("Tab:", target.textContent);
-        });
 
         return tabsContainer
     }
-    private async switchMode(mode: "random" | "new" | "favorite") {
-        if (this.state.state === mode)
-            return;
 
-        this.state.state = mode;
-
-        this.metadataCache.clear();
-
-        this.resetPlaybackSurface();
-
-        switch (mode) {
-            case "random":
-                this.state.randomized = true;
-                this.state.endIndex = config.defaultEndIndex
-                await this.state.modifyPosition(1, true, this.state.randomInRange(1, this.state.endIndex));
-                await this.state.modifyPosition(1,);
-
-                break;
-
-            case "new":
-                this.state.randomized = false;
-                await this.state.fetchNewVideos();
-                break;
-
-            case "favorite":
-                const id = this.user?.getId()
-                console.log(id, "<<<<<<<<<");
-
-                if (!id) return
-                await this.state.fetchLikedVideos(id);
-                this.state.modifyPosition(1, false, 0);
-                break;
-        }
-
-        // this.createMetadataForm(1);      // only recreate the form if needed
-        // await this.loadVideos();         // <-- THIS loads the first video
-    }
     createMetadaInput(section: SectionId) {
         const makeInput = (placeholder: string, key: keyof VideoWithRelations) => {
             const input = document.createElement("input");
             input.type = "text";
             input.placeholder = placeholder;
             input.className = "input-fields";
-            // input.addEventListener("input", async (event) => {
-            //     event.preventDefault();
-            //     await this.updateMeta(section, key, input.value);
-            // });
+            this.metaDataInputs[section]?.push(input);
             return input;
         };
 
@@ -279,6 +210,25 @@ export default class Metadata {
         const fieldsWrapper = this.html.createDiv(`metadata-fields-${section}`, "metadata-fields");
         fieldsWrapper.append(titleInput, modelInput, studioInput, idInput);
         return fieldsWrapper
+    }
+    async populateUploadTagSelect() {
+        if (!this.uploadTagSelect) {
+            return;
+        }
+
+        await this.state.tagsPromise;
+        this.uploadTagSelect.innerHTML = "";
+
+        this.state.allTags.forEach((tag) => {
+            if (tag.id == null) {
+                return;
+            }
+
+            const option = document.createElement("option");
+            option.value = String(tag.id);
+            option.textContent = tag.title;
+            this.uploadTagSelect?.appendChild(option);
+        });
     }
     createMetadaEdit(section: SectionId) {
         const editorPanel = this.html.createDiv(`metadata-editor-${section}`, "metadata-editor hidden");
@@ -297,21 +247,17 @@ export default class Metadata {
     createMetadaBody(section: SectionId, form: HTMLElement) {
         const metadataTitleGroup = this.html.createDiv(`metadata-title-group-${section}`, "metadata-title-group");
         const metadataHeader = this.html.createDiv(`metadata-header-${section}`, "metadata-header");
-
-        const videoTagsLabel = document.createElement("div");
-        videoTagsLabel.textContent = "Video tags";
-        videoTagsLabel.className = "tag-section-label";
-        const metadataHint = document.createElement("div");
-        metadataHint.textContent = "Tap tags to filter instantly";
-        metadataHint.className = "metadata-subtitle";
-        metadataTitleGroup.append(videoTagsLabel, metadataHint);
-        const videoTagsContainer = this.html.createDiv(`video-tags-${section}`, "metadata-tags-panel");
-        const videoTagsWrapper = this.html.createDiv(`video-tags-wrapper-${section}`, "tag-container metadata-tag-list");
         const editToggleBtn = document.createElement("button");
         editToggleBtn.type = "button";
         editToggleBtn.className = `edit-toggle metadata-edit-btn ${this.state.multiSection ? "hidden" : ""}`;
         editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
         editToggleBtn.title = "Edit metadata";
+
+        const closeMetadataBtn = document.createElement("button");
+        closeMetadataBtn.type = "button";
+        closeMetadataBtn.className = "metadata-close-btn";
+        closeMetadataBtn.innerHTML = "&times;";
+        closeMetadataBtn.title = "Hide metadata";
 
         const toggleEditMode = () => {
             const nextAdvancedMode = !this.state.advancedMode;
@@ -338,55 +284,91 @@ export default class Metadata {
         };
 
         editToggleBtn.addEventListener("click", toggleEditMode);
-        const favoriteBtn = document.createElement("button");
-        favoriteBtn.type = "button";
-        favoriteBtn.className = "reaction-btn favorite-btn";
-        favoriteBtn.innerHTML = `
+
+        const videoTagsContainer = this.html.createDiv(`video-tags-${section}`, "metadata-tags-panel");
+        const videoTagsWrapper = this.html.createDiv(`video-tags-wrapper-${section}`, "tag-container metadata-tag-list");
+
+
+        if (this.state.state === "new") {
+            console.log(this.state.state)
+            const clipActions = document.createElement("div");
+            clipActions.className = "clip-actions";
+            editToggleBtn.classList.add("hidden");
+            const addClipBtn = document.createElement("button");
+            addClipBtn.type = "button";
+            addClipBtn.className = "clip-action-btn add-clip-btn";
+            addClipBtn.innerHTML = `
+                                    <span>Add</span>
+                                `;
+            addClipBtn.title = "Add clip";
+
+            const removeClipBtn = document.createElement("button");
+            removeClipBtn.type = "button";
+            removeClipBtn.className = "clip-action-btn remove-clip-btn";
+            removeClipBtn.innerHTML = `
+                <span>Remove</span>
+            `;
+            removeClipBtn.title = "Remove clip";
+
+            clipActions.append(addClipBtn, removeClipBtn);
+            metadataHeader.append(editToggleBtn, closeMetadataBtn, clipActions);
+            videoTagsContainer.append(metadataHeader);
+        } else {
+            editToggleBtn.classList.remove("hidden");
+            const videoTagsLabel = document.createElement("div");
+            videoTagsLabel.textContent = "Video tags";
+            videoTagsLabel.className = "tag-section-label";
+            const metadataHint = document.createElement("div");
+            metadataHint.textContent = "Tap tags to filter instantly";
+            metadataHint.className = "metadata-subtitle";
+            metadataTitleGroup.append(videoTagsLabel, metadataHint);
+
+            const favoriteBtn = document.createElement("button");
+            favoriteBtn.type = "button";
+            favoriteBtn.className = "reaction-btn favorite-btn";
+            favoriteBtn.innerHTML = `
             <span class="favorite-heart">♡</span>
             <span class="favorite-count">0</span>
         `;
-        favoriteBtn.title = "Favorite";
+            favoriteBtn.title = "Favorite";
 
-        const showMetadataBtn = document.createElement("button");
-        showMetadataBtn.type = "button";
-        showMetadataBtn.className = "metadata-show-btn hidden";
-        showMetadataBtn.textContent = "i";
-        showMetadataBtn.title = "Show metadata";
+            const showMetadataBtn = document.createElement("button");
+            showMetadataBtn.type = "button";
+            showMetadataBtn.className = "metadata-show-btn hidden";
+            showMetadataBtn.textContent = "i";
+            showMetadataBtn.title = "Show metadata";
 
-        const closeMetadataBtn = document.createElement("button");
-        closeMetadataBtn.type = "button";
-        closeMetadataBtn.className = "metadata-close-btn";
-        closeMetadataBtn.innerHTML = "&times;";
-        closeMetadataBtn.title = "Hide metadata";
 
-        closeMetadataBtn.addEventListener("click", () => {
-            this.state.advancedMode = false;
+            closeMetadataBtn.addEventListener("click", () => {
+                this.state.advancedMode = false;
 
-            // editorPanel.classList.add("hidden");
-            // titleInput.classList.add("hidden");
-            // modelInput.classList.add("hidden");
-            // studioInput.classList.add("hidden");
-            // idInput.classList.add("hidden");
+                // editorPanel.classList.add("hidden");
+                // titleInput.classList.add("hidden");
+                // modelInput.classList.add("hidden");
+                // studioInput.classList.add("hidden");
+                // idInput.classList.add("hidden");
 
-            // this.setUploadFormVisibility(false);
+                // this.setUploadFormVisibility(false);
 
-            // document.querySelectorAll<HTMLElement>(".tag-delete").forEach((button) => {
-            //     button.classList.add("hidden");
-            // });
+                // document.querySelectorAll<HTMLElement>(".tag-delete").forEach((button) => {
+                //     button.classList.add("hidden");
+                // });
 
-            // editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
-            // editToggleBtn.title = "Edit metadata";
-            this.metaVisible[section] = false
-            this.setMetadataVisibility(form, false);
-        });
-        showMetadataBtn.addEventListener("click", () => {
-            form.classList.remove("metadata-hidden");
-            showMetadataBtn.classList.add("hidden");
-        });
+                // editToggleBtn.innerHTML = `${this.editIcon}<span>Edit</span>`;
+                // editToggleBtn.title = "Edit metadata";
+                this.metaVisible[section] = false
+                this.setMetadataVisibility(form, false);
+            });
+            showMetadataBtn.addEventListener("click", () => {
+                form.classList.remove("metadata-hidden");
+                showMetadataBtn.classList.add("hidden");
+            });
 
-        metadataHeader.append(metadataTitleGroup, showMetadataBtn, editToggleBtn, favoriteBtn, closeMetadataBtn);
-        videoTagsContainer.append(metadataHeader, videoTagsWrapper);
-        this.html.videoTagsContainers.push(videoTagsWrapper);
+            metadataHeader.append(metadataTitleGroup, showMetadataBtn, editToggleBtn, favoriteBtn, closeMetadataBtn);
+            videoTagsContainer.append(metadataHeader, videoTagsWrapper);
+
+        }
+        this.html.videoTagsContainers[section] = videoTagsWrapper;
         return videoTagsContainer
     }
     createMetadaEditTags(section: SectionId) {

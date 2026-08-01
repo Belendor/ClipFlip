@@ -1,6 +1,7 @@
 import State, { SectionId } from "./State";
 import Metadata from "./HTML/Metada";
 import type { Tag } from "./types";
+import VideoApi from "./VideoApi";
 
 type ToggleTagHandler = (tag: string, active: boolean) => void;
 type DeleteTagHandler = (tag: Tag, videoId?: number) => Promise<void>;
@@ -8,6 +9,7 @@ type AddTagHandler = (tagTitle: string, tagId?: number) => Promise<void>;
 
 export default class HTML {
     state: State;
+    api: VideoApi;
     metadata: Metadata;
     appRoot: HTMLElement;
     videoGrid: HTMLElement;
@@ -27,13 +29,18 @@ export default class HTML {
 
     videoPlayers: HTMLVideoElement[] = [];
     // videoForms: HTMLElement[] = [];
-    videoTagsContainers: HTMLDivElement[] = [];
+    videoTagsContainers: { [key: number]: HTMLDivElement | null } = {
+        1: null,
+        2: null,
+        3: null,
+        4: null
+    }
 
-
-    constructor(state: State) {
+    constructor(state: State, api: VideoApi) {
         this.state = state;
-        this.metadata = new Metadata(this, this.state)
+        this.api = api;
         this.appRoot = document.getElementById("app-root") as HTMLElement;
+        this.metadata = new Metadata(this, this.state, this.api);
         this.videoGrid = document.getElementById("video-grid") as HTMLElement;
         this.iconPlay = document.getElementById("icon-play") as HTMLSpanElement;
         this.iconPause = document.getElementById("icon-pause") as HTMLSpanElement;
@@ -43,6 +50,7 @@ export default class HTML {
     }
 
     init() {
+
         if (this.state.multiSection) {
             this.videoGrid.classList.remove("single-view");
         } else {
@@ -53,12 +61,7 @@ export default class HTML {
         }
         this.appRoot.addEventListener("mousemove", this.handleInteraction);
         this.appRoot.addEventListener("click", this.handleInteraction);
-        this.hideFormsBtn.addEventListener("click", () => {
-            if (this.metadata.metaData[1]) {
-                this.metadata.metaVisible[1] = !this.metadata.metaVisible[1]
-                this.metadata.setMetadataVisibility(this.metadata.metaData[1], this.metadata.metaVisible[1]);
-            }
-        });
+        this.hideFormsBtn.addEventListener("click", () => this.hideForms());
 
         window.addEventListener("keydown", this.handleInteraction);
         this.initialized = true
@@ -105,7 +108,22 @@ export default class HTML {
         this.toolbar.style.opacity = "0";
         this.toolbar.style.pointerEvents = "none";
     }
+    hideForms(forceHide: boolean = false) {
+        // 1. Determine target visibility: if forceHide is true, set to false;
+        // otherwise toggle based on the first section's state.
+        const firstSectionId = this.state.sectionIds[0];
+        const targetState = forceHide ? false : !this.metadata.metaVisible[firstSectionId];
 
+        // 2. Apply target state to every section
+        this.state.sectionIds.forEach((sectionId) => {
+            const formElement = this.metadata.metaData[sectionId];
+
+            if (formElement) {
+                this.metadata.metaVisible[sectionId] = targetState;
+                this.metadata.setMetadataVisibility(formElement, targetState);
+            }
+        });
+    }
     createDiv(id: string, className = ""): HTMLDivElement {
         const div = document.createElement("div");
         div.id = id;
@@ -127,7 +145,7 @@ export default class HTML {
         onAddTag?: AddTagHandler,
     ) {
         container.innerHTML = "";
-
+        console.log("Rendering tags for section:", section, "with tags:", tags);
         const fragment = document.createDocumentFragment();
         const visibleCount = 7;
 
@@ -207,8 +225,6 @@ export default class HTML {
         }
 
         // Inline Add Tag Pill with Search Filter Popover
-        console.log(this.state.advancedMode);
-        console.log(onAddTag);
         if (!onAddTag) {
             return
         }

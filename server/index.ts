@@ -15,6 +15,7 @@ const BATCH_SIZE = 2;
 import { OAuth2Client } from "google-auth-library";
 const prisma = new PrismaClient();
 import cookieParser from "cookie-parser";
+import { execSync } from 'child_process';
 
 const app = express();
 const port = 3000;
@@ -28,6 +29,46 @@ app.use(
 );
 app.use(express.json()); // Add this line to enable JSON body parsing
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Set up Multer for handling incoming raw video uploads
+
+// Internal directory configurations
+const tempBaseDir = path.join(__dirname, "../tmp-segments");
+const tempThumbDir = path.join(tempBaseDir, "thumbnails");
+const outputDir = path.join(__dirname, "../video1/new");
+const outputDirThumbnails = path.join(outputDir, "thumbnails");
+
+// Ensure all required directories exist
+[tempBaseDir, tempThumbDir, outputDir, outputDirThumbnails].forEach((dir) => {
+  if (!fsSync.existsSync(dir)) {
+    fsSync.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Utility function to get video duration via ffprobe
+function getVideoDuration(filePath: string): number {
+  try {
+    const output = execSync(
+      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+      { encoding: "utf-8" }
+    );
+    return parseFloat(output.trim());
+  } catch (error) {
+    console.error(`Failed to get duration for ${filePath}:`, error);
+    return 0;
+  }
+}
+
+// Interface for segment payload passed between routes
+interface SegmentItem {
+  tempKey: string;
+  tempVideoName: string;
+  tempFirstThumbName: string;
+  tempMiddleThumbName: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+}
 
 app.post('/videos', async (req: Request, res: Response) => {
   try {
@@ -671,68 +712,157 @@ app.get('/', async (req, res) => {
   // }
 })
 
+// ============================================================================
+// ROUTE 1: Receives video from local client, cuts into temp segments, 
+//          and automatically calls ROUTE 2 before responding.
+// ============================================================================
 app.post(
   "/upload-video",
-
-  (req: Request, res: Response, next) => {
-    console.log("=== HTTP REQUEST ARRIVED ===");
-    next();
-  },
-
   upload.array("files"),
-
   async (req: Request, res: Response) => {
-    console.log("=== MULTER FINISHED ===");
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (files.length === 0) {
+      return res.status(400).json({ error: "No files uploaded" });
+    }
 
     try {
-      const outputDir = path.join(__dirname, "../video1");
-      const files = fsSync.readdirSync(outputDir);
+      const segmentLength = 3;
+      const processedSegments: SegmentItem[] = [];
+      const { tagId } = req.body;
 
-      console.log("Files uploaded:", (req.files as Express.Multer.File[]).length);
+      for (const file of files) {
+        const duration = getVideoDuration(file.path);
+        console.log(`Video ${file.originalname} duration: ${duration.toFixed(2)}s`);
 
-      let maxId = 0;
+        for (let start = 0; start + segmentLength <= duration; start += segmentLength) {
+          const end = start + segmentLength;
+          const mid = ((start + end) / 2).toFixed(2);
 
-      files.forEach((file) => {
-        const match = file.match(/^(\d+)\.mp4$/);
+          // Unique key for temp files prior to DB auto-increment ID assignment
+          const tempKey = crypto.randomUUID();
 
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxId) maxId = num;
+          const tempVideoName = `${tempKey}.mp4`;
+          const tempFirstThumbName = `${tempKey}_first.jpg`;
+          const tempMiddleThumbName = `${tempKey}_middle.jpg`;
+
+          const videoOut = path.join(tempBaseDir, tempVideoName);
+          const firstOut = path.join(tempThumbDir, tempFirstThumbName);
+          const middleOut = path.join(tempThumbDir, tempMiddleThumbName);
+
+          // 1. Cut Video Segment
+          execSync(
+            `ffmpeg -y -ss ${start} -i "${file.path}" -t ${segmentLength} -c:v libx264 -preset medium -crf 22 -maxrate 6M -bufsize 12M -c:a aac -b:a 128k -vf "scale='min(1920\,iw)':-2" "${videoOut}`,
+            { stdio: "inherit" }
+          );
+
+          // 2. Extract Frame 1
+          execSync(
+            `ffmpeg -y -ss ${start} -i "${file.path}" -frames:v 1 "${firstOut}"`,
+            { stdio: "inherit" }
+          );
+
+          // 3. Extract Middle Frame
+          execSync(
+            `ffmpeg -y -ss ${mid} -i "${file.path}" -frames:v 1 "${middleOut}"`,
+            { stdio: "inherit" }
+          );
+
+          processedSegments.push({
+            tempKey,
+            tempVideoName,
+            tempFirstThumbName,
+            tempMiddleThumbName,
+            title: file.originalname,
+            startTime: start,
+            endTime: end,
+          });
         }
-      });
 
-      const lastVideo = await prisma.video.findFirst({
-        orderBy: { id: "desc" },
-        select: { id: true },
-      });
-
-      console.log(
-        `Last video ID in DB: ${lastVideo?.id || 0}, max ID in folder: ${maxId}`
-      );
-
-      let nextId = (lastVideo?.id || 0) + 1;
-      let nextVideo = nextId;
-
-      for (const file of req.files as Express.Multer.File[]) {
-        console.log(`Copying ${file.originalname}`);
-
-        const targetPath = path.join(outputDir, `${nextVideo}.mp4`);
-
-        fsSync.copyFileSync(file.path, targetPath);
-        fsSync.unlinkSync(file.path);
-
-        nextVideo++;
+        // Clean up raw original upload file from Multer temp storage
+        if (fsSync.existsSync(file.path)) {
+          fsSync.unlinkSync(file.path);
+        }
       }
 
-      const { title, tagId } = req.body;
+      console.log(`Cut ${processedSegments.length} segment(s). Triggering confirmation...`);
 
-      const createdVideos = [];
+      const BATCH_SIZE = 10;
+      const confirmResults = [];
 
-      for (const _file of req.files as Express.Multer.File[]) {
-        const video = await prisma.video.create({
+      for (let i = 0; i < processedSegments.length; i += BATCH_SIZE) {
+        const batch = processedSegments.slice(i, i + BATCH_SIZE);
+
+        // Send batch of 10 segments internally to confirm-segments
+        const confirmResponse = await axios.post("http://localhost:3000/confirm-segments", {
+          segments: batch,
+          tagId,
+        });
+        console.log(`Confirmed batch ${i / BATCH_SIZE + 1}:`, confirmResponse.data);
+
+        // Collect created records from each batch response
+        if (confirmResponse.data?.videos) {
+          confirmResults.push(...confirmResponse.data.videos);
+        }
+      }
+
+      return res.json({
+        success: true,
+        message: `Successfully processed and confirmed ${confirmResults.length} segments in batches of ${BATCH_SIZE}`,
+        videos: confirmResults,
+      });
+    } catch (error) {
+      console.error("Error processing temp segments:", error);
+
+      // Cleanup raw uploads on error
+      for (const file of files) {
+        if (fsSync.existsSync(file.path)) {
+          fsSync.unlinkSync(file.path);
+        }
+      }
+
+      return res.status(500).json({
+        error: "Failed to cut video segments",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+);
+
+// ============================================================================
+// ROUTE 2: Takes temporary files, writes DB records, and moves files to final destination.
+// ============================================================================
+app.post("/confirm-segments", async (req: Request, res: Response) => {
+  try {
+    const { segments, tagId } = req.body as {
+      segments: SegmentItem[];
+      tagId?: number | string;
+    };
+
+    if (!segments || segments.length === 0) {
+      return res.status(400).json({ error: "No segment metadata provided" });
+    }
+
+    // Wrap DB operations and file moves inside Prisma transaction
+    const createdRecords = await prisma.$transaction(async (tx) => {
+      const results = [];
+
+      for (const seg of segments) {
+        // 1. Resolve Temp Paths
+        const srcVideo = path.join(tempBaseDir, seg.tempVideoName);
+        const srcFirstThumb = path.join(tempThumbDir, seg.tempFirstThumbName);
+        const srcMidThumb = path.join(tempThumbDir, seg.tempMiddleThumbName);
+
+        // Safety Check: Verify temp files exist before proceeding
+        if (!fsSync.existsSync(srcVideo)) {
+          throw new Error(`Temp video file missing: ${seg.tempVideoName}`);
+        }
+
+        // 2. Create DB Record to get autogenerated ID
+        const newVideo = await tx.newVideo.create({
           data: {
-            id: nextId,
-            title: title || "",
+            title: seg.title,
+            startTime: seg.startTime,
+            endTime: seg.endTime,
             tags: tagId
               ? { connect: [{ id: Number(tagId) }] }
               : undefined,
@@ -740,123 +870,40 @@ app.post(
           include: { tags: true },
         });
 
-        createdVideos.push(video);
-        nextId++;
+        const segmentId = newVideo.id;
+
+        // 3. Resolve Destination Paths using DB ID
+        const destVideo = path.join(outputDir, `${segmentId}.mp4`);
+        const destFirstThumb = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
+        const destMidThumb = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
+
+        // 4. Move Files to Final Location
+        fsSync.renameSync(srcVideo, destVideo);
+        if (fsSync.existsSync(srcFirstThumb)) fsSync.renameSync(srcFirstThumb, destFirstThumb);
+        if (fsSync.existsSync(srcMidThumb)) fsSync.renameSync(srcMidThumb, destMidThumb);
+
+        results.push(newVideo);
       }
 
-      console.log("=== RESPONSE SENT ===");
+      return results;
+    });
 
-      res.json({
-        success: true,
-        videos: createdVideos,
-      });
-    } catch (error) {
-      console.error(error);
-
-      res.status(500).json({
-        error: "Failed to upload video",
-        details: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+    return res.json({
+      success: true,
+      message: "Segments confirmed and saved successfully",
+      videos: createdRecords,
+    });
+  } catch (error) {
+    console.error("Error confirming segments:", error);
+    return res.status(500).json({
+      error: "Failed to confirm and persist video segments",
+      details: error instanceof Error ? error.message : "Unknown error",
+    });
   }
-);
-
-// app.post("/upload-video", upload.array("files"), async (req: Request, res: Response) => {
-//   try {
-//     const outputDir = path.join(__dirname, "../video1/new");
-//     const outputDirThumbnails = path.join(__dirname, "../video1/new/thumbnails");
-//     function getHighestNumericId(dir: string): number {
-//       let maxId = 0;
-
-//       for (const file of fsSync.readdirSync(dir)) {
-//         const match = file.match(/^(\d+)\.mp4$/);
-
-//         if (!match) continue;
-
-//         const id = Number(match[1]);
-
-//         if (id > maxId) {
-//           maxId = id;
-//         }
-//       }
-
-//       return maxId;
-//     }
-
-//     let nextVideo = getHighestNumericId(outputDir) + 1;
-//     let segmentId = getHighestNumericId(outputDir) + 1;
-//     const { tagId } = req.body;
-
-//     const segmentLength = 3;
-
-//     for (const file of req.files as Express.Multer.File[]) {
-//       const duration = getVideoDuration(file.path);
-
-//       console.log(`Video ${file.originalname} duration: ${duration} seconds`);
-
-//       for (let start = 0; start + segmentLength <= duration; start += segmentLength) {
-
-//         const end = start + segmentLength;
-
-
-//         const newVideo = await prisma.newVideo.create({
-//           data: {
-//             title: file.originalname,
-//             startTime: start,
-//             endTime: end,
-//             tags: tagId
-//               ? { connect: [{ id: Number(tagId) }] }
-//               : undefined,
-//           },
-//           include: {
-//             tags: true,
-//           },
-//         });
-
-//         const segmentId = newVideo.id;
-
-//         const videoOut = path.join(outputDir, `${segmentId}.mp4`);
-//         const firstOut = path.join(outputDirThumbnails, `${segmentId}_first.jpg`);
-//         const middleOut = path.join(outputDirThumbnails, `${segmentId}_middle.jpg`);
-
-//         execSync(
-//           `ffmpeg -y -ss ${start} -i "${file.path}" -t ${segmentLength} -c:v libx264 -preset slow -crf 18 -c:a aac -b:a 192k "${videoOut}"`,
-//           { stdio: "inherit" }
-//         );
-
-//         execSync(
-//           `ffmpeg -y -ss ${start} -i "${file.path}" -frames:v 1 "${firstOut}"`,
-//           { stdio: "inherit" }
-//         );
-
-//         const mid = ((start + end) / 2).toFixed(2);
-
-//         execSync(
-//           `ffmpeg -y -ss ${mid} -i "${file.path}" -frames:v 1 "${middleOut}"`,
-//           { stdio: "inherit" }
-//         );
-
-//         console.log(`Created segment ${segmentId}`);
-//       }
-
-//       fsSync.unlinkSync(file.path);
-//     }
-
-//     res.json({ success: true });
-//   } catch (error) {
-//     console.error("Error handling upload:", error);
-
-//     res.status(500).json({
-//       error: "Failed to upload video",
-//       details: error instanceof Error ? error.message : "Unknown error",
-//     });
-//   }
-// });
-
+});
 app.delete("/video/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    console.log(id);
 
     if (Number.isNaN(id)) {
       return res.status(400).json({ error: "Invalid id" });
@@ -866,7 +913,6 @@ app.delete("/video/:id", async (req: Request, res: Response) => {
     const thumbnailsDir = path.join(outputDir, "thumbnails");
 
     const videoFile = path.join(outputDir, `${id}.mp4`);
-    console.log(videoFile);
 
     const firstImage = path.join(thumbnailsDir, `${id}_first.jpg`);
     const middleImage = path.join(thumbnailsDir, `${id}_middle.jpg`);
@@ -874,11 +920,9 @@ app.delete("/video/:id", async (req: Request, res: Response) => {
     const result = await prisma.newVideo.delete({
       where: { id },
     });
-    console.log(result);
 
 
     const deleteIfExists = (file: string) => {
-      console.log("Deleting:", file);
 
       if (!fsSync.existsSync(file)) {
         console.log("Doesn't exist");
@@ -936,7 +980,6 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
         tags: true,
       },
     });
-    console.log(newVideo);
 
 
     if (!newVideo) {
@@ -1074,7 +1117,6 @@ app.post("/auth/google", async (req: Request, res: Response) => {
       secure: false, // true on https production
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
-    console.log(user);
 
     return res.json({ success: true, user });
   } catch (err) {
@@ -1083,10 +1125,9 @@ app.post("/auth/google", async (req: Request, res: Response) => {
 });
 
 app.get("/auth/me", async (req, res) => {
-  console.log("cookies:", req.cookies);
 
   const userId = Number(req.cookies.userId);
-  console.log("userId:", userId);
+
 
   if (!userId) {
     return res.json({ loggedIn: false, user: null });

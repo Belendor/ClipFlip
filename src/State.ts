@@ -11,7 +11,7 @@ type PositionsMap = Record<SectionId, number>;
 
 class State {
     readonly PLAYED_KEY = "playedVideoIds";
-    readonly sectionIds: SectionId[] = [1, 2, 3, 4];
+    sectionIds: SectionId[] = [1]; //, 2, 3, 4
 
     private history: number[] = [];           // Stack of previously played video IDs
     private isInHistoryMode: boolean = false; // Are we currently going backwards?
@@ -180,7 +180,7 @@ class State {
 
     async takeNextVideoId(section: SectionId, random: boolean = false, skip: boolean = false): Promise<number> {
         const currentVideoId = this.positions[section];
-        await this.modifyPosition(section, random);
+        await this.modifyPosition(section);
         return currentVideoId;
     }
 

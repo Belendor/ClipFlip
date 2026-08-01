@@ -30,7 +30,6 @@ export default class User {
         return this.currentUser?.id;
     }
     async checkAuth() {
-        console.log("Checking auth");
         try {
             const res = await fetch(`${config.apiUrl}/auth/me`, {
                 credentials: "include",
@@ -41,7 +40,7 @@ export default class User {
             }
 
             const data = await res.json();
-            console.log(data, "Auth data");
+
 
             if (data.loggedIn) {
                 this.currentUser = data.user;

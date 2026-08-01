@@ -20,10 +20,6 @@ class Players {
     private muted = true;
     private searchAbortController: AbortController | null = null;
 
-    private uploadFormWrapper: HTMLDivElement | null = null;
-    private uploadToolbarButton: HTMLButtonElement | null = null;
-    private uploadTagSelect: HTMLSelectElement | null = null;
-
     constructor(
         private readonly state: State,
         private readonly html: HTML,
@@ -37,6 +33,7 @@ class Players {
     async init() {
         // this.createMetadataFormContainers();
         this.attachEventListeners();
+        this.attachMetadataTabListeners();
         await Promise.all([this.state.tagsPromise, this.state.taggedVideosPromise]);
         await this.loadVideos();
         // await this.auth.loadGoogleSignIn();
@@ -49,11 +46,18 @@ class Players {
         this.html.hideNoVideosBox();
         this.resetPlaybackSurface();
 
-        for (const section of this.getVisibleSections()) {
-            const loaded = await this.loadSection(section, revision);
-            if (!loaded || revision !== this.loadRevision) {
-                return;
-            }
+        const sections = this.getVisibleSections();
+
+        const results = await Promise.all(
+            sections.map(section => this.loadSection(section, revision))
+        );
+
+        if (revision !== this.loadRevision) {
+            return;
+        }
+
+        if (results.some(result => !result)) {
+            return;
         }
     }
 
@@ -124,20 +128,18 @@ class Players {
             return false;
         }
         if (this.state.adminMode && currentMetadata?.reactions?.length) {
-            console.log(currentMetadata?.reactions);
 
             if (currentMetadata?.reactions?.length > 0) {
-                console.log(currentMetadata?.reactions);
 
                 this.loadSection(section, revision);
                 return false;
             }
         }
-        await this.populateMetadataForm(section, currentMetadata);
+        this.populateMetadataForm(section, currentMetadata);
 
         const nextVideoId = await this.state.takeNextVideoId(section);
         if (nextVideoId !== 0) {
-            await this.queuePlayer(backPlayer, nextVideoId);
+            this.queuePlayer(backPlayer, nextVideoId);
         } else {
             this.resetPlayer(backPlayer);
         }
@@ -158,7 +160,7 @@ class Players {
 
     private async queuePlayer(player: HTMLVideoElement, videoId: number): Promise<void> {
         this.configurePlayer(player, videoId, "auto");
-        await this.primePlayer(player);
+        // this.primePlayer(player);
     }
 
     private buildVideoUrl(videoId: number): string {
@@ -254,9 +256,9 @@ class Players {
     }
 
     private setSectionVisualState(section: SectionId, activeIndex: PlayerIndex) {
-        if (section !== 1) {
-            return;
-        }
+        // if (section !== 1 && !this.state.multiSection) {
+        //     return;
+        // }
 
         const [frontIndex, backIndex] = this.getSectionPlayerIndexes(section);
         const frontSlot = this.html.videoPlayers[frontIndex].parentElement;
@@ -273,7 +275,67 @@ class Players {
         backSlot.classList.toggle("offscreen-right", frontIsActive);
     }
 
+    attachMetadataTabListeners() {
+        this.html.metadata?.metaDataTabs &&
+            Object.values(this.html.metadata.metaDataTabs).forEach((metaTab) => {
+                if (!metaTab) return;
+
+                const tabRandom = metaTab.querySelector(
+                    ".metadata-tab:nth-child(1)"
+                ) as HTMLButtonElement | null;
+
+                const tabNew = metaTab.querySelector(
+                    ".metadata-tab:nth-child(2)"
+                ) as HTMLButtonElement | null;
+
+                const tabFavorite = metaTab.querySelector(
+                    ".metadata-tab:nth-child(3)"
+                ) as HTMLButtonElement | null;
+
+                metaTab.addEventListener("click", async (e) => {
+                    // e.target might be an icon or child element inside the button,
+                    // so target.closest() ensures we match the actual button element.
+                    const targetBtn = (e.target as HTMLElement)?.closest(".metadata-tab");
+
+                    if (!targetBtn) return;
+
+                    // Handle mode switching
+                    if (targetBtn === tabRandom) {
+                        await this.switchMode("random");
+                    } else if (targetBtn === tabFavorite) {
+                        await this.switchMode("favorite");
+                    } else if (targetBtn === tabNew) {
+                        await this.switchMode("new");
+                    }
+
+                    // Update active CSS states
+                    tabRandom?.classList.toggle("active", targetBtn === tabRandom);
+                    tabFavorite?.classList.toggle("active", targetBtn === tabFavorite);
+                    tabNew?.classList.toggle("active", targetBtn === tabNew);
+                });
+            });
+
+        this.state.sectionIds.forEach((section) => {
+            this.html.metadata.metaDataInputs[section]?.forEach((input) => {
+                input.addEventListener("input", async (event) => {
+                    event.preventDefault();
+
+                    const target = event.target as HTMLInputElement | HTMLSelectElement;
+
+                    // Get key dynamically from name, id, or dataset attribute
+                    const key = target.name || target.id || target.dataset.key;
+                    const value = target.value;
+
+                    if (key) {
+                        await this.updateMeta(section, key, value);
+                    }
+                });
+            });
+        });
+    }
+
     private attachEventListeners() {
+
         // Get elements
         const navLeft = document.getElementById('nav-left');
         const navCenter = document.getElementById('nav-center');
@@ -392,13 +454,15 @@ class Players {
         });
 
 
-        this.uploadToolbarButton = document.getElementById("uploadVideoBtn") as HTMLButtonElement | null;
-        this.uploadToolbarButton?.addEventListener("click", async () => {
-            const shouldOpen = this.uploadFormWrapper?.classList.contains("hidden") ?? false;
+        const uploadToolbarButton = document.getElementById("uploadVideoBtn") as HTMLButtonElement | null;
+        uploadToolbarButton?.addEventListener("click", async () => {
+            console.log("Upload button clicked");
+            const shouldOpen = this.html.metadata.uploadFormWrapper?.classList.contains("hidden") ?? false;
+            console.log("Upload form should open:", shouldOpen);
             if (shouldOpen) {
-                await this.populateUploadTagSelect();
+                await this.html.metadata.populateUploadTagSelect();
             }
-            this.setUploadFormVisibility(shouldOpen);
+            this.html.metadata.setUploadFormVisibility(shouldOpen);
         });
 
         this.html.appRoot.addEventListener("dblclick", (event) => {
@@ -411,15 +475,32 @@ class Players {
 
         this.html.multiscreenButton.addEventListener("click", () => {
 
+
             this.state.multiSection = !this.state.multiSection
+            if (this.state.multiSection) {
+                this.state.sectionIds = [1, 2, 3, 4]
+                Array.from(document.getElementsByClassName("player")).forEach((player) => {
+                    const slot = player as HTMLElement;
+                    slot.style.objectFit = "cover";
+                })
+            } else {
+                this.state.sectionIds = [1]
+                Array.from(document.getElementsByClassName("player")).forEach((player) => {
+                    const slot = player as HTMLElement;
+                    slot.style.objectFit = "contain";
+                })
+            }
+
             this.html.init()
             this.html.metadata.init()
+            this.html.hideForms(true)
             // this.resetPlaybackSurface();
-            this.loadVideos
+            this.loadVideos()
         });
 
         this.attachSearchListeners();
         this.attachPlayerListeners();
+        this.attachMetadataTabListeners();
     }
 
     private async toggleFullscreen() {
@@ -433,35 +514,6 @@ class Players {
         }
 
         await document.exitFullscreen();
-    }
-
-    private setUploadFormVisibility(visible: boolean) {
-        if (!this.uploadFormWrapper) {
-            return;
-        }
-
-        this.uploadFormWrapper.classList.toggle("hidden", !visible);
-        this.uploadToolbarButton?.classList.toggle("is-active", visible);
-    }
-
-    private async populateUploadTagSelect() {
-        if (!this.uploadTagSelect) {
-            return;
-        }
-
-        await this.state.tagsPromise;
-        this.uploadTagSelect.innerHTML = "";
-
-        this.state.allTags.forEach((tag) => {
-            if (tag.id == null) {
-                return;
-            }
-
-            const option = document.createElement("option");
-            option.value = String(tag.id);
-            option.textContent = tag.title;
-            this.uploadTagSelect?.appendChild(option);
-        });
     }
 
     private attachSearchListeners() {
@@ -559,6 +611,7 @@ class Players {
         if (!this.metadataCache.has(videoId) || refresh) {
             if (this.state.state == "new") {
                 const newVideo = this.state?.newVideos?.find((video) => video.id === videoId) || null;
+                console.log(`Fetching metadata for videoId ${videoId} from state:`, newVideo);
                 if (!newVideo) {
                     throw new Error(`New video with ID ${videoId} not found in state`);
                 }
@@ -576,7 +629,6 @@ class Players {
                 );
             }
         }
-
         return this.metadataCache.get(videoId) ?? null;
     }
 
@@ -623,9 +675,9 @@ class Players {
         }
 
         try {
-            // await video.play();
-            // video.pause();
-            // video.currentTime = 0;
+            await video.play();
+            video.pause();
+            video.currentTime = 0;
         } catch (error) {
             console.warn("Failed to prime queued video", error);
         }
@@ -645,7 +697,6 @@ class Players {
             const nextIndex = currentIndex === frontIndex ? backIndex : frontIndex;
             const currentPlayer = this.html.videoPlayers[currentIndex];
             const nextPlayer = this.html.videoPlayers[nextIndex];
-            this.playPlayer(nextPlayer, nextIndex);
             const finishedVideoId = this.getPlayerVideoId(currentPlayer);
 
             if (finishedVideoId) {
@@ -653,19 +704,15 @@ class Players {
             }
 
             const nextVideoId = this.getPlayerVideoId(nextPlayer);
+
             if (!nextVideoId) {
                 this.state.markEmpty();
                 return;
             }
 
-            // const ready = await this.waitForVideoReady(nextPlayer);
-            // if (!ready) {
-            //     console.warn("Queued player was not fully ready before swap, attempting playback anyway", nextVideoId);
-            // }
+            await this.waitForVideoReady(nextPlayer);
+            await this.playPlayer(nextPlayer, nextIndex);
 
-            // nextPlayer.currentTime = 0;
-
-            // await this.waitForPlaybackStart(nextPlayer);
             this.setSectionActivePlayer(section, nextIndex);
             currentPlayer.pause();
             this.getVideoMetadata(nextVideoId)
@@ -678,11 +725,9 @@ class Players {
 
             const queuedVideoId = await this.state.takeNextVideoId(section);
             if (queuedVideoId === 0) {
-                window.setTimeout(() => this.resetPlayer(currentPlayer), 220);
+                this.resetPlayer(currentPlayer);
             } else {
-                window.setTimeout(() => {
-                    void this.queuePlayer(currentPlayer, queuedVideoId);
-                }, 220);
+                await this.queuePlayer(currentPlayer, queuedVideoId);
             }
         } catch (error) {
             console.error("Error during player swap:", error);
@@ -844,7 +889,9 @@ class Players {
             };
         }
 
-        const tagsWrapper = this.html.videoTagsContainers[section - 1];
+        const tagsWrapper = this.html.videoTagsContainers[section];
+        console.log(  this.html.videoTagsContainers[section]);
+        
         if (!tagsWrapper) {
             return;
         }
@@ -1005,8 +1052,6 @@ class Players {
         return this.api.fetchVideos(query);
     }
 
-
-
     private getActiveIndexForSection(section: number): PlayerIndex {
         const [frontIndex, backIndex] = this.getSectionPlayerIndexes(section as SectionId);
         return this.state.active[frontIndex] ? frontIndex : backIndex;
@@ -1047,7 +1092,43 @@ class Players {
             return null;
         }
     }
+    private async switchMode(mode: "random" | "new" | "favorite") {
+        if (this.state.state === mode)
+            return;
+        console.log(`Switching mode to: ${mode}`);
+        this.state.state = mode;
 
+        this.metadataCache.clear();
+
+        this.resetPlaybackSurface();
+
+        switch (mode) {
+            case "random":
+                this.state.randomized = true;
+                this.state.endIndex = config.defaultEndIndex
+                await this.state.modifyPosition(1, true, this.state.randomInRange(1, this.state.endIndex));
+                await this.state.modifyPosition(1,);
+
+                break;
+
+            case "new":
+                this.state.randomized = false;
+                await this.state.fetchNewVideos();
+                break;
+
+            case "favorite":
+                const id = this.user?.getId()
+
+                if (!id) return
+                await this.state.fetchLikedVideos(id);
+                this.state.modifyPosition(1, false, 0);
+                break;
+        }
+        this.html.init()
+        this.html.metadata.init()
+        this.attachMetadataTabListeners()
+        await this.loadVideos();         // <-- THIS loads the first video
+    }
 }
 
 export default Players;
