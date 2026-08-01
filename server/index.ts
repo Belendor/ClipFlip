@@ -1113,8 +1113,8 @@ app.post("/auth/google", async (req: Request, res: Response) => {
 
     res.cookie("userId", user.id, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false, // true on https production
+      sameSite: "none",
+      secure: true, // true on https production
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
 
