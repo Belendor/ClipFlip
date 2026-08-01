@@ -8,6 +8,7 @@ import multer from 'multer';
 import { pipeline, Readable } from "stream";
 import { promisify } from "util";
 import axios from 'axios';
+import FormData from 'form-data';
 const streamPipeline = promisify(pipeline);
 // multer in-memory or direct-to-disk upload
 const upload = multer({ dest: path.join(__dirname, '../tmp_uploads') })
@@ -32,11 +33,11 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Set up Multer for handling incoming raw video uploads
 
-// Internal directory configurations
-const tempBaseDir = path.join(__dirname, "../tmp-segments");
-const tempThumbDir = path.join(tempBaseDir, "thumbnails");
-const outputDir = path.join(__dirname, "../video1/new");
-const outputDirThumbnails = path.join(outputDir, "thumbnails");
+// ✅ ALWAYS use absolute paths for server directories
+const tempBaseDir = path.resolve(__dirname, "../storage/temp/videos");
+const tempThumbDir = path.resolve(__dirname, "../storage/temp/thumbnails");
+const outputDir = path.resolve(__dirname, "../storage/final/videos");
+const outputDirThumbnails = path.resolve(__dirname, "../storage/final/thumbnails");
 
 // Interface matching your segment payload
 interface SegmentItem {
@@ -778,7 +779,8 @@ app.get('/', async (req, res) => {
 })
 
 // ============================================================================
-// ROUTE 1: UPLOAD & PROCESS VIDEO SEGMENTS
+// ROUTE 1: Receives video from local client, cuts into temp segments, 
+//          and automatically calls ROUTE 2 before responding.
 // ============================================================================
 app.post(
   "/upload-video",
@@ -794,7 +796,7 @@ app.post(
       const processedSegments: SegmentItem[] = [];
       const { tagId } = req.body;
 
-      // Ensure temp directories exist on the server filesystem
+      // Ensure temp directories exist on the server
       if (!fsSync.existsSync(tempBaseDir)) fsSync.mkdirSync(tempBaseDir, { recursive: true });
       if (!fsSync.existsSync(tempThumbDir)) fsSync.mkdirSync(tempThumbDir, { recursive: true });
 
@@ -815,7 +817,7 @@ app.post(
           const firstOut = path.join(tempThumbDir, tempFirstThumbName);
           const middleOut = path.join(tempThumbDir, tempMiddleThumbName);
 
-          // 1. Cut Video Segment (Array args - bypasses shell escape issues)
+          // 1. Cut Video Segment
           execFileSync(
             "ffmpeg",
             [
@@ -830,10 +832,10 @@ app.post(
               "-bufsize", "12M",
               "-c:a", "aac",
               "-b:a", "128k",
-              "-vf", "scale='min(1920,iw)':-2",
+              "-vf", "scale=min(1920\\,iw):-2",
               videoOut,
             ],
-            { stdio: "inherit" }
+            { stdio: "pipe" } // Use pipe to prevent stdout noise, or "inherit" to see FFmpeg errors directly
           );
 
           // 2. Extract Frame 1
@@ -846,7 +848,7 @@ app.post(
               "-frames:v", "1",
               firstOut,
             ],
-            { stdio: "inherit" }
+            { stdio: "pipe" }
           );
 
           // 3. Extract Middle Frame
@@ -859,10 +861,15 @@ app.post(
               "-frames:v", "1",
               middleOut,
             ],
-            { stdio: "inherit" }
+            { stdio: "pipe" }
           );
+          // Add right after FFmpeg execution in Route 1:
+          if (!fsSync.existsSync(videoOut)) {
+            console.error(`[ERROR] FFmpeg finished without throwing, but output file is missing at: ${videoOut}`);
+            throw new Error(`FFmpeg output missing: ${videoOut}`);
+          }
 
-          // Immediate local check to ensure FFmpeg created the video file
+          // Verify file existence immediately after cutting
           if (!fsSync.existsSync(videoOut)) {
             throw new Error(`FFmpeg ran but segment file was not created: ${videoOut}`);
           }
@@ -884,71 +891,154 @@ app.post(
         }
       }
 
-      console.log(`Cut ${processedSegments.length} segment(s). Confirming database records...`);
+      console.log(`Cut ${processedSegments.length} segment(s). Sending binaries to confirm-segments...`);
 
-      // Process in internal batches of 10 without HTTP overhead
       const BATCH_SIZE = 10;
       const confirmResults = [];
 
       for (let i = 0; i < processedSegments.length; i += BATCH_SIZE) {
         const batch = processedSegments.slice(i, i + BATCH_SIZE);
-        const createdRecords = await processSegmentBatch(batch, tagId);
-        confirmResults.push(...createdRecords);
+        const formData = new FormData();
+
+        // 1. Append JSON metadata as a field
+        formData.append("metadata", JSON.stringify({ segments: batch, tagId }));
+
+        // 2. Append actual binary files to multipart payload
+        for (const seg of batch) {
+          const videoPath = path.join(tempBaseDir, seg.tempVideoName);
+          const firstThumbPath = path.join(tempThumbDir, seg.tempFirstThumbName);
+          const midThumbPath = path.join(tempThumbDir, seg.tempMiddleThumbName);
+
+          formData.append("videos", fsSync.createReadStream(videoPath), seg.tempVideoName);
+          if (fsSync.existsSync(firstThumbPath)) {
+            formData.append("thumbs", fsSync.createReadStream(firstThumbPath), seg.tempFirstThumbName);
+          }
+          if (fsSync.existsSync(midThumbPath)) {
+            formData.append("thumbs", fsSync.createReadStream(midThumbPath), seg.tempMiddleThumbName);
+          }
+        }
+
+        // 3. POST multipart request with form-data headers
+        const confirmResponse = await axios.post(
+          "https://clip-flip.com/api/confirm-segments",
+          formData,
+          {
+            headers: {
+              ...formData.getHeaders(),
+            },
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+          }
+        );
+
+        if (confirmResponse.data?.videos) {
+          confirmResults.push(...confirmResponse.data.videos);
+        }
       }
 
       return res.json({
         success: true,
-        message: `Successfully processed and saved ${confirmResults.length} segments`,
+        message: "Upload processed and segments confirmed successfully",
         videos: confirmResults,
       });
     } catch (error) {
-      console.error("Error processing temp segments:", error);
-
-      // Cleanup raw uploads on error
-      for (const file of files) {
-        if (fsSync.existsSync(file.path)) {
-          fsSync.unlinkSync(file.path);
-        }
-      }
-
+      console.error("Error uploading video:", error);
       return res.status(500).json({
-        error: "Failed to cut video segments",
+        error: "Failed to process uploaded video segments",
         details: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
 );
 
-// ============================================================================
-// ROUTE 2: EXTERNAL CONFIRM-SEGMENTS ROUTE
-// (Kept in case an external API client calls this endpoint directly)
-// ============================================================================
-app.post("/confirm-segments", async (req: Request, res: Response) => {
-  try {
-    const { segments, tagId } = req.body as {
-      segments: SegmentItem[];
-      tagId?: number | string;
-    };
+// Configure Multer storage for incoming confirmation files
+const confirmUpload = multer({ dest: tempBaseDir });
 
-    if (!segments || segments.length === 0) {
-      return res.status(400).json({ error: "No segment metadata provided" });
+app.post(
+  "/confirm-segments",
+  confirmUpload.fields([
+    { name: "videos", maxCount: 20 },
+    { name: "thumbs", maxCount: 40 },
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const uploadedVideos = files["videos"] || [];
+      const uploadedThumbs = files["thumbs"] || [];
+
+      // Parse metadata sent from Route 1
+      const { segments, tagId } = JSON.parse(req.body.metadata) as {
+        segments: SegmentItem[];
+        tagId?: number | string;
+      };
+
+      if (!segments || segments.length === 0) {
+        return res.status(400).json({ error: "No segment metadata provided" });
+      }
+
+      // Map incoming files by original filename for instant lookup
+      const videoFileMap = new Map(uploadedVideos.map((f) => [f.originalname, f.path]));
+      const thumbFileMap = new Map(uploadedThumbs.map((f) => [f.originalname, f.path]));
+
+      const createdRecords = await prisma.$transaction(async (tx) => {
+        const results = [];
+
+        for (const seg of segments) {
+          const tempVideoPath = videoFileMap.get(seg.tempVideoName);
+          const tempFirstThumbPath = thumbFileMap.get(seg.tempFirstThumbName);
+          const tempMidThumbPath = thumbFileMap.get(seg.tempMiddleThumbName);
+
+          if (!tempVideoPath || !fsSync.existsSync(tempVideoPath)) {
+            throw new Error(`Binary file missing for segment: ${seg.tempVideoName}`);
+          }
+
+          // Create DB record
+          const newVideo = await tx.newVideo.create({
+            data: {
+              title: seg.title,
+              startTime: seg.startTime,
+              endTime: seg.endTime,
+              tags: tagId ? { connect: [{ id: Number(tagId) }] } : undefined,
+            },
+            include: { tags: true },
+          });
+
+          // Move files from Multer temp path to final destination
+          const destVideo = path.join(outputDir, `${newVideo.id}.mp4`);
+          const destFirstThumb = path.join(outputDirThumbnails, `${newVideo.id}_first.jpg`);
+          const destMidThumb = path.join(outputDirThumbnails, `${newVideo.id}_middle.jpg`);
+
+          if (!fsSync.existsSync(outputDir)) fsSync.mkdirSync(outputDir, { recursive: true });
+          if (!fsSync.existsSync(outputDirThumbnails)) fsSync.mkdirSync(outputDirThumbnails, { recursive: true });
+
+          fsSync.renameSync(tempVideoPath, destVideo);
+          if (tempFirstThumbPath && fsSync.existsSync(tempFirstThumbPath)) {
+            fsSync.renameSync(tempFirstThumbPath, destFirstThumb);
+          }
+          if (tempMidThumbPath && fsSync.existsSync(tempMidThumbPath)) {
+            fsSync.renameSync(tempMidThumbPath, destMidThumb);
+          }
+
+          results.push(newVideo);
+        }
+
+        return results;
+      });
+
+      return res.json({
+        success: true,
+        message: "Segments and binary files confirmed successfully",
+        videos: createdRecords,
+      });
+    } catch (error) {
+      console.error("Error confirming segment binaries:", error);
+      return res.status(500).json({
+        error: "Failed to confirm and persist video segments",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-
-    const createdRecords = await processSegmentBatch(segments, tagId);
-
-    return res.json({
-      success: true,
-      message: "Segments confirmed and saved successfully",
-      videos: createdRecords,
-    });
-  } catch (error) {
-    console.error("Error confirming segments:", error);
-    return res.status(500).json({
-      error: "Failed to confirm and persist video segments",
-      details: error instanceof Error ? error.message : "Unknown error",
-    });
   }
-});
+);
 app.delete("/video/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
