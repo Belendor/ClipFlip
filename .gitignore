@@ -24,3 +24,5 @@ downloads
 /tmp_uploads
 /video1
 video1
+/server/app.log
+/storage
