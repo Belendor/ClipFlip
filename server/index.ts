@@ -1111,22 +1111,26 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid id" });
     }
 
-    const approvedDir = path.join(__dirname, "../video");
-    const pendingDir = path.join(__dirname, "../video1/new");
+    const PROJECT_ROOT = path.resolve(__dirname, "..");
 
-    const approvedThumbDir = path.join(approvedDir, "thumbnails");
-    const pendingThumbDir = path.join(pendingDir, "thumbnails");
+    // Source Paths (Pending)
+    const pendingDir = path.join(PROJECT_ROOT, "video1/new");
+    const pendingThumbDir = path.join(PROJECT_ROOT, "video1/new/thumbnails");
 
+    // Destination Paths (Approved)
+    const approvedDir = path.join(PROJECT_ROOT, "video1");
+    const approvedThumbDir = path.join(PROJECT_ROOT, "video/thumbnails");
+
+    // Files
     const sourceVideo = path.join(pendingDir, `${id}.mp4`);
+    const sourceFirstThumb = path.join(pendingThumbDir, `${id}.jpg`);
+    // const sourceMiddleThumb = path.join(pendingThumbDir, `${id}_middle.jpg`);
+
     const destVideo = path.join(approvedDir, `${id}.mp4`);
-
-    const sourceFirstThumb = path.join(pendingThumbDir, `${id}_first.jpg`);
-    const sourceMiddleThumb = path.join(pendingThumbDir, `${id}_middle.jpg`);
-
     const destFirstThumb = path.join(approvedThumbDir, `${id}.jpg`);
     const destMiddleThumb = path.join(approvedThumbDir, `${id}_mid.jpg`);
 
-    // Get metadata
+    // 1. Check if video exists in DB
     const newVideo = await prisma.newVideo.findUnique({
       where: { id },
       include: {
@@ -1134,49 +1138,61 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
       },
     });
 
-
     if (!newVideo) {
       return res.status(404).json({ error: "Video not found" });
     }
 
-    // Copy metadata to main table
-    await prisma.video.create({
-      data: {
-        title: newVideo.title,
-        tags: {
-          connect: newVideo.tags.map((tag) => ({ id: tag.id })),
+    // 2. Check if source video file actually exists on disk
+    if (!fsSync.existsSync(sourceVideo)) {
+      return res.status(400).json({
+        error: `Source video file missing on disk: ${sourceVideo}`,
+      });
+    }
+
+    // 3. Ensure destination directories exist (Prevents EPERM error)
+    if (!fsSync.existsSync(approvedDir)) {
+      fsSync.mkdirSync(approvedDir, { recursive: true });
+    }
+    if (!fsSync.existsSync(approvedThumbDir)) {
+      fsSync.mkdirSync(approvedThumbDir, { recursive: true });
+    }
+
+    // 4. Update Database (Transfer from newVideo -> video)
+    await prisma.$transaction(async (tx) => {
+      await tx.video.create({
+        data: {
+          title: newVideo.title,
+          tags: {
+            connect: newVideo.tags.map((tag) => ({ id: tag.id })),
+          },
         },
-        // copy any other fields you have
-      },
+      });
+
+      await tx.newVideo.delete({
+        where: { id },
+      });
     });
 
-    // Copy files
-    fsSync.copyFileSync(sourceVideo, destVideo);
-    fsSync.copyFileSync(sourceFirstThumb, destFirstThumb);
-    fsSync.copyFileSync(sourceMiddleThumb, destMiddleThumb);
+    // 5. Move files safely (cross-device fallback)
+    moveFileCrossDevice(sourceVideo, destVideo);
 
-    // Delete originals
-    const deleteIfExists = (file: string) => {
-      if (fsSync.existsSync(file)) {
-        fsSync.unlinkSync(file);
-      }
-    };
+    if (fsSync.existsSync(sourceFirstThumb)) {
+      moveFileCrossDevice(sourceFirstThumb, destFirstThumb);
+    }
+    // if (fsSync.existsSync(sourceMiddleThumb)) {
+    //   moveFileCrossDevice(sourceMiddleThumb, destMiddleThumb);
+    // }
 
-    deleteIfExists(sourceVideo);
-    deleteIfExists(sourceFirstThumb);
-    deleteIfExists(sourceMiddleThumb);
-
-    // Remove from newVideo table
-    await prisma.newVideo.delete({
-      where: { id },
+    return res.json({
+      success: true,
+      message: `Video ${id} approved successfully`,
     });
-
-    res.json({ success: true });
   } catch (error) {
-    console.error(error);
+    console.error("Error approving video:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: "Failed to approve video",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
