@@ -452,16 +452,16 @@ class Players {
         });
 
 
-        const uploadToolbarButton = document.getElementById("uploadVideoBtn") as HTMLButtonElement | null;
-        uploadToolbarButton?.addEventListener("click", async () => {
-            console.log("Upload button clicked");
-            const shouldOpen = this.html.metadata.uploadFormWrapper?.classList.contains("hidden") ?? false;
-            console.log("Upload form should open:", shouldOpen);
-            if (shouldOpen) {
-                await this.html.metadata.populateUploadTagSelect();
-            }
-            this.html.metadata.setUploadFormVisibility(shouldOpen);
-        });
+        // const uploadToolbarButton = document.getElementById("uploadVideoBtn") as HTMLButtonElement | null;
+        // uploadToolbarButton?.addEventListener("click", async () => {
+        //     console.log("Upload button clicked");
+        //     const shouldOpen = this.html.metadata.uploadFormWrapper?.classList.contains("hidden") ?? false;
+        //     console.log("Upload form should open:", shouldOpen);
+        //     if (shouldOpen) {
+        //         await this.html.metadata.populateUploadTagSelect();
+        //     }
+        //     this.html.metadata.setUploadFormVisibility(shouldOpen);
+        // });
 
         this.html.appRoot.addEventListener("dblclick", (event) => {
             const target = event.target as HTMLElement | null;
