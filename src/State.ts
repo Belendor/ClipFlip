@@ -297,7 +297,6 @@ class State {
         }
 
         this.positions[section] = this.positions[section] + 1 > this.endIndex ? 1 : this.positions[section] + 1;
-        console.log("Queuing next untagged video:", this.positions[section]);
     }
 
     async fetchVideosByTags(section: SectionId): Promise<void> {

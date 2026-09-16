@@ -613,8 +613,6 @@ app.get("/ai", async (_req, res) => {
       const base64_1 = buffer1.toString("base64")
       const base64_2 = buffer2.toString("base64")
 
-      console.log(`Processing ${id}`)
-
       // const response = await openai.responses.create({
       //   model: "gpt-5.4",
       //   input: [
@@ -725,8 +723,6 @@ Rules:
       }
 
       const match = Boolean(parsed.ass_visible) && Boolean(parsed.panties_visible)
-      console.log(parsed)
-      console.log(match)
 
       if (match) {
         await fs.copyFile(videoPath, path.join(outDir, `${id}.mp4`))
@@ -813,7 +809,6 @@ app.post(
 
       for (const file of files) {
         const duration = getVideoDuration(file.path);
-        console.log(`Video ${file.originalname} duration: ${duration.toFixed(2)}s`);
 
         for (let start = 0; start + segmentLength <= duration; start += segmentLength) {
           const end = start + segmentLength;
@@ -901,8 +896,6 @@ app.post(
           fsSync.unlinkSync(file.path);
         }
       }
-
-      console.log(`Cut ${processedSegments.length} segment(s). Sending binaries to confirm-segments...`);
 
       const BATCH_SIZE = 10;
       const confirmResults = [];

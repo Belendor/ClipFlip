@@ -41,7 +41,6 @@ class Players {
 
     async loadVideos(): Promise<void> {
         const revision = ++this.loadRevision;
-        console.log("Loading videos, revision:", revision);
         this.state.clearEmptyState();
         this.html.hideNoVideosBox();
         this.resetPlaybackSurface();
@@ -102,7 +101,6 @@ class Players {
         const backPlayer = this.html.videoPlayers[backIndex];
 
         const currentVideoId = await this.state.takeNextVideoId(section);
-        console.log(`Section ${section} - Queued video ID:`, currentVideoId);
         if (currentVideoId === 0) {
             this.state.markEmpty();
             return false;

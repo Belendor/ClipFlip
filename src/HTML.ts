@@ -145,7 +145,6 @@ export default class HTML {
         onAddTag?: AddTagHandler,
     ) {
         container.innerHTML = "";
-        console.log("Rendering tags for section:", section, "with tags:", tags);
         const fragment = document.createDocumentFragment();
         const visibleCount = 7;
 
