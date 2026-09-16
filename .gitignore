@@ -26,3 +26,6 @@ downloads
 video1
 /server/app.log
 /storage
+*.log
+src/config.ts
+thumbnail.jpg
