@@ -805,6 +805,7 @@ app.post(
       const segmentLength = 3;
       const processedSegments: SegmentItem[] = [];
       const { tagId } = req.body;
+      const { title } = req.body;
 
       // Ensure temp directories exist on the server
       if (!fsSync.existsSync(tempBaseDir)) fsSync.mkdirSync(tempBaseDir, { recursive: true });
@@ -889,7 +890,7 @@ app.post(
             tempVideoName,
             tempFirstThumbName,
             tempMiddleThumbName,
-            title: file.originalname,
+            title: title + "," + file.originalname,
             startTime: start,
             endTime: end,
           });
@@ -1196,59 +1197,95 @@ app.post("/video/:id/approve", async (req: Request, res: Response) => {
     });
   }
 });
-app.get("/download", async (_req, res) => {
-  const FULL_SAMPLE_URL =
-    "https://ev-h.phncdn.com/hls/videos/202408/06/456164611/1080P_4000K_456164611.mp4/seg-2-v1-a1.ts?validfrom=1780178723&validto=1780185923&ipa=1&hdl=-1&hash=qHHle%2BaybF2PdkmJucRjU2%2Bw5cI%3D";
+app.get("/download", async (req, res) => {
+  // Pass the real media playlist (.m3u8) URL, NOT a single .ts segment
+  const playlistUrl = (req.query.url as string) || ""; // or hard-code for testing
 
-  const outputDir = path.join(__dirname, '../segments');
-  await fs.mkdir(outputDir, { recursive: true });
-
-  const urlObj = new URL(FULL_SAMPLE_URL);
-
-  // Find the last number before .ts
-  const match = urlObj.pathname.match(/^(.*?)(\d+)([^\/]*\.ts)$/);
-
-  if (!match) {
+  if (!playlistUrl || !playlistUrl.includes(".m3u8")) {
     return res.status(400).json({
-      error: "Could not identify segment number in URL",
+      error: "Provide a valid HLS media playlist URL (?url=...m3u8)",
     });
   }
 
-  const [, prefix, currentSeg, suffix] = match;
+  const outputDir = path.join(__dirname, "../segments");
+  await fs.mkdir(outputDir, { recursive: true });
 
-  let seg = Number(currentSeg);
-  let downloaded = 0;
+  try {
+    // 1. Fetch the playlist
+    const playlistRes = await fetch(playlistUrl, {
+      headers: {
+        // add any required headers/cookies/referer if the CDN needs them
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
 
-  while (true) {
-    const pathname = `${prefix}${seg}${suffix}`;
-
-    const url =
-      `${urlObj.origin}${pathname}` +
-      (urlObj.search ? urlObj.search : "");
-
-    const filePath = path.join(outputDir, `${seg}.ts`);
-
-    console.log(`Downloading ${url}`);
-
-    const response = await fetch(url);
-
-    if (!response.ok || !response.body) {
-      console.log(`Stop at segment ${seg} (${response.status})`);
-      break;
+    if (!playlistRes.ok) {
+      return res.status(playlistRes.status).json({
+        error: `Failed to fetch playlist: ${playlistRes.status}`,
+      });
     }
 
-    const stream =
-      typeof (response.body as any).getReader === "function"
-        ? Readable.fromWeb(response.body as any)
-        : (response.body as unknown as NodeJS.ReadableStream);
+    const text = await playlistRes.text();
+    const base = new URL(playlistUrl);
 
-    await streamPipeline(stream, fsSync.createWriteStream(filePath));
+    // 2. Extract segment URLs
+    const segmentUrls: string[] = [];
+    for (const line of text.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
 
-    downloaded++;
-    seg++;
+      const segUrl = trimmed.startsWith("http")
+        ? trimmed
+        : new URL(trimmed, base).href;
+
+      segmentUrls.push(segUrl);
+    }
+
+    if (segmentUrls.length === 0) {
+      return res.status(400).json({ error: "No segments found in playlist" });
+    }
+
+    // 3. Download each segment
+    let downloaded = 0;
+    for (const [i, url] of segmentUrls.entries()) {
+      const filePath = path.join(
+        outputDir,
+        `${String(i).padStart(5, "0")}.ts`
+      );
+
+      console.log(`[${i + 1}/${segmentUrls.length}] ${url}`);
+
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+      });
+
+      if (!response.ok || !response.body) {
+        console.warn(`Failed segment ${i}: ${response.status}`);
+        continue;
+      }
+
+      const stream =
+        typeof (response.body as any).getReader === "function"
+          ? Readable.fromWeb(response.body as any)
+          : (response.body as unknown as NodeJS.ReadableStream);
+
+      await pipeline(stream, fsSync.createWriteStream(filePath));
+      downloaded++;
+    }
+
+    res.json({
+      downloaded,
+      total: segmentUrls.length,
+      outputDir,
+    });
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Download failed" });
   }
-
-  res.json({ downloaded });
 });
 app.post("/auth/google", async (req: Request, res: Response) => {
   try {

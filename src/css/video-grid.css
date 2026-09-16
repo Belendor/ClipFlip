@@ -24,7 +24,17 @@
 }
 
 .video-grid.single-view .video-section:not(#section-1) {
-    display: none;
+    /* Remove display: none completely */
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+    
+    /* Force mobile GPU to keep this layer active in memory */
+    transform: translateZ(0);
+    will-change: transform, opacity;
 }
 
 .video-grid.single-view #section-1 {

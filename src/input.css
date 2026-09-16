@@ -41,8 +41,12 @@
   flex-direction: column;
   gap: 6px;
 }
-.tag-search-popover.hidden {
-  display: none;
+.tag-search-popover.hidden,
+.tag-page-brand {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.2s ease; /* Optional: adds a smooth fade */
 }
 .tag-search-input {
   width: 100%;
@@ -489,7 +493,10 @@ select[multiple] {
 }
 
 .hidden {
-    display: none !important;
+    /* display: none !important; */
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important; 
 }
 
 .metadata-header {
